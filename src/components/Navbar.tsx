@@ -1,0 +1,258 @@
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircle, Users2 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+
+export default function Navbar() {
+  const { isAdmin, loginAdmin, logoutAdmin } = useApp();
+  const navigate = useNavigate();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+      isActive
+        ? 'bg-accent-600 text-white shadow-lg shadow-accent-600/25'
+        : 'text-primary-300 hover:bg-primary-800 hover:text-white'
+    }`;
+
+  const handleAdminClick = (e: React.MouseEvent) => {
+    if (!isAdmin) {
+      e.preventDefault();
+      setShowPasswordModal(true);
+      setPassword('');
+      setError('');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setError('Please enter the admin password');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const success = await loginAdmin(password);
+      if (success) {
+        setShowPasswordModal(false);
+        setPassword('');
+        navigate('/admin');
+      } else {
+        setError('Invalid password');
+      }
+    } catch {
+      setError('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowPasswordModal(false);
+    setPassword('');
+    setError('');
+  };
+
+  return (
+    <>
+      <nav className="sticky top-0 z-50 bg-primary-900/90 backdrop-blur-md border-b border-primary-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+          {/* Logo with Team Icon */}
+          <NavLink to="/dashboard" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-accent-400 to-accent-600 rounded-xl flex items-center justify-center shadow-lg shadow-accent-600/20 group-hover:shadow-accent-500/30 transition-shadow flex-shrink-0">
+              <Users2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            {/* Short version on mobile, full on desktop */}
+            <span 
+              className="hidden md:block text-sm font-bold text-primary-100 border-l border-primary-700 pl-3 tracking-wide"
+              style={{ textShadow: '0 0 10px rgba(33, 134, 235, 0.6), 0 0 20px rgba(33, 134, 235, 0.4), 0 0 30px rgba(33, 134, 235, 0.2)' }}
+            >
+              RUN.PROTECT.SERVE.INSPIRE
+            </span>
+            <span 
+              className="block md:hidden text-[10px] font-bold text-primary-100 border-l border-primary-700 pl-2 tracking-tight leading-tight"
+              style={{ textShadow: '0 0 8px rgba(33, 134, 235, 0.5)' }}
+            >
+              RUN.PROTECT<br/>SERVE.INSPIRE
+            </span>
+          </NavLink>
+
+            {/* Navigation Links */}
+            <div className="flex items-center gap-2">
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-2">
+                <NavLink to="/dashboard" className={navLinkClass}>
+                  <LayoutDashboard size={18} />
+                  <span>Dashboard</span>
+                </NavLink>
+                <NavLink to="/add-run" className={navLinkClass}>
+                  <PlusCircle size={18} />
+                  <span>Add Run</span>
+                </NavLink>
+                <NavLink 
+                  to="/admin" 
+                  className={navLinkClass}
+                  onClick={handleAdminClick}
+                >
+                  <Shield size={18} />
+                  <span>Admin</span>
+                </NavLink>
+                {isAdmin && (
+                  <>
+                    <NavLink to="/admin/users" className={navLinkClass}>
+                      <Users size={18} />
+                      <span>Users</span>
+                    </NavLink>
+                    <button
+                      onClick={logoutAdmin}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary-300 hover:bg-danger-600/20 hover:text-danger-500 transition-all duration-200 font-medium"
+                    >
+                      <LogOut size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Mobile Navigation */}
+              <div className="flex md:hidden items-center gap-1">
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) =>
+                    `p-3 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-accent-600 text-white'
+                        : 'text-primary-300 hover:bg-primary-800'
+                    }`
+                  }
+                >
+                  <LayoutDashboard size={20} />
+                </NavLink>
+                <NavLink
+                  to="/add-run"
+                  className={({ isActive }) =>
+                    `p-3 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-accent-600 text-white'
+                        : 'text-primary-300 hover:bg-primary-800'
+                    }`
+                  }
+                >
+                  <PlusCircle size={20} />
+                </NavLink>
+                <button
+                  onClick={(e) => {
+                    if (isAdmin) {
+                      navigate('/admin');
+                    } else {
+                      handleAdminClick(e);
+                    }
+                  }}
+                  className="p-3 rounded-lg transition-all text-primary-300 hover:bg-primary-800"
+                >
+                  <Shield size={20} />
+                </button>
+                {isAdmin && (
+                  <>
+                    <NavLink
+                      to="/admin/users"
+                      className={({ isActive }) =>
+                        `p-3 rounded-lg transition-all ${
+                          isActive
+                            ? 'bg-accent-600 text-white'
+                            : 'text-primary-300 hover:bg-primary-800'
+                        }`
+                      }
+                    >
+                      <Users size={20} />
+                    </NavLink>
+                    <button
+                      onClick={logoutAdmin}
+                      className="p-3 rounded-lg text-primary-300 hover:bg-danger-600/20 hover:text-danger-500 transition-all"
+                    >
+                      <LogOut size={20} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Admin Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-primary-900 border border-primary-700 rounded-2xl shadow-2xl w-full max-w-sm animate-fade-in">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-accent-500/20 rounded-xl flex items-center justify-center">
+                    <Lock className="w-5 h-5 text-accent-400" />
+                  </div>
+                  <h2 className="font-display text-xl font-bold text-white">Admin Access</h2>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-2 rounded-lg text-primary-400 hover:bg-primary-800 hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleLogin}>
+                {error && (
+                  <div className="mb-4 p-3 rounded-xl bg-danger-500/10 border border-danger-500/30 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-danger-500 flex-shrink-0" />
+                    <p className="text-danger-500 text-sm">{error}</p>
+                  </div>
+                )}
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-primary-300 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter admin password"
+                    className="w-full px-4 py-3 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500 transition-all"
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 px-4 bg-accent-600 hover:bg-accent-500 disabled:bg-primary-700 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Shield size={18} />
+                      <span>Login</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,0 +1,583 @@
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Hash, User, MapPin, Calendar, Route, CheckCircle, AlertCircle, Search, Loader2, Camera, X, Image } from 'lucide-react';
+import Card from '../components/Card';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import { useApp } from '../context/AppContext';
+import { addRun, checkDuplicateRun, getUserByServiceNumber } from '../services/api';
+
+interface FormData {
+  serviceNumber: string;
+  name: string;
+  station: string;
+  date: string;
+  distanceKm: string;
+}
+
+interface FormErrors {
+  serviceNumber?: string;
+  date?: string;
+  distanceKm?: string;
+  photo?: string;
+  general?: string;
+}
+
+interface UserData {
+  name: string;
+  station: string;
+  rank?: string;
+}
+
+export default function AddRun() {
+  const navigate = useNavigate();
+  const { refreshData } = useApp();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const today = new Date().toISOString().split('T')[0];
+  
+  const [formData, setFormData] = useState<FormData>({
+    serviceNumber: '',
+    name: '',
+    station: '',
+    date: today,
+    distanceKm: '',
+  });
+  
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [userFound, setUserFound] = useState<UserData | null>(null);
+  const [userNotFound, setUserNotFound] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Search for user by service number
+  const handleSearch = async () => {
+    const serviceNumber = formData.serviceNumber.trim();
+    
+    if (!serviceNumber) {
+      setErrors({ serviceNumber: 'Please enter a service number' });
+      return;
+    }
+
+    setIsSearching(true);
+    setUserNotFound(false);
+    setErrors({});
+    
+    try {
+      const result = await getUserByServiceNumber(serviceNumber);
+      if (result.success && result.data) {
+        setUserFound({
+          name: result.data.name,
+          station: result.data.station,
+          rank: result.data.rank,
+        });
+        setFormData(prev => ({
+          ...prev,
+          name: result.data!.name,
+          station: result.data!.station,
+        }));
+      } else {
+        setUserFound(null);
+        setUserNotFound(true);
+      }
+    } catch {
+      setUserFound(null);
+      setUserNotFound(true);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle photo selection
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({ ...prev, photo: 'Please select an image file' }));
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, photo: 'Image must be less than 5MB' }));
+        return;
+      }
+      
+      setPhoto(file);
+      setErrors(prev => ({ ...prev, photo: undefined }));
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove photo
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Reset search
+  const resetSearch = () => {
+    setFormData({
+      serviceNumber: '',
+      name: '',
+      station: '',
+      date: today,
+      distanceKm: '',
+    });
+    setUserFound(null);
+    setUserNotFound(false);
+    setPhoto(null);
+    setPhotoPreview(null);
+    setErrors({});
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.serviceNumber.trim()) {
+      newErrors.serviceNumber = 'Service number is required';
+    }
+
+    if (!formData.date) {
+      newErrors.date = 'Date is required';
+    }
+
+    const distance = parseFloat(formData.distanceKm);
+    if (!formData.distanceKm || isNaN(distance)) {
+      newErrors.distanceKm = 'Distance is required';
+    } else if (distance <= 0) {
+      newErrors.distanceKm = 'Distance must be greater than 0';
+    } else if (distance > 10) {
+      newErrors.distanceKm = 'Distance cannot exceed 10 KM';
+    }
+
+    // Photo is required
+    if (!photo) {
+      newErrors.photo = 'Screenshot proof is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      // First check for duplicate
+      const duplicateCheck = await checkDuplicateRun(
+        formData.serviceNumber.trim(),
+        formData.date
+      );
+
+      if (duplicateCheck.success && duplicateCheck.data?.exists) {
+        setErrors({
+          general: 'You have already logged your run for this date. Only one run per person per day is allowed.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare photo data if a photo was selected
+      let photoPayload = undefined;
+      if (photo) {
+        try {
+          const base64 = await fileToBase64(photo);
+          photoPayload = {
+            base64,
+            mimeType: photo.type,
+          };
+        } catch (photoError) {
+          console.error('Error converting photo:', photoError);
+          // Continue without photo if conversion fails
+        }
+      }
+
+      // If no duplicate, submit the run
+      const response = await addRun({
+        serviceNumber: formData.serviceNumber.trim(),
+        name: formData.name.trim(),
+        station: formData.station.trim(),
+        date: formData.date,
+        distanceKm: parseFloat(formData.distanceKm),
+        photo: photoPayload,
+      });
+
+      if (response.success) {
+        setIsSuccess(true);
+        // Refresh dashboard data
+        await refreshData();
+        // Navigate to dashboard after short delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        setErrors({
+          general: response.error || 'Failed to add run. Please try again.',
+        });
+      }
+    } catch (error) {
+      setErrors({
+        general: 'An unexpected error occurred. Please try again.',
+      });
+      console.error('Submit error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16">
+        <Card className="text-center py-12 animate-fade-in">
+          <div className="w-20 h-20 bg-success-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-success-500" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-white mb-2">
+            Run Logged Successfully!
+          </h2>
+          <p className="text-primary-400 mb-6">
+            Great job! Your {formData.distanceKm} km run has been recorded.
+          </p>
+          <p className="text-primary-500 text-sm">
+            Redirecting to dashboard...
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto px-4 py-8">
+      {/* Title */}
+      <div className="text-center mb-6 animate-fade-in">
+        <p className="text-sm font-medium text-accent-400 tracking-widest uppercase mb-1">
+          Madaveli Police
+        </p>
+        <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          100K RUN CHALLENGE
+        </h1>
+      </div>
+
+      {/* Header */}
+      <div className="mb-8 animate-fade-in">
+        <h2 className="font-display text-2xl font-bold text-white mb-2">
+          Log Your Run
+        </h2>
+        <p className="text-primary-400">
+          Search your service number to get started
+        </p>
+      </div>
+
+      {/* General Error */}
+      {errors.general && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-danger-500/10 border border-danger-500/30 mb-6 animate-fade-in">
+          <AlertCircle className="w-5 h-5 text-danger-500 flex-shrink-0 mt-0.5" />
+          <p className="text-danger-500 text-sm">{errors.general}</p>
+        </div>
+      )}
+
+      {/* Container 1: Search */}
+      <Card className="animate-fade-in stagger-1 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Search className="w-5 h-5 text-accent-400" />
+          <h2 className="font-display text-lg font-semibold text-white">Find Your Profile</h2>
+        </div>
+
+        <div className="space-y-4">
+          {/* Service Number Search */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-primary-200">
+              Service Number
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400">
+                  <Hash className="w-5 h-5" />
+                </div>
+                <input
+                  name="serviceNumber"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  value={formData.serviceNumber}
+                  onChange={(e) => {
+                    // Only allow digits, max 4 characters
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setFormData(prev => ({ ...prev, serviceNumber: value }));
+                    setErrors(prev => ({ ...prev, serviceNumber: undefined }));
+                    if (userFound) {
+                      resetSearch();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  placeholder="e.g. 5568"
+                  disabled={!!userFound}
+                  className={`
+                    w-full px-4 py-3 bg-primary-800/50 border rounded-xl text-white placeholder-primary-500
+                    outline-none ring-0 focus:ring-2 focus:ring-inset transition-all duration-200 pl-12
+                    disabled:opacity-60 disabled:cursor-not-allowed
+                    ${errors.serviceNumber ? 'border-danger-500 focus:ring-danger-500' : 
+                      userFound ? 'border-success-500 focus:ring-success-500' : 'border-primary-700 focus:ring-accent-500'}
+                  `}
+                />
+              </div>
+              {!userFound ? (
+                <Button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  className="px-6"
+                >
+                  {isSearching ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Search className="w-5 h-5" />
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={resetSearch}
+                  className="px-4"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
+            {errors.serviceNumber && (
+              <p className="text-danger-500 text-sm font-medium">{errors.serviceNumber}</p>
+            )}
+          </div>
+
+          {/* User Not Found Message */}
+          {userNotFound && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <p className="text-amber-400 text-sm">
+                <AlertCircle className="w-4 h-4 inline mr-2" />
+                User not found. Please check your service number or contact admin to register.
+              </p>
+            </div>
+          )}
+
+          {/* User Found - Show Details */}
+          {userFound && (
+            <div className="p-4 rounded-xl bg-success-500/10 border border-success-500/30 space-y-3 animate-fade-in">
+              <div className="flex items-center gap-2 text-success-400 mb-3">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">Profile Found</span>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* Name */}
+                <div className="flex items-center gap-3 p-3 bg-primary-800/50 rounded-lg">
+                  <User className="w-5 h-5 text-primary-400" />
+                  <div>
+                    <p className="text-xs text-primary-400">Name</p>
+                    <p className="text-white font-medium">{userFound.name}</p>
+                  </div>
+                </div>
+                
+                {/* Rank */}
+                {userFound.rank && (
+                  <div className="flex items-center gap-3 p-3 bg-primary-800/50 rounded-lg">
+                    <Hash className="w-5 h-5 text-primary-400" />
+                    <div>
+                      <p className="text-xs text-primary-400">Rank</p>
+                      <p className="text-white font-medium">{userFound.rank}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Station */}
+                <div className="flex items-center gap-3 p-3 bg-primary-800/50 rounded-lg">
+                  <MapPin className="w-5 h-5 text-primary-400" />
+                  <div>
+                    <p className="text-xs text-primary-400">Station</p>
+                    <p className="text-white font-medium">{userFound.station}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Container 2: Run Details - Only shown when user is found */}
+      {userFound && (
+        <Card className="animate-fade-in">
+          <div className="flex items-center gap-2 mb-4">
+            <Route className="w-5 h-5 text-accent-400" />
+            <h2 className="font-display text-lg font-semibold text-white">Run Details</h2>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              label="Date"
+              name="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, date: e.target.value }));
+                setErrors(prev => ({ ...prev, date: undefined }));
+              }}
+              max={today}
+              error={errors.date}
+              icon={<Calendar className="w-5 h-5" />}
+            />
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-primary-200">
+                Distance (KM) <span className="text-primary-500 text-xs">Max 10 KM</span>
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400">
+                  <Route className="w-5 h-5" />
+                </div>
+                <input
+                  name="distanceKm"
+                  type="number"
+                  value={formData.distanceKm}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Prevent entering more than 10
+                    if (parseFloat(value) > 10) {
+                      setErrors(prev => ({ ...prev, distanceKm: 'Distance cannot exceed 10 KM' }));
+                    } else {
+                      setErrors(prev => ({ ...prev, distanceKm: undefined }));
+                    }
+                    setFormData(prev => ({ ...prev, distanceKm: value }));
+                  }}
+                  placeholder="e.g., 5.5"
+                  step="0.1"
+                  min="0.1"
+                  max="10"
+                  className={`
+                    w-full px-4 py-3 bg-primary-800/50 border rounded-xl text-white placeholder-primary-500
+                    outline-none ring-0 focus:ring-2 focus:ring-inset transition-all duration-200 pl-12
+                    ${errors.distanceKm ? 'border-danger-500 focus:ring-danger-500' : 'border-primary-700 focus:ring-accent-500'}
+                  `}
+                />
+              </div>
+              {errors.distanceKm && (
+                <p className="text-danger-500 text-sm font-medium">{errors.distanceKm}</p>
+              )}
+            </div>
+
+            {/* Photo Upload */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-primary-200">
+                Screenshot Proof <span className="text-danger-500">*</span>
+              </label>
+              
+              {!photoPreview ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+                    hover:border-accent-500 hover:bg-accent-500/5 transition-all duration-200
+                    ${errors.photo ? 'border-danger-500 bg-danger-500/5' : 'border-primary-700'}`}
+                >
+                  <Camera className={`w-10 h-10 mx-auto mb-3 ${errors.photo ? 'text-danger-500' : 'text-primary-500'}`} />
+                  <p className="text-primary-300 font-medium mb-1">Upload screenshot from Strava, Nike, etc.</p>
+                  <p className="text-primary-500 text-sm">Click to browse or drag and drop</p>
+                  <p className="text-primary-600 text-xs mt-2">JPG, PNG up to 5MB</p>
+                </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden">
+                  <img
+                    src={photoPreview}
+                    alt="Run preview"
+                    className="w-full h-48 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                    <div className="flex items-center gap-2 text-white text-sm">
+                      <Image className="w-4 h-4" />
+                      <span className="truncate">{photo?.name}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              
+              {errors.photo && (
+                <p className="text-danger-500 text-sm font-medium">{errors.photo}</p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              loading={isSubmitting}
+              className="w-full mt-6"
+            >
+              {isSubmitting ? 'Saving...' : 'Log Run'}
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {/* Tips - Always visible */}
+      <div className="mt-6 p-4 rounded-xl bg-primary-800/30 border border-primary-700/30 animate-fade-in stagger-2">
+        <h3 className="font-medium text-primary-200 mb-2">💡 Tips</h3>
+        <ul className="text-sm text-primary-400 space-y-1">
+          <li>• You can only log one run per day</li>
+          <li>• Maximum distance is 10 KM per run</li>
+          <li>• Screenshot proof from Strava/Nike/etc. is <span className="text-accent-400 font-medium">required</span></li>
+        </ul>
+      </div>
+    </div>
+  );
+}

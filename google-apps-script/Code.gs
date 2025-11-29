@@ -865,16 +865,9 @@ function deleteUser(data) {
  * @returns {Object} Response with token if valid
  */
 function validateAdmin(password) {
-  const config = getConfig();
-  
-  if (password === config.adminPassword) {
-    return {
-      success: true,
-      data: { token: config.adminToken }
-    };
-  }
-  
-  return { success: false, error: 'Invalid password' };
+  // DEPRECATED: This function is no longer used
+  // All admin logins must go through validateAdminLogin with service number
+  return { success: false, error: 'Please use service number and password to login' };
 }
 
 /**

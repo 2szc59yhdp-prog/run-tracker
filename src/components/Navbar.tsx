@@ -4,7 +4,7 @@ import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircl
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
-  const { isAdmin, adminUser, loginAdmin, loginAdminLegacy, logoutAdmin } = useApp();
+  const { isAdmin, adminUser, loginAdmin, logoutAdmin } = useApp();
   const navigate = useNavigate();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [serviceNumber, setServiceNumber] = useState('');
@@ -44,13 +44,7 @@ export default function Navbar() {
     setError('');
 
     try {
-      // Try new login method first
-      let success = await loginAdmin(serviceNumber, password);
-      
-      // Fallback to legacy login if new method fails
-      if (!success) {
-        success = await loginAdminLegacy(password);
-      }
+      const success = await loginAdmin(serviceNumber, password);
       
       if (success) {
         setShowPasswordModal(false);

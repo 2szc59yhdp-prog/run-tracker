@@ -8,7 +8,7 @@ import { useApp } from '../context/AppContext';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { loginAdmin, loginAdminLegacy, isAdmin } = useApp();
+  const { loginAdmin, isAdmin } = useApp();
   
   const [serviceNumber, setServiceNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -38,13 +38,7 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      // Try new login method first
-      let success = await loginAdmin(serviceNumber, password);
-      
-      // Fallback to legacy login if new method fails (for backwards compatibility)
-      if (!success) {
-        success = await loginAdminLegacy(password);
-      }
+      const success = await loginAdmin(serviceNumber, password);
       
       if (success) {
         navigate('/admin');

@@ -118,31 +118,78 @@ export default function Dashboard() {
     return registeredUsers.filter(user => user.station !== 'General Admin').length;
   }, [registeredUsers]);
 
+  // Constants for finisher criteria
+  const MIN_DISTANCE_KM = 100; // Must reach 100km
+  const MIN_ACTIVE_DAYS = 40;  // Must have at least 40 active days
+
   // Calculate station performance from runner stats
+  // A "finisher" must: reach 100km AND have 40+ active days
   const stationPerformance = useMemo(() => {
-    const stationMap = new Map<string, { distance: number; runners: number; runCount: number }>();
+    const stationMap = new Map<string, { 
+      distance: number; 
+      runners: number; 
+      runCount: number;
+      finishers: number;
+      participants: number;
+    }>();
     
-    runnerStats.forEach(runner => {
-      const existing = stationMap.get(runner.station) || { distance: 0, runners: 0, runCount: 0 };
-      stationMap.set(runner.station, {
-        distance: existing.distance + runner.totalDistance,
-        runners: existing.runners + 1,
-        runCount: existing.runCount + runner.runCount,
+    // Get participant count per station from registered users
+    const participantCounts = new Map<string, number>();
+    registeredUsers.forEach(user => {
+      if (user.station !== 'General Admin') {
+        participantCounts.set(user.station, (participantCounts.get(user.station) || 0) + 1);
+      }
+    });
+    
+    // Initialize all stations
+    ALL_STATIONS.forEach(station => {
+      stationMap.set(station, { 
+        distance: 0, 
+        runners: 0, 
+        runCount: 0, 
+        finishers: 0,
+        participants: participantCounts.get(station) || 0
       });
     });
+    
+    runnerStats.forEach(runner => {
+      const existing = stationMap.get(runner.station);
+      if (existing) {
+        // Check if this runner qualifies as a finisher
+        const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && runner.runCount >= MIN_ACTIVE_DAYS;
+        
+        stationMap.set(runner.station, {
+          distance: existing.distance + runner.totalDistance,
+          runners: existing.runners + 1,
+          runCount: existing.runCount + runner.runCount,
+          finishers: existing.finishers + (isFinisher ? 1 : 0),
+          participants: existing.participants,
+        });
+      }
+    });
 
-    // Convert to array and sort by total distance
+    // Convert to array and sort by finisher percentage (then by total distance as tiebreaker)
     return Array.from(stationMap.entries())
+      .filter(([_, data]) => data.participants > 0) // Only show stations with participants
       .map(([station, data]) => ({
         station,
         totalDistance: data.distance,
         runners: data.runners,
         runCount: data.runCount,
-        // Target: 100km per runner
-        targetDistance: data.runners * 100,
+        finishers: data.finishers,
+        participants: data.participants,
+        // Performance = percentage of participants who are finishers
+        performancePercent: data.participants > 0 ? (data.finishers / data.participants) * 100 : 0,
       }))
-      .sort((a, b) => b.totalDistance - a.totalDistance);
-  }, [runnerStats]);
+      .sort((a, b) => {
+        // Sort by performance percentage first
+        if (b.performancePercent !== a.performancePercent) {
+          return b.performancePercent - a.performancePercent;
+        }
+        // Tiebreaker: total distance
+        return b.totalDistance - a.totalDistance;
+      });
+  }, [runnerStats, registeredUsers]);
 
 
   // Filter recent runs by service number
@@ -367,79 +414,91 @@ export default function Dashboard() {
               No station data available yet.
             </p>
           ) : (
-            <div className="space-y-3">
-              {stationPerformance.map((station, index) => {
-                const progressPercent = (station.totalDistance / station.targetDistance) * 100;
-                const isLeader = index === 0;
-                
-                return (
-                  <div
-                    key={station.station}
-                    className={`
-                      flex items-center gap-4 p-4 rounded-xl transition-all
-                      ${isLeader 
-                        ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10 border border-accent-500/30' 
-                        : index === 1 ? 'bg-primary-700/30 border border-primary-600/30' :
-                          index === 2 ? 'bg-primary-700/20 border border-primary-600/20' :
-                          'bg-primary-800/30'}
-                    `}
-                  >
-                    {/* Rank */}
-                    <div className={`
-                      w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-lg flex-shrink-0
-                      ${isLeader 
-                        ? 'bg-gradient-to-br from-accent-400 to-purple-500 text-white' 
-                        : index === 1 ? 'bg-primary-400 text-primary-900' :
-                          index === 2 ? 'bg-orange-600 text-white' :
-                          'bg-primary-700 text-primary-300'}
-                    `}>
-                      {isLeader ? <Trophy className="w-5 h-5" /> : index + 1}
-                    </div>
+            <>
+              {/* Legend */}
+              <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
+                <p className="font-medium text-primary-300 mb-1">Finisher Criteria:</p>
+                <p>• Reach at least <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} km</span> total distance</p>
+                <p>• Have at least <span className="text-accent-400 font-medium">{MIN_ACTIVE_DAYS} active days</span></p>
+              </div>
+              
+              <div className="space-y-3">
+                {stationPerformance.map((station, index) => {
+                  const isLeader = index === 0 && station.performancePercent > 0;
+                  
+                  return (
+                    <div
+                      key={station.station}
+                      className={`
+                        flex items-center gap-4 p-4 rounded-xl transition-all
+                        ${isLeader 
+                          ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10 border border-accent-500/30' 
+                          : index === 1 ? 'bg-primary-700/30 border border-primary-600/30' :
+                            index === 2 ? 'bg-primary-700/20 border border-primary-600/20' :
+                            'bg-primary-800/30'}
+                      `}
+                    >
+                      {/* Rank */}
+                      <div className={`
+                        w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-lg flex-shrink-0
+                        ${isLeader 
+                          ? 'bg-gradient-to-br from-accent-400 to-purple-500 text-white' 
+                          : index === 1 ? 'bg-primary-400 text-primary-900' :
+                            index === 2 ? 'bg-orange-600 text-white' :
+                            'bg-primary-700 text-primary-300'}
+                      `}>
+                        {isLeader ? <Trophy className="w-5 h-5" /> : index + 1}
+                      </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-semibold truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
-                        {station.station}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-3 text-sm text-primary-400">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {station.runners} runner{station.runners !== 1 ? 's' : ''}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <TrendingUp className="w-3 h-3" />
-                          {station.runCount} run{station.runCount !== 1 ? 's' : ''}
-                        </span>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
+                          {station.station}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 text-sm text-primary-400">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {station.participants} participant{station.participants !== 1 ? 's' : ''}
+                          </span>
+                          <span className="flex items-center gap-1 text-success-400">
+                            <Award className="w-3 h-3" />
+                            {station.finishers} finisher{station.finishers !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Performance & Progress */}
+                      <div className="text-right min-w-[100px]">
+                        <p className="font-display font-bold text-white text-lg">
+                          {station.performancePercent.toFixed(0)}%
+                        </p>
+                        <p className="text-xs text-primary-500 mb-1">
+                          {station.finishers}/{station.participants} completed
+                        </p>
+                        {/* Progress Bar */}
+                        <div className="w-full h-1.5 bg-primary-700 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              station.performancePercent >= 100 
+                                ? 'bg-success-500' 
+                                : isLeader 
+                                  ? 'bg-gradient-to-r from-accent-500 to-purple-500' 
+                                  : 'bg-accent-500'
+                            }`}
+                            style={{ width: `${Math.min(station.performancePercent, 100)}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Distance & Progress */}
-                    <div className="text-right min-w-[120px]">
-                      <p className="font-display font-bold text-white text-lg">
-                        {station.totalDistance.toFixed(1)}
-                        <span className="text-sm text-primary-400">/ {station.targetDistance} km</span>
-                      </p>
-                      <p className="text-xs text-primary-500 mb-1">
-                        {progressPercent.toFixed(0)}% complete
-                      </p>
-                      {/* Progress Bar */}
-                      <div className="w-full h-1.5 bg-primary-700 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            progressPercent >= 100 
-                              ? 'bg-success-500' 
-                              : isLeader 
-                                ? 'bg-gradient-to-r from-accent-500 to-purple-500' 
-                                : 'bg-accent-500'
-                          }`}
-                          style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              {/* Total Distance Note */}
+              <div className="mt-4 pt-4 border-t border-primary-700/50 text-xs text-primary-500 text-center">
+                Total team distance: <span className="text-white font-medium">{stationPerformance.reduce((sum, s) => sum + s.totalDistance, 0).toFixed(1)} km</span>
+              </div>
+            </>
           )}
         </Card>
         </div>

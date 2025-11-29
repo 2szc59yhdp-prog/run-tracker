@@ -14,6 +14,7 @@ const STATIONS = [
   'Thinadhoo City Police',
   'Gdh.Atoll Police',
   'Gdh.Madaveli Police Station',
+  'Gdh.Nadella Police Station',
   'Gdh.Rathafandhoo Police Station',
   'Gdh.Fiyoari Police Station',
   'Gdh.Faresmaathoda Police Station',

@@ -4,7 +4,7 @@ import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircl
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
-  const { isAdmin, loginAdmin, loginAdminLegacy, logoutAdmin } = useApp();
+  const { isAdmin, adminUser, loginAdmin, loginAdminLegacy, logoutAdmin } = useApp();
   const navigate = useNavigate();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [serviceNumber, setServiceNumber] = useState('');
@@ -126,13 +126,20 @@ export default function Navbar() {
                       <Users size={18} />
                       <span>Users</span>
                     </NavLink>
-                    <button
-                      onClick={logoutAdmin}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary-300 hover:bg-danger-600/20 hover:text-danger-500 transition-all duration-200 font-medium"
-                    >
-                      <LogOut size={18} />
-                      <span>Logout</span>
-                    </button>
+                    <div className="flex items-center gap-3 pl-2 border-l border-primary-700 ml-2">
+                      {adminUser?.name && (
+                        <span className="text-sm text-primary-300">
+                          Welcome, <span className="text-accent-400 font-medium">{adminUser.name}</span>
+                        </span>
+                      )}
+                      <button
+                        onClick={logoutAdmin}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary-300 hover:bg-danger-600/20 hover:text-danger-500 transition-all duration-200 font-medium"
+                      >
+                        <LogOut size={18} />
+                        <span>Logout</span>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

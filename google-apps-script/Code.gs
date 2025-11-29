@@ -388,6 +388,20 @@ function addRun(data) {
     status
   ]);
   
+  // Send email notification to all admins
+  try {
+    sendNewRunNotification({
+      name: data.name,
+      serviceNumber: data.serviceNumber,
+      station: data.station,
+      date: data.date,
+      distanceKm: distance
+    });
+  } catch (e) {
+    Logger.log('Failed to send email notification: ' + e.message);
+    // Don't fail the run submission if email fails
+  }
+  
   return {
     success: true,
     data: {
@@ -1071,6 +1085,150 @@ function formatDate(date) {
   const day = String(d.getDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
+}
+
+// ============================================================
+// EMAIL NOTIFICATIONS
+// ============================================================
+
+/**
+ * Sends email notification to all admins when a new run is submitted
+ * @param {Object} runData - The run data (name, serviceNumber, station, date, distanceKm)
+ */
+function sendNewRunNotification(runData) {
+  const adminEmails = getAdminEmails();
+  
+  if (adminEmails.length === 0) {
+    Logger.log('No admin emails found for notification');
+    return;
+  }
+  
+  const subject = '🏃 New Run Submission - ' + runData.name;
+  
+  const formattedDate = formatDate(runData.date);
+  
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%); color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">🏃 New Run Submission</h1>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+        <p style="margin: 0 0 15px; color: #333;">A new run has been submitted and is waiting for your review:</p>
+        
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Name</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${runData.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Service Number</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${runData.serviceNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Station</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333;">${runData.station}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Date</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; color: #666;">Distance</td>
+            <td style="padding: 10px; color: #2186eb; font-weight: bold; font-size: 18px;">${runData.distanceKm} km</td>
+          </tr>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="https://run.huvadhoofulusclub.events/admin" 
+             style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Review Now →
+          </a>
+        </div>
+        
+        <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">
+          This is an automated notification from the 100K Run Challenge system.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  const plainBody = `
+New Run Submission
+
+Name: ${runData.name}
+Service Number: #${runData.serviceNumber}
+Station: ${runData.station}
+Date: ${formattedDate}
+Distance: ${runData.distanceKm} km
+
+Review at: https://run.huvadhoofulusclub.events/admin
+  `;
+  
+  // Send to all admins
+  adminEmails.forEach(email => {
+    try {
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        body: plainBody,
+        htmlBody: htmlBody
+      });
+      Logger.log('Notification sent to: ' + email);
+    } catch (e) {
+      Logger.log('Failed to send to ' + email + ': ' + e.message);
+    }
+  });
+}
+
+/**
+ * Gets email addresses of all admin users
+ * @returns {string[]} Array of admin email addresses
+ */
+function getAdminEmails() {
+  const sheet = getUsersSheet();
+  if (!sheet) {
+    return [];
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  const emailColIndex = headers.indexOf('Email');
+  const isAdminColIndex = headers.indexOf('IsAdmin');
+  
+  if (emailColIndex === -1) {
+    return [];
+  }
+  
+  const adminEmails = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const isAdmin = isAdminColIndex >= 0 && (row[isAdminColIndex] === true || row[isAdminColIndex] === 'TRUE' || row[isAdminColIndex] === 'true');
+    const email = row[emailColIndex] ? row[emailColIndex].toString().trim() : '';
+    
+    if (isAdmin && email && email.includes('@')) {
+      adminEmails.push(email);
+    }
+  }
+  
+  return adminEmails;
+}
+
+/**
+ * Test function to verify email notifications work
+ * Run this manually from Apps Script to test
+ */
+function testEmailNotification() {
+  sendNewRunNotification({
+    name: 'Test Runner',
+    serviceNumber: '1234',
+    station: 'Test Station',
+    date: new Date().toISOString().split('T')[0],
+    distanceKm: 5.5
+  });
+  Logger.log('Test notification sent!');
 }
 
 // ============================================================

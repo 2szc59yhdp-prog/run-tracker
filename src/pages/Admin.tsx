@@ -102,6 +102,32 @@ export default function Admin() {
     rejected: runs.filter(r => r.status === 'rejected').length,
   };
 
+  // Calculate admin approval statistics
+  const adminStats = (() => {
+    const statsMap = new Map<string, { name: string; serviceNumber: string; approved: number; rejected: number }>();
+    
+    runs.forEach(run => {
+      if (run.approvedByName && (run.status === 'approved' || run.status === 'rejected')) {
+        const key = run.approvedBy || run.approvedByName;
+        const existing = statsMap.get(key);
+        
+        if (existing) {
+          if (run.status === 'approved') existing.approved++;
+          if (run.status === 'rejected') existing.rejected++;
+        } else {
+          statsMap.set(key, {
+            name: run.approvedByName,
+            serviceNumber: run.approvedBy || '',
+            approved: run.status === 'approved' ? 1 : 0,
+            rejected: run.status === 'rejected' ? 1 : 0,
+          });
+        }
+      }
+    });
+    
+    return Array.from(statsMap.values()).sort((a, b) => (b.approved + b.rejected) - (a.approved + a.rejected));
+  })();
+
   const handleEdit = (run: Run) => {
     setEditingId(run.id);
     setEditForm({
@@ -347,6 +373,53 @@ export default function Admin() {
           <Button onClick={() => refreshData()} variant="secondary" className="mt-4">
             Try Again
           </Button>
+        </Card>
+      )}
+
+      {/* Admin Approval Statistics */}
+      {adminStats.length > 0 && (
+        <Card className="mb-6 animate-fade-in">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-accent-500/20 text-accent-400">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-semibold text-white">Admin Activity</h2>
+              <p className="text-xs text-primary-500">Who approved/rejected runs</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {adminStats.map((admin) => (
+              <div 
+                key={admin.serviceNumber || admin.name} 
+                className="bg-primary-800/30 rounded-xl p-4 border border-primary-700/30"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-white font-medium">{admin.name}</p>
+                    {admin.serviceNumber && (
+                      <p className="text-xs text-primary-500">#{admin.serviceNumber}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-primary-500">Total</p>
+                    <p className="text-white font-bold">{admin.approved + admin.rejected}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <div className="flex-1 bg-success-500/20 rounded-lg px-3 py-2 text-center">
+                    <p className="text-success-400 font-bold text-lg">{admin.approved}</p>
+                    <p className="text-success-400/70 text-xs">Approved</p>
+                  </div>
+                  <div className="flex-1 bg-danger-500/20 rounded-lg px-3 py-2 text-center">
+                    <p className="text-danger-400 font-bold text-lg">{admin.rejected}</p>
+                    <p className="text-danger-400/70 text-xs">Rejected</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 

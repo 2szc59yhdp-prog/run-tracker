@@ -23,10 +23,9 @@ const ALL_STATIONS = [
 ];
 
 // Status badge component
-function StatusBadge({ status, rejectionReason, approvedBy, approvedByName }: { 
+function StatusBadge({ status, rejectionReason, approvedByName }: { 
   status: RunStatus; 
   rejectionReason?: string;
-  approvedBy?: string;
   approvedByName?: string;
 }) {
   const config = {
@@ -544,7 +543,6 @@ export default function Dashboard() {
                           <StatusBadge 
                             status={run.status || 'pending'} 
                             rejectionReason={run.rejectionReason}
-                            approvedBy={run.approvedBy}
                             approvedByName={run.approvedByName}
                           />
                         </td>
@@ -597,7 +595,6 @@ export default function Dashboard() {
                         <StatusBadge 
                           status={run.status || 'pending'} 
                           rejectionReason={run.rejectionReason}
-                          approvedBy={run.approvedBy}
                           approvedByName={run.approvedByName}
                         />
                       </div>

@@ -1,10 +1,26 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy } from 'lucide-react';
 import Card, { StatCard } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
 import { useApp } from '../context/AppContext';
-import type { RunStatus } from '../types';
+import { fetchAllUsers } from '../services/api';
+import type { RunStatus, RegisteredUser } from '../types';
+
+// All stations in specified order
+const ALL_STATIONS = [
+  'SPSR',
+  'Gdh.Atoll Police',
+  'SPSR RR&HV',
+  'Thinadhoo City Police',
+  'Gdh.Madaveli Police Station',
+  'Gdh.Nadella Police Station',
+  'Gdh.Rathafandhoo Police Station',
+  'Gdh.Fiyoari Police Station',
+  'Gdh.Faresmaathoda Police Station',
+  'Gdh.Vaadhoo Police Station',
+  'Gdh.Gadhdhoo Police Station',
+];
 
 // Status badge component
 function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejectionReason?: string }) {
@@ -46,6 +62,45 @@ function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejection
 export default function Dashboard() {
   const { dashboardStats, runnerStats, recentRuns, isLoading, error, refreshData } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+
+  // Fetch registered users on mount
+  useEffect(() => {
+    async function loadUsers() {
+      const response = await fetchAllUsers();
+      if (response.success && response.data) {
+        setRegisteredUsers(response.data);
+      }
+    }
+    loadUsers();
+  }, []);
+
+  // Calculate participants by station from registered users (excluding General Admin)
+  const participantsByStation = useMemo(() => {
+    const counts = new Map<string, number>();
+    
+    // Initialize all stations with 0
+    ALL_STATIONS.forEach(station => counts.set(station, 0));
+    
+    // Count registered users by station (exclude General Admin)
+    registeredUsers.forEach(user => {
+      if (user.station !== 'General Admin') {
+        const current = counts.get(user.station) || 0;
+        counts.set(user.station, current + 1);
+      }
+    });
+    
+    // Return in the specified order
+    return ALL_STATIONS.map(station => ({
+      station,
+      count: counts.get(station) || 0,
+    }));
+  }, [registeredUsers]);
+
+  // Total participants (excluding General Admin)
+  const totalParticipants = useMemo(() => {
+    return registeredUsers.filter(user => user.station !== 'General Admin').length;
+  }, [registeredUsers]);
 
   // Calculate station performance from runner stats
   const stationPerformance = useMemo(() => {
@@ -147,9 +202,50 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Participants by Station */}
+      <div className="mb-8 animate-fade-in stagger-2">
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-success-500/20 text-success-500">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-white">
+                  Participants
+                </h2>
+                <p className="text-xs text-primary-500">Number of registered participants by station</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-primary-500">Total</p>
+              <p className="font-display text-2xl font-bold text-success-400">{totalParticipants}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {participantsByStation.map((item) => (
+              <div
+                key={item.station}
+                className="flex items-center justify-between p-4 rounded-xl bg-primary-800/30 border border-primary-700/30"
+              >
+                <span className="text-white font-medium truncate mr-3">{item.station}</span>
+                <span className={`flex-shrink-0 px-3 py-1 rounded-full font-display font-bold ${
+                  item.count > 0 
+                    ? 'bg-success-500/20 text-success-400' 
+                    : 'bg-primary-700/50 text-primary-500'
+                }`}>
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
       <div className="space-y-6">
         {/* Leaderboard - Only APPROVED runs */}
-        <div className="animate-fade-in stagger-2">
+        <div className="animate-fade-in stagger-3">
           <Card>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-warning-500/20 text-warning-500">
@@ -239,7 +335,7 @@ export default function Dashboard() {
         </div>
 
         {/* Station Performance Board */}
-        <div className="animate-fade-in stagger-3">
+        <div className="animate-fade-in stagger-4">
           <Card>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-gradient-to-br from-accent-500/20 to-purple-500/20 text-accent-400">
@@ -336,7 +432,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Runs - Shows ALL runs with status */}
-        <div className="animate-fade-in stagger-4">
+        <div className="animate-fade-in stagger-5">
           <Card>
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
               <div className="flex items-center gap-3">

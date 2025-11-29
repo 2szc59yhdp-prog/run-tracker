@@ -11,6 +11,7 @@ import type { RegisteredUser } from '../types';
 
 // Station options for dropdown
 const STATIONS = [
+  'General Admin',
   'Thinadhoo City Police',
   'Gdh.Atoll Police',
   'Gdh.Madaveli Police Station',

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Edit2, Trash2, Search, X, Save, Hash, User, Award, Mail, Phone, MapPin, ChevronDown } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Search, X, Save, Hash, User, Award, Mail, Phone, MapPin, ChevronDown, Check } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -11,13 +11,18 @@ import type { RegisteredUser } from '../types';
 
 // Station options for dropdown
 const STATIONS = [
-  'Thinadhoo City Police Station',
+  'Thinadhoo City Police',
+  'Gdh.Atoll Police',
   'Gdh.Madaveli Police Station',
   'Gdh.Rathafandhoo Police Station',
   'Gdh.Fiyoari Police Station',
   'Gdh.Faresmaathoda Police Station',
   'Gdh.Vaadhoo Police Station',
   'Gdh.Gadhdhoo Police Station',
+  'SPSR',
+  'SPSR RR&HV',
+  'Forensic',
+  'Intel',
 ];
 
 export function RegisteredUsers() {
@@ -45,6 +50,38 @@ export function RegisteredUsers() {
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [stationDropdownOpen, setStationDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setStationDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Calculate dropdown position when opening
+  const handleDropdownToggle = () => {
+    if (!stationDropdownOpen && dropdownButtonRef.current) {
+      const buttonRect = dropdownButtonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const dropdownHeight = 260; // max-h-60 = 15rem = 240px + some padding
+      
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        setDropdownPosition('top');
+      } else {
+        setDropdownPosition('bottom');
+      }
+    }
+    setStationDropdownOpen(!stationDropdownOpen);
+  };
 
   // Redirect if not admin
   useEffect(() => {
@@ -443,28 +480,46 @@ export function RegisteredUsers() {
                 <label className="block text-sm font-medium text-primary-200">
                   Station <span className="text-red-400">*</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <select
-                    value={formData.station}
-                    onChange={(e) => setFormData({ ...formData, station: e.target.value })}
-                    required
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    ref={dropdownButtonRef}
+                    type="button"
+                    onClick={handleDropdownToggle}
                     className="w-full px-4 py-3 bg-primary-800/50 border border-primary-700 rounded-xl text-white 
                       outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500
-                      transition-all duration-200 pl-12 pr-10 appearance-none cursor-pointer"
+                      transition-all duration-200 pl-12 pr-10 cursor-pointer text-left flex items-center justify-between"
                   >
-                    <option value="" className="bg-primary-800">Select a station...</option>
-                    {STATIONS.map((station) => (
-                      <option key={station} value={station} className="bg-primary-800">
-                        {station}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-400 pointer-events-none">
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <span className={formData.station ? 'text-white' : 'text-primary-400'}>
+                      {formData.station || 'Select a station...'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${stationDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {stationDropdownOpen && (
+                    <div className={`absolute z-50 w-full bg-primary-800 border border-primary-700 rounded-xl shadow-xl overflow-hidden
+                      ${dropdownPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+                      <div className="max-h-60 overflow-y-auto py-2">
+                        {STATIONS.map((station) => (
+                          <button
+                            key={station}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, station });
+                              setStationDropdownOpen(false);
+                            }}
+                            className={`w-full px-4 py-2.5 text-left flex items-center justify-between hover:bg-primary-700/50 transition-colors
+                              ${formData.station === station ? 'bg-accent-500/20 text-accent-400' : 'text-white'}`}
+                          >
+                            <span>{station}</span>
+                            {formData.station === station && <Check className="w-4 h-4 text-accent-400" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

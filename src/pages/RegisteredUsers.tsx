@@ -35,7 +35,8 @@ export function RegisteredUsers() {
   const { isAdmin, adminToken, adminUser } = useApp();
   
   // Check if current user is the super admin
-  const isSuperAdmin = adminUser?.serviceNumber === SUPER_ADMIN_SERVICE_NUMBER;
+  // If adminUser is null (legacy login with master password), allow super admin access
+  const isSuperAdmin = !adminUser || adminUser.serviceNumber === SUPER_ADMIN_SERVICE_NUMBER;
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);

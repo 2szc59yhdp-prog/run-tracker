@@ -330,13 +330,16 @@ export default function AddRun() {
                 <input
                   name="serviceNumber"
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
+                  maxLength={5}
                   value={formData.serviceNumber}
                   onChange={(e) => {
-                    // Only allow digits, max 4 characters
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    // Allow C + 4 digits (civil staff) or just 4 digits (police)
+                    let value = e.target.value.toUpperCase();
+                    if (value.startsWith('C')) {
+                      value = 'C' + value.slice(1).replace(/\D/g, '').slice(0, 4);
+                    } else {
+                      value = value.replace(/\D/g, '').slice(0, 4);
+                    }
                     setFormData(prev => ({ ...prev, serviceNumber: value }));
                     setErrors(prev => ({ ...prev, serviceNumber: undefined }));
                     if (userFound) {

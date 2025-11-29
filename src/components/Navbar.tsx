@@ -260,11 +260,18 @@ export default function Navbar() {
                     </div>
                     <input
                       type="text"
-                      inputMode="numeric"
-                      maxLength={4}
+                      maxLength={5}
                       value={serviceNumber}
-                      onChange={(e) => setServiceNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                      placeholder="e.g., 5568"
+                      onChange={(e) => {
+                        let value = e.target.value.toUpperCase();
+                        if (value.startsWith('C')) {
+                          value = 'C' + value.slice(1).replace(/\D/g, '').slice(0, 4);
+                        } else {
+                          value = value.replace(/\D/g, '').slice(0, 4);
+                        }
+                        setServiceNumber(value);
+                      }}
+                      placeholder="e.g., 5568 or C1234"
                       className="w-full px-4 py-3 pl-10 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500 transition-all"
                       autoFocus
                     />

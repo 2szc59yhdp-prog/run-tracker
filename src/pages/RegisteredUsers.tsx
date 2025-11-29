@@ -509,14 +509,19 @@ export function RegisteredUsers() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Service Number"
-                  inputMode="numeric"
-                  maxLength={4}
+                  maxLength={5}
                   value={formData.serviceNumber}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    let value = e.target.value.toUpperCase();
+                    // Allow C followed by digits, or just digits
+                    if (value.startsWith('C')) {
+                      value = 'C' + value.slice(1).replace(/\D/g, '').slice(0, 4);
+                    } else {
+                      value = value.replace(/\D/g, '').slice(0, 4);
+                    }
                     setFormData({ ...formData, serviceNumber: value });
                   }}
-                  placeholder="e.g., 5568"
+                  placeholder="e.g., 5568 or C1234"
                   icon={<Hash className="w-4 h-4" />}
                   required
                 />

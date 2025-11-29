@@ -84,11 +84,18 @@ export default function AdminLogin() {
           <Input
             label="Service Number"
             type="text"
-            inputMode="numeric"
-            maxLength={4}
+            maxLength={5}
             value={serviceNumber}
-            onChange={(e) => setServiceNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            placeholder="e.g., 5568"
+            onChange={(e) => {
+              let value = e.target.value.toUpperCase();
+              if (value.startsWith('C')) {
+                value = 'C' + value.slice(1).replace(/\D/g, '').slice(0, 4);
+              } else {
+                value = value.replace(/\D/g, '').slice(0, 4);
+              }
+              setServiceNumber(value);
+            }}
+            placeholder="e.g., 5568 or C1234"
             icon={<Hash className="w-5 h-5" />}
           />
 

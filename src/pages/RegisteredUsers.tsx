@@ -27,9 +27,15 @@ const STATIONS = [
   'Intel',
 ];
 
+// Only this service number can grant/revoke admin access
+const SUPER_ADMIN_SERVICE_NUMBER = '5568';
+
 export function RegisteredUsers() {
   const navigate = useNavigate();
-  const { isAdmin, adminToken } = useApp();
+  const { isAdmin, adminToken, adminUser } = useApp();
+  
+  // Check if current user is the super admin
+  const isSuperAdmin = adminUser?.serviceNumber === SUPER_ADMIN_SERVICE_NUMBER;
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<RegisteredUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -368,17 +374,19 @@ export function RegisteredUsers() {
                       <td className="py-4 px-4 text-primary-300 max-w-[200px] truncate">{user.station}</td>
                       <td className="py-4 px-4">
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => setAdminModal(user)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              user.isAdmin 
-                                ? 'text-accent-400 bg-accent-500/20' 
-                                : 'text-primary-500 hover:bg-primary-700/50'
-                            }`}
-                            title={user.isAdmin ? 'Remove admin' : 'Make admin'}
-                          >
-                            <Shield className="w-4 h-4" />
-                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => setAdminModal(user)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                user.isAdmin 
+                                  ? 'text-accent-400 bg-accent-500/20' 
+                                  : 'text-primary-500 hover:bg-primary-700/50'
+                              }`}
+                              title={user.isAdmin ? 'Remove admin' : 'Make admin'}
+                            >
+                              <Shield className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => openEditModal(user)}
                             className="p-2 text-accent-400 hover:bg-accent-500/20 rounded-lg transition-colors"
@@ -422,16 +430,18 @@ export function RegisteredUsers() {
                       <p className="text-accent-400 text-sm font-mono">#{user.serviceNumber}</p>
                     </div>
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => setAdminModal(user)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          user.isAdmin 
-                            ? 'text-accent-400 bg-accent-500/20' 
-                            : 'text-primary-500 hover:bg-primary-700/50'
-                        }`}
-                      >
-                        <Shield className="w-4 h-4" />
-                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => setAdminModal(user)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            user.isAdmin 
+                              ? 'text-accent-400 bg-accent-500/20' 
+                              : 'text-primary-500 hover:bg-primary-700/50'
+                          }`}
+                        >
+                          <Shield className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => openEditModal(user)}
                         className="p-2 text-accent-400 hover:bg-accent-500/20 rounded-lg transition-colors"

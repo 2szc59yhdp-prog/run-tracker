@@ -67,7 +67,16 @@ export default function Dashboard() {
   const [serviceFilter, setServiceFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
 
-  // Fetch registered users on mount
+  // Auto-refresh data every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refreshData]);
+
+  // Fetch registered users on mount and refresh every 5 seconds
   useEffect(() => {
     async function loadUsers() {
       const response = await fetchAllUsers();
@@ -76,6 +85,10 @@ export default function Dashboard() {
       }
     }
     loadUsers();
+
+    // Also refresh users every 5 seconds
+    const interval = setInterval(loadUsers, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Calculate participants by station from registered users (excluding General Admin)

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare } from 'lucide-react';
 import Card from '../components/Card';
@@ -74,6 +74,15 @@ export default function Admin() {
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [customRejectionReason, setCustomRejectionReason] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<Run | null>(null);
+
+  // Auto-refresh runs every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refreshData]);
 
   // Redirect if not admin
   if (!isAdmin) {

@@ -166,7 +166,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 py-16">
         <Card className="text-center py-12">
           <p className="text-danger-500 text-lg mb-4">{error}</p>
-          <Button onClick={refreshData} variant="secondary">
+          <Button onClick={() => refreshData()} variant="secondary">
             Try Again
           </Button>
         </Card>

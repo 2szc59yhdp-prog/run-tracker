@@ -344,7 +344,7 @@ export default function Admin() {
       {error && (
         <Card className="mb-6">
           <p className="text-danger-500">{error}</p>
-          <Button onClick={refreshData} variant="secondary" className="mt-4">
+          <Button onClick={() => refreshData()} variant="secondary" className="mt-4">
             Try Again
           </Button>
         </Card>

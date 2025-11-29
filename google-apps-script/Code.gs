@@ -891,14 +891,17 @@ function validateAdminLogin(serviceNumber, password) {
   const config = getConfig();
   const sheet = getUsersSheet();
   
+  // Super admin service number (only this user can use master password)
+  const SUPER_ADMIN = '5568';
+  
   if (!sheet) {
-    // Fall back to legacy admin authentication
-    if (password === config.adminPassword) {
+    // Fall back to legacy admin authentication - ONLY for super admin
+    if (serviceNumber.toString() === SUPER_ADMIN && password === config.adminPassword) {
       return {
         success: true,
         data: { 
           token: config.adminToken,
-          admin: { serviceNumber: 'SYSTEM', name: 'System Admin' }
+          admin: { serviceNumber: SUPER_ADMIN, name: 'Super Admin' }
         }
       };
     }
@@ -922,7 +925,7 @@ function validateAdminLogin(serviceNumber, password) {
         return { success: false, error: 'User does not have admin privileges' };
       }
       
-      // Check password
+      // Check their individual password
       const storedPassword = adminPasswordColIndex >= 0 ? row[adminPasswordColIndex].toString() : '';
       
       if (storedPassword && password === storedPassword) {
@@ -938,8 +941,8 @@ function validateAdminLogin(serviceNumber, password) {
         };
       }
       
-      // Also check against the global admin password as fallback
-      if (password === config.adminPassword) {
+      // Only super admin can use the master password as fallback
+      if (serviceNumber.toString() === SUPER_ADMIN && password === config.adminPassword) {
         return {
           success: true,
           data: {
@@ -952,17 +955,22 @@ function validateAdminLogin(serviceNumber, password) {
         };
       }
       
+      // If admin has no password set, show helpful error
+      if (!storedPassword) {
+        return { success: false, error: 'No password set. Contact super admin to set your password.' };
+      }
+      
       return { success: false, error: 'Invalid password' };
     }
   }
   
-  // User not found - try legacy authentication
-  if (password === config.adminPassword) {
+  // User not found - only super admin can use legacy authentication
+  if (serviceNumber.toString() === SUPER_ADMIN && password === config.adminPassword) {
     return {
       success: true,
       data: { 
         token: config.adminToken,
-        admin: { serviceNumber: serviceNumber, name: 'Admin ' + serviceNumber }
+        admin: { serviceNumber: serviceNumber, name: 'Super Admin' }
       }
     };
   }

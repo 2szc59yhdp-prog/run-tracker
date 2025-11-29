@@ -517,7 +517,7 @@ export default function AddRun() {
                     ${errors.photo ? 'border-danger-500 bg-danger-500/5' : 'border-primary-700'}`}
                 >
                   <Camera className={`w-10 h-10 mx-auto mb-3 ${errors.photo ? 'text-danger-500' : 'text-primary-500'}`} />
-                  <p className="text-primary-300 font-medium mb-1">Upload screenshot from Strava, Nike, etc.</p>
+                  <p className="text-primary-300 font-medium mb-1">Upload screenshot from Strava</p>
                   <p className="text-primary-500 text-sm">Click to browse or drag and drop</p>
                   <p className="text-primary-600 text-xs mt-2">JPG, PNG up to 5MB</p>
                 </div>
@@ -575,7 +575,7 @@ export default function AddRun() {
         <ul className="text-sm text-primary-400 space-y-1">
           <li>• You can only log one run per day</li>
           <li>• Maximum distance is 10 KM per run</li>
-          <li>• Screenshot proof from Strava/Nike/etc. is <span className="text-accent-400 font-medium">required</span></li>
+          <li>• Screenshot proof from Strava is <span className="text-accent-400 font-medium">required</span></li>
         </ul>
       </div>
     </div>

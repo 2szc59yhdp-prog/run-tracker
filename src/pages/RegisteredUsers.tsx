@@ -23,8 +23,6 @@ const STATIONS = [
   'Gdh.Gadhdhoo Police Station',
   'SPSR',
   'SPSR RR&HV',
-  'Forensic',
-  'Intel',
 ];
 
 // Only this service number can grant/revoke admin access

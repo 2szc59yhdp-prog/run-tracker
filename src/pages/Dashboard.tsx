@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints } from 'lucide-react';
 import Card, { StatCard } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
@@ -7,11 +7,8 @@ import { useApp } from '../context/AppContext';
 import { fetchAllUsers } from '../services/api';
 import type { RunStatus, RegisteredUser } from '../types';
 
-// All stations in specified order
+// All stations for Station Performance Board (police stations only)
 const ALL_STATIONS = [
-  'SPSR',
-  'Gdh.Atoll Police',
-  'SPSR RR&HV',
   'Thinadhoo City Police',
   'Gdh.Madaveli Police Station',
   'Gdh.Nadella Police Station',
@@ -124,6 +121,7 @@ export default function Dashboard() {
 
   // Calculate station performance from runner stats
   // A "finisher" must: reach 100km AND have 40+ active days
+  // Live progress = average of each runner's progress (min of distance% and days%)
   const stationPerformance = useMemo(() => {
     const stationMap = new Map<string, { 
       distance: number; 
@@ -131,56 +129,103 @@ export default function Dashboard() {
       runCount: number;
       finishers: number;
       participants: number;
+      totalProgress: number; // Sum of all runners' progress percentages
     }>();
     
     // Get participant count per station from registered users
     const participantCounts = new Map<string, number>();
     registeredUsers.forEach(user => {
-      if (user.station !== 'General Admin') {
+      if (user.station && user.station !== 'General Admin') {
         participantCounts.set(user.station, (participantCounts.get(user.station) || 0) + 1);
       }
     });
     
-    // Initialize all stations
+    // Initialize all known stations
     ALL_STATIONS.forEach(station => {
       stationMap.set(station, { 
         distance: 0, 
         runners: 0, 
         runCount: 0, 
         finishers: 0,
-        participants: participantCounts.get(station) || 0
+        participants: participantCounts.get(station) || 0,
+        totalProgress: 0
       });
     });
     
-    runnerStats.forEach(runner => {
-      const existing = stationMap.get(runner.station);
-      if (existing) {
-        // Check if this runner qualifies as a finisher
-        const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && runner.runCount >= MIN_ACTIVE_DAYS;
-        
-        stationMap.set(runner.station, {
-          distance: existing.distance + runner.totalDistance,
-          runners: existing.runners + 1,
-          runCount: existing.runCount + runner.runCount,
-          finishers: existing.finishers + (isFinisher ? 1 : 0),
-          participants: existing.participants,
+    // Also add any stations from participant counts that aren't in ALL_STATIONS
+    participantCounts.forEach((count, station) => {
+      if (!stationMap.has(station)) {
+        stationMap.set(station, {
+          distance: 0,
+          runners: 0,
+          runCount: 0,
+          finishers: 0,
+          participants: count,
+          totalProgress: 0
         });
       }
     });
+    
+    // Process runner stats (from approved runs)
+    runnerStats.forEach(runner => {
+      if (!runner.station) return;
+      
+      // If station doesn't exist in map, add it
+      if (!stationMap.has(runner.station)) {
+        stationMap.set(runner.station, {
+          distance: 0,
+          runners: 0,
+          runCount: 0,
+          finishers: 0,
+          participants: participantCounts.get(runner.station) || 0,
+          totalProgress: 0
+        });
+      }
+      
+      const existing = stationMap.get(runner.station)!;
+      
+      // Calculate individual runner's progress
+      // Progress is the MINIMUM of distance% and days% (since both are required)
+      const distanceProgress = Math.min((runner.totalDistance / MIN_DISTANCE_KM) * 100, 100);
+      const daysProgress = Math.min((runner.runCount / MIN_ACTIVE_DAYS) * 100, 100);
+      const runnerProgress = Math.min(distanceProgress, daysProgress);
+      
+      // Check if this runner qualifies as a finisher (100% on both)
+      const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && runner.runCount >= MIN_ACTIVE_DAYS;
+      
+      stationMap.set(runner.station, {
+        distance: existing.distance + runner.totalDistance,
+        runners: existing.runners + 1,
+        runCount: existing.runCount + runner.runCount,
+        finishers: existing.finishers + (isFinisher ? 1 : 0),
+        participants: existing.participants,
+        totalProgress: existing.totalProgress + runnerProgress,
+      });
+    });
 
-    // Convert to array and sort by finisher percentage (then by total distance as tiebreaker)
+    // Stations to exclude from the performance board
+    const excludedStations = ['General Admin', 'Gdh.Atoll Police', 'SPSR', 'SPSR RR&HV'];
+    
+    // Convert to array and sort by average progress (then by total distance as tiebreaker)
+    // Show all stations in ALL_STATIONS even if they have 0 participants
     return Array.from(stationMap.entries())
-      .filter(([_, data]) => data.participants > 0) // Only show stations with participants
-      .map(([station, data]) => ({
-        station,
-        totalDistance: data.distance,
-        runners: data.runners,
-        runCount: data.runCount,
-        finishers: data.finishers,
-        participants: data.participants,
-        // Performance = percentage of participants who are finishers
-        performancePercent: data.participants > 0 ? (data.finishers / data.participants) * 100 : 0,
-      }))
+      .filter(([station]) => !excludedStations.includes(station) && ALL_STATIONS.includes(station))
+      .map(([station, data]) => {
+        // Average progress = total progress of active runners / total participants
+        // This gives credit for runners who are making progress
+        const avgProgress = data.participants > 0 ? data.totalProgress / data.participants : 0;
+        
+        return {
+          station,
+          totalDistance: data.distance,
+          runners: data.runners,
+          runCount: data.runCount,
+          finishers: data.finishers,
+          participants: data.participants,
+          // Live performance = average progress of all participants toward finishing
+          performancePercent: avgProgress,
+        };
+      })
       .sort((a, b) => {
         // Sort by performance percentage first
         if (b.performancePercent !== a.performancePercent) {
@@ -324,21 +369,21 @@ export default function Dashboard() {
                 No approved runs yet. Be the first!
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {runnerStats.map((runner, index) => (
                   <div
                     key={runner.serviceNumber}
                     className={`
-                      flex items-center gap-4 p-4 rounded-xl transition-all
-                      ${index === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5 border border-warning-500/30' : 
-                        index === 1 ? 'bg-primary-700/30 border border-primary-600/30' :
-                        index === 2 ? 'bg-primary-700/20 border border-primary-600/20' :
-                        'bg-primary-800/30'}
+                      flex items-center gap-3 py-2 px-3 rounded-lg transition-all
+                      ${index === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5' : 
+                        index === 1 ? 'bg-primary-700/20' :
+                        index === 2 ? 'bg-primary-700/10' :
+                        'hover:bg-primary-800/20'}
                     `}
                   >
                     {/* Rank */}
                     <div className={`
-                      w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-lg
+                      w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
                       ${index === 0 ? 'bg-warning-500 text-primary-900' :
                         index === 1 ? 'bg-primary-400 text-primary-900' :
                         index === 2 ? 'bg-orange-600 text-white' :
@@ -349,39 +394,37 @@ export default function Dashboard() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">
-                        {runner.name}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-3 text-sm text-primary-400">
-                        <span className="flex items-center gap-1">
-                          <Hash className="w-3 h-3" />
-                          {runner.serviceNumber}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white text-sm truncate">
+                          {runner.name}
+                        </p>
+                        <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-primary-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          {runner.station}
+                          <span className="truncate max-w-[150px]">{runner.station}</span>
+                        </span>
+                        <span className="text-accent-400 flex items-center gap-0.5">
+                          <Footprints className="w-3 h-3" />
+                          {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
                         </span>
                       </div>
                     </div>
 
                     {/* Distance & Progress */}
-                    <div className="text-right min-w-[100px]">
-                      <p className="font-display font-bold text-white text-lg">
+                    <div className="text-right flex-shrink-0 min-w-[90px]">
+                      <p className="font-display font-bold text-white text-sm">
                         {runner.totalDistance.toFixed(1)}
-                        <span className="text-sm text-primary-400">/ 100 km</span>
+                        <span className="text-xs text-primary-500 font-normal">/ 100 km</span>
                       </p>
-                      <p className="text-xs text-primary-500 mb-1">
-                        {runner.runCount} run{runner.runCount !== 1 ? 's' : ''} • {(100 - runner.totalDistance).toFixed(1)} km left
+                      <p className="text-xs text-primary-500">
+                        {(100 - runner.totalDistance).toFixed(1)} km left
                       </p>
-                      {/* Progress Bar */}
-                      <div className="w-full h-1.5 bg-primary-700 rounded-full overflow-hidden">
+                      <div className="w-full h-1 bg-primary-700 rounded-full overflow-hidden mt-0.5">
                         <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            runner.totalDistance >= 100 
-                              ? 'bg-success-500' 
-                              : index === 0 
-                                ? 'bg-warning-500' 
-                                : 'bg-accent-500'
+                          className={`h-full rounded-full ${
+                            runner.totalDistance >= 100 ? 'bg-success-500' : index === 0 ? 'bg-warning-500' : 'bg-accent-500'
                           }`}
                           style={{ width: `${Math.min((runner.totalDistance / 100) * 100, 100)}%` }}
                         />
@@ -417,12 +460,13 @@ export default function Dashboard() {
             <>
               {/* Legend */}
               <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
-                <p className="font-medium text-primary-300 mb-1">Finisher Criteria:</p>
+                <p className="font-medium text-primary-300 mb-1">Finisher Criteria (both required):</p>
                 <p>• Reach at least <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} km</span> total distance</p>
                 <p>• Have at least <span className="text-accent-400 font-medium">{MIN_ACTIVE_DAYS} active days</span></p>
+                <p className="mt-2 text-primary-500 italic">Progress shows average completion toward both goals</p>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {stationPerformance.map((station, index) => {
                   const isLeader = index === 0 && station.performancePercent > 0;
                   
@@ -430,60 +474,47 @@ export default function Dashboard() {
                     <div
                       key={station.station}
                       className={`
-                        flex items-center gap-4 p-4 rounded-xl transition-all
+                        flex items-center gap-3 py-2 px-3 rounded-lg transition-all
                         ${isLeader 
-                          ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10 border border-accent-500/30' 
-                          : index === 1 ? 'bg-primary-700/30 border border-primary-600/30' :
-                            index === 2 ? 'bg-primary-700/20 border border-primary-600/20' :
-                            'bg-primary-800/30'}
+                          ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10' 
+                          : index === 1 ? 'bg-primary-700/20' :
+                            index === 2 ? 'bg-primary-700/10' :
+                            'hover:bg-primary-800/20'}
                       `}
                     >
                       {/* Rank */}
                       <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-lg flex-shrink-0
+                        w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
                         ${isLeader 
                           ? 'bg-gradient-to-br from-accent-400 to-purple-500 text-white' 
                           : index === 1 ? 'bg-primary-400 text-primary-900' :
                             index === 2 ? 'bg-orange-600 text-white' :
                             'bg-primary-700 text-primary-300'}
                       `}>
-                        {isLeader ? <Trophy className="w-5 h-5" /> : index + 1}
+                        {isLeader ? <Trophy className="w-4 h-4" /> : index + 1}
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className={`font-semibold truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
+                        <p className={`font-medium text-sm truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
                           {station.station}
                         </p>
-                        <div className="flex flex-wrap items-center gap-x-3 text-sm text-primary-400">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {station.participants} participant{station.participants !== 1 ? 's' : ''}
-                          </span>
-                          <span className="flex items-center gap-1 text-success-400">
-                            <Award className="w-3 h-3" />
-                            {station.finishers} finisher{station.finishers !== 1 ? 's' : ''}
-                          </span>
+                        <div className="flex items-center gap-2 text-xs text-primary-400">
+                          <span>{station.participants} participants</span>
+                          <span className="text-success-400">{station.finishers} finished</span>
+                          <span className="text-accent-400">{station.totalDistance.toFixed(1)} km</span>
                         </div>
                       </div>
 
-                      {/* Performance & Progress */}
-                      <div className="text-right min-w-[100px]">
-                        <p className="font-display font-bold text-white text-lg">
-                          {station.performancePercent.toFixed(0)}%
+                      {/* Performance */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-display font-bold text-white">
+                          {station.performancePercent.toFixed(1)}%
                         </p>
-                        <p className="text-xs text-primary-500 mb-1">
-                          {station.finishers}/{station.participants} completed
-                        </p>
-                        {/* Progress Bar */}
-                        <div className="w-full h-1.5 bg-primary-700 rounded-full overflow-hidden">
+                        <div className="w-16 h-1 bg-primary-700 rounded-full overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              station.performancePercent >= 100 
-                                ? 'bg-success-500' 
-                                : isLeader 
-                                  ? 'bg-gradient-to-r from-accent-500 to-purple-500' 
-                                  : 'bg-accent-500'
+                            className={`h-full rounded-full ${
+                              station.performancePercent >= 100 ? 'bg-success-500' : isLeader ? 'bg-accent-500' : 'bg-accent-500'
                             }`}
                             style={{ width: `${Math.min(station.performancePercent, 100)}%` }}
                           />

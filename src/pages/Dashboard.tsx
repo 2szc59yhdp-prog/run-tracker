@@ -202,38 +202,35 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Participants by Station */}
-      <div className="mb-8 animate-fade-in stagger-2">
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success-500/20 text-success-500">
-                <Users className="w-5 h-5" />
+      {/* Participants by Station - Compact List */}
+      <div className="mb-6 animate-fade-in stagger-2">
+        <Card className="!p-4 sm:!p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-success-500/20 text-success-500">
+                <Users className="w-4 h-4" />
               </div>
-              <div>
-                <h2 className="font-display text-xl font-semibold text-white">
-                  Participants
-                </h2>
-                <p className="text-xs text-primary-500">Number of registered participants by station</p>
-              </div>
+              <h2 className="font-display text-lg font-semibold text-white">
+                Participants
+              </h2>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-primary-500">Total</p>
-              <p className="font-display text-2xl font-bold text-success-400">{totalParticipants}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-primary-500">Total:</span>
+              <span className="font-display text-xl font-bold text-success-400">{totalParticipants}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1.5">
             {participantsByStation.map((item) => (
               <div
                 key={item.station}
-                className="flex items-center justify-between p-4 rounded-xl bg-primary-800/30 border border-primary-700/30"
+                className="flex items-center justify-between py-1.5 border-b border-primary-700/30 last:border-0"
               >
-                <span className="text-white font-medium truncate mr-3">{item.station}</span>
-                <span className={`flex-shrink-0 px-3 py-1 rounded-full font-display font-bold ${
+                <span className="text-sm text-primary-300 truncate mr-2">{item.station}</span>
+                <span className={`flex-shrink-0 text-sm font-display font-bold ${
                   item.count > 0 
-                    ? 'bg-success-500/20 text-success-400' 
-                    : 'bg-primary-700/50 text-primary-500'
+                    ? 'text-success-400' 
+                    : 'text-primary-600'
                 }`}>
                   {item.count}
                 </span>

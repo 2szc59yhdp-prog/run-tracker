@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { Run, RunnerStats, DashboardStats } from '../types';
-import { fetchAllRuns, validateAdminPassword } from '../services/api';
+import type { Run, RunnerStats, DashboardStats, AdminUser } from '../types';
+import { fetchAllRuns, validateAdminLogin, validateAdminPassword } from '../services/api';
 import { STORAGE_KEYS } from '../config';
 
 interface AppContextType {
@@ -17,10 +17,12 @@ interface AppContextType {
   // Admin state
   isAdmin: boolean;
   adminToken: string | null;
+  adminUser: AdminUser | null;
   
   // Actions
   refreshData: () => Promise<void>;
-  loginAdmin: (password: string) => Promise<boolean>;
+  loginAdmin: (serviceNumber: string, password: string) => Promise<boolean>;
+  loginAdminLegacy: (password: string) => Promise<boolean>;
   logoutAdmin: () => void;
 }
 
@@ -32,6 +34,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
   // Filter only APPROVED runs for leaderboard calculations
   const approvedRuns = runs.filter(run => run.status === 'approved');
@@ -98,14 +101,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Admin login
-  const loginAdmin = useCallback(async (password: string): Promise<boolean> => {
+  // Admin login with service number and password
+  const loginAdmin = useCallback(async (serviceNumber: string, password: string): Promise<boolean> => {
+    try {
+      const response = await validateAdminLogin(serviceNumber, password);
+      
+      if (response.success && response.data?.token && response.data?.admin) {
+        setIsAdmin(true);
+        setAdminToken(response.data.token);
+        setAdminUser(response.data.admin);
+        localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, response.data.token);
+        localStorage.setItem('adminUser', JSON.stringify(response.data.admin));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Legacy admin login (for backwards compatibility)
+  const loginAdminLegacy = useCallback(async (password: string): Promise<boolean> => {
     try {
       const response = await validateAdminPassword(password);
       
       if (response.success && response.data?.token) {
         setIsAdmin(true);
         setAdminToken(response.data.token);
+        setAdminUser({ serviceNumber: 'SYSTEM', name: 'System Admin' });
         localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, response.data.token);
         return true;
       }
@@ -119,15 +142,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logoutAdmin = useCallback(() => {
     setIsAdmin(false);
     setAdminToken(null);
+    setAdminUser(null);
     localStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN);
+    localStorage.removeItem('adminUser');
   }, []);
 
   // Initialize - check for existing admin session and load data
   useEffect(() => {
     const storedToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
+    const storedAdminUser = localStorage.getItem('adminUser');
+    
     if (storedToken) {
       setIsAdmin(true);
       setAdminToken(storedToken);
+      
+      if (storedAdminUser) {
+        try {
+          setAdminUser(JSON.parse(storedAdminUser));
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
     }
     
     refreshData();
@@ -144,8 +179,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         error,
         isAdmin,
         adminToken,
+        adminUser,
         refreshData,
         loginAdmin,
+        loginAdminLegacy,
         logoutAdmin,
       }}
     >

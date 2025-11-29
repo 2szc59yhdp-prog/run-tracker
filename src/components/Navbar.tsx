@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircle, Users2 } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircle, Users2, Hash } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
-  const { isAdmin, loginAdmin, logoutAdmin } = useApp();
+  const { isAdmin, loginAdmin, loginAdminLegacy, logoutAdmin } = useApp();
   const navigate = useNavigate();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [serviceNumber, setServiceNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +23,7 @@ export default function Navbar() {
     if (!isAdmin) {
       e.preventDefault();
       setShowPasswordModal(true);
+      setServiceNumber('');
       setPassword('');
       setError('');
     }
@@ -29,8 +31,12 @@ export default function Navbar() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!serviceNumber.trim()) {
+      setError('Please enter your service number');
+      return;
+    }
     if (!password.trim()) {
-      setError('Please enter the admin password');
+      setError('Please enter your password');
       return;
     }
 
@@ -38,13 +44,21 @@ export default function Navbar() {
     setError('');
 
     try {
-      const success = await loginAdmin(password);
+      // Try new login method first
+      let success = await loginAdmin(serviceNumber, password);
+      
+      // Fallback to legacy login if new method fails
+      if (!success) {
+        success = await loginAdminLegacy(password);
+      }
+      
       if (success) {
         setShowPasswordModal(false);
+        setServiceNumber('');
         setPassword('');
         navigate('/admin');
       } else {
-        setError('Invalid password');
+        setError('Invalid credentials');
       }
     } catch {
       setError('Login failed. Please try again.');
@@ -55,6 +69,7 @@ export default function Navbar() {
 
   const closeModal = () => {
     setShowPasswordModal(false);
+    setServiceNumber('');
     setPassword('');
     setError('');
   };
@@ -100,6 +115,7 @@ export default function Navbar() {
                   to="/admin" 
                   className={navLinkClass}
                   onClick={handleAdminClick}
+                  end
                 >
                   <Shield size={18} />
                   <span>Admin</span>
@@ -147,18 +163,28 @@ export default function Navbar() {
                 >
                   <PlusCircle size={20} />
                 </NavLink>
-                <button
-                  onClick={(e) => {
-                    if (isAdmin) {
-                      navigate('/admin');
-                    } else {
-                      handleAdminClick(e);
+                {isAdmin ? (
+                  <NavLink
+                    to="/admin"
+                    end
+                    className={({ isActive }) =>
+                      `p-3 rounded-lg transition-all ${
+                        isActive
+                          ? 'bg-accent-600 text-white'
+                          : 'text-primary-300 hover:bg-primary-800'
+                      }`
                     }
-                  }}
-                  className="p-3 rounded-lg transition-all text-primary-300 hover:bg-primary-800"
-                >
-                  <Shield size={20} />
-                </button>
+                  >
+                    <Shield size={20} />
+                  </NavLink>
+                ) : (
+                  <button
+                    onClick={handleAdminClick}
+                    className="p-3 rounded-lg transition-all text-primary-300 hover:bg-primary-800"
+                  >
+                    <Shield size={20} />
+                  </button>
+                )}
                 {isAdmin && (
                   <>
                     <NavLink
@@ -217,18 +243,43 @@ export default function Navbar() {
                   </div>
                 )}
 
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-primary-300 mb-2">
+                    Service Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-400">
+                      <Hash size={18} />
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={serviceNumber}
+                      onChange={(e) => setServiceNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="e.g., 5568"
+                      className="w-full px-4 py-3 pl-10 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500 transition-all"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-primary-300 mb-2">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="w-full px-4 py-3 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500 transition-all"
-                    autoFocus
-                  />
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-400">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full px-4 py-3 pl-10 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-accent-500 transition-all"
+                    />
+                  </div>
                 </div>
 
                 <button

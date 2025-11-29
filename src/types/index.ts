@@ -20,6 +20,9 @@ export interface Run {
   photoUrl?: string;    // Photo thumbnail URL
   status: RunStatus;    // Approval status
   rejectionReason?: string; // Reason for rejection (if rejected)
+  approvedBy?: string;      // Service number of admin who approved/rejected
+  approvedByName?: string;  // Name of admin who approved/rejected
+  approvedAt?: string;      // Timestamp of approval/rejection
 }
 
 export interface RegisteredUser {
@@ -31,6 +34,8 @@ export interface RegisteredUser {
   phone: string;
   station: string;
   createdAt?: string;
+  isAdmin?: boolean;        // Whether user has admin privileges
+  adminPassword?: string;   // Admin password (only for admins)
 }
 
 export interface AddUserPayload {
@@ -87,7 +92,14 @@ export interface ApiResponse<T = unknown> {
 // Admin authentication state
 export interface AdminState {
   isAdmin: boolean;
-  login: (password: string) => boolean;
+  adminUser: AdminUser | null;
+  login: (serviceNumber: string, password: string) => Promise<boolean>;
   logout: () => void;
+}
+
+// Logged in admin user info
+export interface AdminUser {
+  serviceNumber: string;
+  name: string;
 }
 

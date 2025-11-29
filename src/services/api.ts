@@ -6,7 +6,7 @@
  */
 
 import { APPS_SCRIPT_URL } from '../config';
-import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload } from '../types';
+import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser } from '../types';
 
 /**
  * Fetches all runs from the Google Sheet
@@ -164,6 +164,7 @@ export async function updateRunStatus(
   runId: string,
   status: 'pending' | 'approved' | 'rejected',
   adminToken: string,
+  adminUser?: AdminUser,
   rejectionReason?: string
 ): Promise<ApiResponse<Run>> {
   try {
@@ -174,6 +175,8 @@ export async function updateRunStatus(
         id: runId,
         status,
         adminToken,
+        approvedBy: adminUser?.serviceNumber || '',
+        approvedByName: adminUser?.name || '',
         rejectionReason: rejectionReason || '',
       }),
     });
@@ -194,7 +197,39 @@ export async function updateRunStatus(
 }
 
 /**
- * Validates admin password with the backend
+ * Validates admin credentials (service number + password)
+ */
+export async function validateAdminLogin(
+  serviceNumber: string,
+  password: string
+): Promise<ApiResponse<{ token: string; admin: AdminUser }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'validateAdminLogin',
+        serviceNumber,
+        password,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error validating admin:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to validate admin',
+    };
+  }
+}
+
+/**
+ * Legacy: Validates admin password with the backend (keeping for backwards compatibility)
  */
 export async function validateAdminPassword(
   password: string
@@ -374,6 +409,42 @@ export async function deleteUser(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete user',
+    };
+  }
+}
+
+/**
+ * Updates a user's admin status and password (Admin only)
+ */
+export async function updateUserAdminStatus(
+  userId: string,
+  isAdmin: boolean,
+  adminPassword: string | null,
+  adminToken: string
+): Promise<ApiResponse<RegisteredUser>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'updateUserAdminStatus',
+        id: userId,
+        isAdmin,
+        adminPassword: adminPassword || '',
+        adminToken,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating user admin status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update admin status',
     };
   }
 }

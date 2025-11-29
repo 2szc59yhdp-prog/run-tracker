@@ -213,8 +213,14 @@ function doPost(e) {
       case 'validateAdmin':
         result = validateAdmin(data.password);
         break;
+      case 'validateAdminLogin':
+        result = validateAdminLogin(data.serviceNumber, data.password);
+        break;
       case 'addUser':
         result = addUser(data);
+        break;
+      case 'updateUserAdminStatus':
+        result = updateUserAdminStatus(data);
         break;
       case 'updateUser':
         result = updateUser(data);
@@ -259,6 +265,9 @@ function getAllRuns() {
   const photoIdColIndex = headers.indexOf('PhotoId');
   const photoUrlColIndex = headers.indexOf('PhotoUrl');
   const rejectionReasonColIndex = headers.indexOf('RejectionReason');
+  const approvedByColIndex = headers.indexOf('ApprovedBy');
+  const approvedByNameColIndex = headers.indexOf('ApprovedByName');
+  const approvedAtColIndex = headers.indexOf('ApprovedAt');
   
   // Skip header row
   const runs = [];
@@ -275,7 +284,10 @@ function getAllRuns() {
         photoId: photoIdColIndex >= 0 && row[photoIdColIndex] ? row[photoIdColIndex].toString() : '',
         photoUrl: photoUrlColIndex >= 0 && row[photoUrlColIndex] ? row[photoUrlColIndex].toString() : '',
         status: statusColIndex >= 0 && row[statusColIndex] ? row[statusColIndex].toString() : 'pending',
-        rejectionReason: rejectionReasonColIndex >= 0 && row[rejectionReasonColIndex] ? row[rejectionReasonColIndex].toString() : ''
+        rejectionReason: rejectionReasonColIndex >= 0 && row[rejectionReasonColIndex] ? row[rejectionReasonColIndex].toString() : '',
+        approvedBy: approvedByColIndex >= 0 && row[approvedByColIndex] ? row[approvedByColIndex].toString() : '',
+        approvedByName: approvedByNameColIndex >= 0 && row[approvedByNameColIndex] ? row[approvedByNameColIndex].toString() : '',
+        approvedAt: approvedAtColIndex >= 0 && row[approvedAtColIndex] ? formatDate(row[approvedAtColIndex]) : ''
       });
     }
   }
@@ -448,7 +460,7 @@ function updateRun(data) {
 
 /**
  * Updates a run's approval status (Admin only)
- * @param {Object} data - Object containing run ID, status, admin token, and optional rejectionReason
+ * @param {Object} data - Object containing run ID, status, admin token, approvedBy, approvedByName, and optional rejectionReason
  * @returns {Object} Response with updated run
  */
 function updateRunStatus(data) {
@@ -471,11 +483,9 @@ function updateRunStatus(data) {
   // Find Status column index (create if doesn't exist)
   let statusColIndex = headers.indexOf('Status');
   if (statusColIndex === -1) {
-    // Add Status column if it doesn't exist
     const lastCol = sheet.getLastColumn();
     sheet.getRange(1, lastCol + 1).setValue('Status');
-    statusColIndex = lastCol; // 0-indexed for array, but will be lastCol+1 for sheet
-    // Set default status for all existing rows
+    statusColIndex = lastCol;
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       const statusRange = sheet.getRange(2, lastCol + 1, lastRow - 1, 1);
@@ -487,10 +497,33 @@ function updateRunStatus(data) {
   // Find RejectionReason column index (create if doesn't exist)
   let rejectionReasonColIndex = headers.indexOf('RejectionReason');
   if (rejectionReasonColIndex === -1) {
-    // Add RejectionReason column if it doesn't exist
     const lastCol = sheet.getLastColumn();
     sheet.getRange(1, lastCol + 1).setValue('RejectionReason');
     rejectionReasonColIndex = lastCol;
+  }
+  
+  // Find ApprovedBy column index (create if doesn't exist)
+  let approvedByColIndex = headers.indexOf('ApprovedBy');
+  if (approvedByColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('ApprovedBy');
+    approvedByColIndex = lastCol;
+  }
+  
+  // Find ApprovedByName column index (create if doesn't exist)
+  let approvedByNameColIndex = headers.indexOf('ApprovedByName');
+  if (approvedByNameColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('ApprovedByName');
+    approvedByNameColIndex = lastCol;
+  }
+  
+  // Find ApprovedAt column index (create if doesn't exist)
+  let approvedAtColIndex = headers.indexOf('ApprovedAt');
+  if (approvedAtColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('ApprovedAt');
+    approvedAtColIndex = lastCol;
   }
   
   // Find the row with matching ID
@@ -513,12 +546,24 @@ function updateRunStatus(data) {
   const rejectionReason = data.status === 'rejected' ? (data.rejectionReason || '') : '';
   sheet.getRange(rowIndex, rejectionReasonColIndex + 1).setValue(rejectionReason);
   
+  // Update approver info (only for approved/rejected status)
+  const approvedBy = (data.status === 'approved' || data.status === 'rejected') ? (data.approvedBy || '') : '';
+  const approvedByName = (data.status === 'approved' || data.status === 'rejected') ? (data.approvedByName || '') : '';
+  const approvedAt = (data.status === 'approved' || data.status === 'rejected') ? new Date() : '';
+  
+  sheet.getRange(rowIndex, approvedByColIndex + 1).setValue(approvedBy);
+  sheet.getRange(rowIndex, approvedByNameColIndex + 1).setValue(approvedByName);
+  sheet.getRange(rowIndex, approvedAtColIndex + 1).setValue(approvedAt);
+  
   return {
     success: true,
     data: {
       id: data.id,
       status: data.status,
-      rejectionReason: rejectionReason
+      rejectionReason: rejectionReason,
+      approvedBy: approvedBy,
+      approvedByName: approvedByName,
+      approvedAt: approvedAt ? formatDate(approvedAt) : ''
     }
   };
 }
@@ -575,6 +620,10 @@ function getAllUsers() {
   }
   
   const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  // Find admin column indices
+  const isAdminColIndex = headers.indexOf('IsAdmin');
   
   const users = [];
   for (let i = 1; i < data.length; i++) {
@@ -588,7 +637,8 @@ function getAllUsers() {
         email: row[4].toString(),
         phone: row[5].toString(),
         station: row[6].toString(),
-        createdAt: formatDate(row[7])
+        createdAt: formatDate(row[7]),
+        isAdmin: isAdminColIndex >= 0 ? (row[isAdminColIndex] === true || row[isAdminColIndex] === 'TRUE' || row[isAdminColIndex] === 'true') : false
       });
     }
   }
@@ -796,7 +846,7 @@ function deleteUser(data) {
 // ============================================================
 
 /**
- * Validates admin password and returns token
+ * Validates admin password and returns token (legacy method)
  * @param {string} password - The password to validate
  * @returns {Object} Response with token if valid
  */
@@ -811,6 +861,176 @@ function validateAdmin(password) {
   }
   
   return { success: false, error: 'Invalid password' };
+}
+
+/**
+ * Validates admin login with service number and individual password
+ * @param {string} serviceNumber - The admin's service number
+ * @param {string} password - The admin's individual password
+ * @returns {Object} Response with token and admin info if valid
+ */
+function validateAdminLogin(serviceNumber, password) {
+  if (!serviceNumber || !password) {
+    return { success: false, error: 'Service number and password are required' };
+  }
+  
+  const config = getConfig();
+  const sheet = getUsersSheet();
+  
+  if (!sheet) {
+    // Fall back to legacy admin authentication
+    if (password === config.adminPassword) {
+      return {
+        success: true,
+        data: { 
+          token: config.adminToken,
+          admin: { serviceNumber: 'SYSTEM', name: 'System Admin' }
+        }
+      };
+    }
+    return { success: false, error: 'Invalid credentials' };
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  const isAdminColIndex = headers.indexOf('IsAdmin');
+  const adminPasswordColIndex = headers.indexOf('AdminPassword');
+  
+  // Search for the user
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[1].toString() === serviceNumber.toString()) {
+      // Found the user, check if they're an admin
+      const isAdmin = isAdminColIndex >= 0 && (row[isAdminColIndex] === true || row[isAdminColIndex] === 'TRUE' || row[isAdminColIndex] === 'true');
+      
+      if (!isAdmin) {
+        return { success: false, error: 'User does not have admin privileges' };
+      }
+      
+      // Check password
+      const storedPassword = adminPasswordColIndex >= 0 ? row[adminPasswordColIndex].toString() : '';
+      
+      if (storedPassword && password === storedPassword) {
+        return {
+          success: true,
+          data: {
+            token: config.adminToken,
+            admin: {
+              serviceNumber: row[1].toString(),
+              name: row[2].toString()
+            }
+          }
+        };
+      }
+      
+      // Also check against the global admin password as fallback
+      if (password === config.adminPassword) {
+        return {
+          success: true,
+          data: {
+            token: config.adminToken,
+            admin: {
+              serviceNumber: row[1].toString(),
+              name: row[2].toString()
+            }
+          }
+        };
+      }
+      
+      return { success: false, error: 'Invalid password' };
+    }
+  }
+  
+  // User not found - try legacy authentication
+  if (password === config.adminPassword) {
+    return {
+      success: true,
+      data: { 
+        token: config.adminToken,
+        admin: { serviceNumber: serviceNumber, name: 'Admin ' + serviceNumber }
+      }
+    };
+  }
+  
+  return { success: false, error: 'Invalid credentials' };
+}
+
+/**
+ * Updates a user's admin status and password (Admin only)
+ * @param {Object} data - Object containing user ID, isAdmin, adminPassword, and admin token
+ * @returns {Object} Response with updated user
+ */
+function updateUserAdminStatus(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  
+  if (!data.id) {
+    return { success: false, error: 'User ID is required' };
+  }
+  
+  const sheet = getUsersSheet();
+  if (!sheet) {
+    return { success: false, error: 'Users sheet not found' };
+  }
+  
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  
+  // Find or create IsAdmin column
+  let isAdminColIndex = headers.indexOf('IsAdmin');
+  if (isAdminColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('IsAdmin');
+    isAdminColIndex = lastCol;
+  }
+  
+  // Find or create AdminPassword column
+  let adminPasswordColIndex = headers.indexOf('AdminPassword');
+  if (adminPasswordColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('AdminPassword');
+    adminPasswordColIndex = lastCol;
+  }
+  
+  // Find the row with matching ID
+  let rowIndex = -1;
+  let userName = '';
+  let userServiceNumber = '';
+  for (let i = 1; i < dataRange.length; i++) {
+    if (dataRange[i][0].toString() === data.id.toString()) {
+      rowIndex = i + 1;
+      userServiceNumber = dataRange[i][1].toString();
+      userName = dataRange[i][2].toString();
+      break;
+    }
+  }
+  
+  if (rowIndex === -1) {
+    return { success: false, error: 'User not found' };
+  }
+  
+  // Update admin status
+  sheet.getRange(rowIndex, isAdminColIndex + 1).setValue(data.isAdmin ? 'TRUE' : 'FALSE');
+  
+  // Update admin password (only if setting as admin and password provided)
+  if (data.isAdmin && data.adminPassword) {
+    sheet.getRange(rowIndex, adminPasswordColIndex + 1).setValue(data.adminPassword);
+  } else if (!data.isAdmin) {
+    // Clear password when removing admin status
+    sheet.getRange(rowIndex, adminPasswordColIndex + 1).setValue('');
+  }
+  
+  return {
+    success: true,
+    data: {
+      id: data.id,
+      serviceNumber: userServiceNumber,
+      name: userName,
+      isAdmin: data.isAdmin
+    }
+  };
 }
 
 /**

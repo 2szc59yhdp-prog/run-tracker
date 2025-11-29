@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Edit2, Trash2, Search, X, Save, Hash, User, Award, Mail, Phone, MapPin, ChevronDown, Check } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Search, X, Save, Hash, User, Award, Mail, Phone, MapPin, ChevronDown, Check, Shield, Lock } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useApp } from '../context/AppContext';
-import { fetchAllUsers, addUser, updateUser, deleteUser } from '../services/api';
+import { fetchAllUsers, addUser, updateUser, deleteUser, updateUserAdminStatus } from '../services/api';
 import type { RegisteredUser } from '../types';
 
 // Station options for dropdown
@@ -40,6 +40,9 @@ export function RegisteredUsers() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<RegisteredUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<RegisteredUser | null>(null);
+  const [adminModal, setAdminModal] = useState<RegisteredUser | null>(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -153,7 +156,44 @@ export function RegisteredUsers() {
     setShowAddModal(false);
     setEditingUser(null);
     setDeleteConfirm(null);
+    setAdminModal(null);
+    setAdminPassword('');
     setFormError(null);
+  }
+
+  // Handle admin status update
+  async function handleAdminSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!adminModal || !adminToken) return;
+
+    // If making admin, require password
+    if (!adminModal.isAdmin && !adminPassword.trim()) {
+      setFormError('Please set a password for the admin');
+      return;
+    }
+
+    setAdminLoading(true);
+    setFormError(null);
+
+    try {
+      const response = await updateUserAdminStatus(
+        adminModal.id,
+        !adminModal.isAdmin, // Toggle admin status
+        !adminModal.isAdmin ? adminPassword : null, // Only send password when granting
+        adminToken
+      );
+
+      if (response.success) {
+        await loadUsers();
+        closeModals();
+      } else {
+        setFormError(response.error || 'Failed to update admin status');
+      }
+    } catch {
+      setFormError('An error occurred while updating admin status');
+    } finally {
+      setAdminLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -312,13 +352,33 @@ export function RegisteredUsers() {
                       className="border-b border-primary-700/50 hover:bg-primary-700/30 transition-colors"
                     >
                       <td className="py-4 px-4 text-accent-400 font-mono font-semibold">{user.serviceNumber}</td>
-                      <td className="py-4 px-4 text-white font-medium">{user.name}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">{user.name}</span>
+                          {user.isAdmin && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/20 text-accent-400 border border-accent-500/30">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-4 px-4 text-primary-300">{user.rank || '-'}</td>
                       <td className="py-4 px-4 text-primary-300">{user.email || '-'}</td>
                       <td className="py-4 px-4 text-primary-300">{user.phone || '-'}</td>
                       <td className="py-4 px-4 text-primary-300 max-w-[200px] truncate">{user.station}</td>
                       <td className="py-4 px-4">
                         <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => setAdminModal(user)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              user.isAdmin 
+                                ? 'text-accent-400 bg-accent-500/20' 
+                                : 'text-primary-500 hover:bg-primary-700/50'
+                            }`}
+                            title={user.isAdmin ? 'Remove admin' : 'Make admin'}
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openEditModal(user)}
                             className="p-2 text-accent-400 hover:bg-accent-500/20 rounded-lg transition-colors"
@@ -351,10 +411,27 @@ export function RegisteredUsers() {
                   {/* Header with name and actions */}
                   <div className="flex items-start justify-between mb-3 pb-3 border-b border-primary-700/50">
                     <div>
-                      <p className="text-white font-semibold text-lg">{user.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-semibold text-lg">{user.name}</p>
+                        {user.isAdmin && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/20 text-accent-400 border border-accent-500/30">
+                            Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-accent-400 text-sm font-mono">#{user.serviceNumber}</p>
                     </div>
                     <div className="flex gap-1">
+                      <button
+                        onClick={() => setAdminModal(user)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          user.isAdmin 
+                            ? 'text-accent-400 bg-accent-500/20' 
+                            : 'text-primary-500 hover:bg-primary-700/50'
+                        }`}
+                      >
+                        <Shield className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => openEditModal(user)}
                         className="p-2 text-accent-400 hover:bg-accent-500/20 rounded-lg transition-colors"
@@ -554,6 +631,88 @@ export function RegisteredUsers() {
       )}
 
       {/* Delete Confirmation Modal */}
+      {/* Admin Status Modal */}
+      {adminModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <div className="text-center mb-6">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                adminModal.isAdmin ? 'bg-danger-500/20' : 'bg-accent-500/20'
+              }`}>
+                <Shield className={`w-8 h-8 ${adminModal.isAdmin ? 'text-danger-500' : 'text-accent-400'}`} />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">
+                {adminModal.isAdmin ? 'Remove Admin Access' : 'Grant Admin Access'}
+              </h2>
+              <p className="text-primary-400 text-sm">
+                {adminModal.isAdmin 
+                  ? `Remove admin privileges from ${adminModal.name}?`
+                  : `Grant admin privileges to ${adminModal.name}?`
+                }
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminSubmit}>
+              {!adminModal.isAdmin && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-primary-200 mb-2">
+                    Set Admin Password *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-400">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="Enter password for admin login"
+                      className="w-full px-4 py-3 pl-12 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none focus:ring-2 focus:ring-accent-500 transition-all"
+                    />
+                  </div>
+                  <p className="text-primary-500 text-xs mt-2">
+                    This password will be used for admin login with their service number
+                  </p>
+                </div>
+              )}
+
+              {adminModal.isAdmin && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+                  <p className="text-amber-400 text-sm">
+                    ⚠️ This will revoke all admin privileges. They will no longer be able to approve runs or manage users.
+                  </p>
+                </div>
+              )}
+
+              {formError && (
+                <p className="text-red-400 text-sm mb-4">{formError}</p>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={closeModals}
+                  className="flex-1 min-h-[48px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant={adminModal.isAdmin ? 'danger' : 'primary'}
+                  disabled={adminLoading}
+                  loading={adminLoading}
+                  className="flex-1 min-h-[48px]"
+                >
+                  <Shield className="w-4 h-4" />
+                  {adminModal.isAdmin ? 'Remove Admin' : 'Grant Admin'}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-md">

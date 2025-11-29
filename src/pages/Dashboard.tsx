@@ -23,7 +23,12 @@ const ALL_STATIONS = [
 ];
 
 // Status badge component
-function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejectionReason?: string }) {
+function StatusBadge({ status, rejectionReason, approvedBy, approvedByName }: { 
+  status: RunStatus; 
+  rejectionReason?: string;
+  approvedBy?: string;
+  approvedByName?: string;
+}) {
   const config = {
     pending: {
       icon: Clock,
@@ -50,6 +55,11 @@ function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejection
         <Icon className="w-3 h-3" />
         {text}
       </span>
+      {(status === 'approved' || status === 'rejected') && approvedByName && (
+        <span className="text-xs text-primary-500">
+          by {approvedByName}
+        </span>
+      )}
       {status === 'rejected' && rejectionReason && (
         <span className="text-xs text-danger-400/80 italic max-w-[200px] leading-tight">
           "{rejectionReason}"
@@ -531,7 +541,12 @@ export default function Dashboard() {
                           {run.distanceKm.toFixed(1)} km
                         </td>
                         <td className="py-3 px-2 text-center">
-                          <StatusBadge status={run.status || 'pending'} rejectionReason={run.rejectionReason} />
+                          <StatusBadge 
+                            status={run.status || 'pending'} 
+                            rejectionReason={run.rejectionReason}
+                            approvedBy={run.approvedBy}
+                            approvedByName={run.approvedByName}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -579,7 +594,12 @@ export default function Dashboard() {
                         </span>
                       </div>
                       <div className="pt-2 border-t border-primary-700/50">
-                        <StatusBadge status={run.status || 'pending'} rejectionReason={run.rejectionReason} />
+                        <StatusBadge 
+                          status={run.status || 'pending'} 
+                          rejectionReason={run.rejectionReason}
+                          approvedBy={run.approvedBy}
+                          approvedByName={run.approvedByName}
+                        />
                       </div>
                     </div>
                   ))}

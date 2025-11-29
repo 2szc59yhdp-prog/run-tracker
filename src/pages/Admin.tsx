@@ -13,7 +13,12 @@ import { REJECTION_REASONS } from '../types';
 type FilterStatus = 'all' | RunStatus;
 
 // Status badge component
-function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejectionReason?: string }) {
+function StatusBadge({ status, rejectionReason, approvedBy, approvedByName }: { 
+  status: RunStatus; 
+  rejectionReason?: string;
+  approvedBy?: string;
+  approvedByName?: string;
+}) {
   const config = {
     pending: {
       icon: Clock,
@@ -40,6 +45,11 @@ function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejection
         <Icon className="w-3 h-3" />
         {text}
       </span>
+      {(status === 'approved' || status === 'rejected') && approvedByName && (
+        <span className="text-xs text-primary-500">
+          by {approvedByName} #{approvedBy}
+        </span>
+      )}
       {status === 'rejected' && rejectionReason && (
         <span className="text-xs text-danger-400/80 italic max-w-[200px] leading-tight">
           "{rejectionReason}"
@@ -50,7 +60,7 @@ function StatusBadge({ status, rejectionReason }: { status: RunStatus; rejection
 }
 
 export default function Admin() {
-  const { isAdmin, adminToken, runs, isLoading, error, refreshData } = useApp();
+  const { isAdmin, adminToken, adminUser, runs, isLoading, error, refreshData } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Run>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -143,7 +153,7 @@ export default function Admin() {
     setMessage(null);
 
     try {
-      const response = await updateRunStatus(runId, 'approved', adminToken);
+      const response = await updateRunStatus(runId, 'approved', adminToken, adminUser || undefined);
 
       if (response.success) {
         setMessage({ 
@@ -176,7 +186,7 @@ export default function Admin() {
     setMessage(null);
 
     try {
-      const response = await updateRunStatus(rejectConfirm.id, 'rejected', adminToken, finalReason);
+      const response = await updateRunStatus(rejectConfirm.id, 'rejected', adminToken, adminUser || undefined, finalReason);
 
       if (response.success) {
         setMessage({ 
@@ -212,7 +222,7 @@ export default function Admin() {
     setMessage(null);
 
     try {
-      const response = await updateRunStatus(runId, newStatus, adminToken);
+      const response = await updateRunStatus(runId, newStatus, adminToken, adminUser || undefined);
 
       if (response.success) {
         setMessage({ 
@@ -512,7 +522,12 @@ export default function Admin() {
                       </div>
                       <div className="bg-primary-800/30 rounded-lg p-3">
                         <p className="text-xs text-primary-500 mb-1">Status</p>
-                        <StatusBadge status={run.status || 'pending'} rejectionReason={run.rejectionReason} />
+                        <StatusBadge 
+                          status={run.status || 'pending'} 
+                          rejectionReason={run.rejectionReason}
+                          approvedBy={run.approvedBy}
+                          approvedByName={run.approvedByName}
+                        />
                       </div>
                     </div>
 

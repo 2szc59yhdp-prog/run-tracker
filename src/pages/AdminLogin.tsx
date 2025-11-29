@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, AlertCircle } from 'lucide-react';
+import { Shield, Lock, AlertCircle, Hash } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -8,8 +8,9 @@ import { useApp } from '../context/AppContext';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { loginAdmin, isAdmin } = useApp();
+  const { loginAdmin, loginAdminLegacy, isAdmin } = useApp();
   
+  const [serviceNumber, setServiceNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,8 +24,13 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!serviceNumber.trim()) {
+      setError('Please enter your service number');
+      return;
+    }
+    
     if (!password.trim()) {
-      setError('Please enter the admin password');
+      setError('Please enter your password');
       return;
     }
 
@@ -32,12 +38,18 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      const success = await loginAdmin(password);
+      // Try new login method first
+      let success = await loginAdmin(serviceNumber, password);
+      
+      // Fallback to legacy login if new method fails (for backwards compatibility)
+      if (!success) {
+        success = await loginAdminLegacy(password);
+      }
       
       if (success) {
         navigate('/admin');
       } else {
-        setError('Invalid password. Please try again.');
+        setError('Invalid credentials. Please check your service number and password.');
       }
     } catch {
       setError('Authentication failed. Please try again.');
@@ -57,11 +69,11 @@ export default function AdminLogin() {
             Admin Access
           </h1>
           <p className="text-primary-400 text-sm">
-            Enter the admin password to access management features
+            Enter your credentials to access management features
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-500/10 border border-danger-500/30">
               <AlertCircle className="w-5 h-5 text-danger-500 flex-shrink-0" />
@@ -70,11 +82,22 @@ export default function AdminLogin() {
           )}
 
           <Input
+            label="Service Number"
+            type="text"
+            inputMode="numeric"
+            maxLength={4}
+            value={serviceNumber}
+            onChange={(e) => setServiceNumber(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            placeholder="e.g., 5568"
+            icon={<Hash className="w-5 h-5" />}
+          />
+
+          <Input
             label="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter admin password"
+            placeholder="Enter your admin password"
             icon={<Lock className="w-5 h-5" />}
           />
 
@@ -82,17 +105,16 @@ export default function AdminLogin() {
             type="submit"
             size="lg"
             loading={isLoading}
-            className="w-full"
+            className="w-full mt-6"
           >
             {isLoading ? 'Verifying...' : 'Login'}
           </Button>
         </form>
 
         <p className="text-center text-primary-500 text-xs mt-6">
-          Contact your system administrator if you need access
+          Contact system administrator if you need admin access
         </p>
       </Card>
     </div>
   );
 }
-

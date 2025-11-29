@@ -75,10 +75,10 @@ export default function Admin() {
   const [customRejectionReason, setCustomRejectionReason] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<Run | null>(null);
 
-  // Auto-refresh runs every 5 seconds
+  // Auto-refresh runs every 5 seconds (silent - no loading spinner)
   useEffect(() => {
     const interval = setInterval(() => {
-      refreshData();
+      refreshData(true); // silent refresh
     }, 5000);
 
     return () => clearInterval(interval);

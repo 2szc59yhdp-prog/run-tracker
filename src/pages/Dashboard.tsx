@@ -67,10 +67,10 @@ export default function Dashboard() {
   const [serviceFilter, setServiceFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
 
-  // Auto-refresh data every 5 seconds
+  // Auto-refresh data every 5 seconds (silent - no loading spinner)
   useEffect(() => {
     const interval = setInterval(() => {
-      refreshData();
+      refreshData(true); // silent refresh
     }, 5000);
 
     return () => clearInterval(interval);

@@ -20,7 +20,7 @@ interface AppContextType {
   adminUser: AdminUser | null;
   
   // Actions
-  refreshData: () => Promise<void>;
+  refreshData: (silent?: boolean) => Promise<void>;
   loginAdmin: (serviceNumber: string, password: string) => Promise<boolean>;
   loginAdminLegacy: (password: string) => Promise<boolean>;
   logoutAdmin: () => void;
@@ -76,9 +76,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 20);
 
-  // Fetch data from API
-  const refreshData = useCallback(async () => {
-    setIsLoading(true);
+  // Fetch data from API (silent = true for background refresh without loading spinner)
+  const refreshData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
     
     try {
@@ -91,13 +93,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: run.status || 'pending',
         }));
         setRuns(runsWithStatus as Run[]);
-      } else {
+      } else if (!silent) {
         setError(response.error || 'Failed to load data');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      if (!silent) {
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 

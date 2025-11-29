@@ -22,11 +22,10 @@ const ALL_STATIONS = [
   'Gdh.Gadhdhoo Police Station',
 ];
 
-// Status badge component
-function StatusBadge({ status, rejectionReason, approvedByName }: { 
+// Status badge component (public view - no approver info shown)
+function StatusBadge({ status, rejectionReason }: { 
   status: RunStatus; 
   rejectionReason?: string;
-  approvedByName?: string;
 }) {
   const config = {
     pending: {
@@ -54,11 +53,6 @@ function StatusBadge({ status, rejectionReason, approvedByName }: {
         <Icon className="w-3 h-3" />
         {text}
       </span>
-      {(status === 'approved' || status === 'rejected') && approvedByName && (
-        <span className="text-xs text-primary-500">
-          by {approvedByName}
-        </span>
-      )}
       {status === 'rejected' && rejectionReason && (
         <span className="text-xs text-danger-400/80 italic max-w-[200px] leading-tight">
           "{rejectionReason}"
@@ -543,7 +537,6 @@ export default function Dashboard() {
                           <StatusBadge 
                             status={run.status || 'pending'} 
                             rejectionReason={run.rejectionReason}
-                            approvedByName={run.approvedByName}
                           />
                         </td>
                       </tr>
@@ -595,7 +588,6 @@ export default function Dashboard() {
                         <StatusBadge 
                           status={run.status || 'pending'} 
                           rejectionReason={run.rejectionReason}
-                          approvedByName={run.approvedByName}
                         />
                       </div>
                     </div>

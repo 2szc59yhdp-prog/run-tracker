@@ -400,12 +400,12 @@ export default function Dashboard() {
                         </p>
                         <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-primary-400">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          <span className="truncate max-w-[150px]">{runner.station}</span>
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
                         </span>
-                        <span className="text-accent-400 flex items-center gap-0.5">
+                        <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
                           <Footprints className="w-3 h-3" />
                           {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
                         </span>

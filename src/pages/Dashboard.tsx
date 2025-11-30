@@ -448,7 +448,7 @@ export default function Dashboard() {
           href="https://join.photocircleapp.com/R5W9BW072Z"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white font-bold rounded-xl shadow-lg shadow-accent-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] border border-accent-400/30"
         >
           <Camera className="w-6 h-6" />
           <span className="text-lg">Share Your Run Photos</span>

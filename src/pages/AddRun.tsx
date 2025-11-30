@@ -48,11 +48,29 @@ export default function AddRun() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   
   // Pre-warm the API when page loads to reduce cold start delay
   useEffect(() => {
     warmupApi();
   }, []);
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Show toast when there's a general error
+  useEffect(() => {
+    if (errors.general) {
+      setToast({ message: errors.general, type: 'error' });
+    }
+  }, [errors.general]);
   const [userFound, setUserFound] = useState<UserData | null>(null);
   const [userNotFound, setUserNotFound] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -176,6 +194,13 @@ export default function AddRun() {
     }
 
     setErrors(newErrors);
+    
+    // Show toast for any validation error
+    const errorMessages = Object.values(newErrors).filter(Boolean);
+    if (errorMessages.length > 0) {
+      setToast({ message: errorMessages[0] as string, type: 'error' });
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
@@ -288,6 +313,30 @@ export default function AddRun() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">
+      {/* Fixed Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg ${
+            toast.type === 'error' 
+              ? 'bg-danger-500/90 text-white border border-danger-400' 
+              : 'bg-success-500/90 text-white border border-success-400'
+          }`}>
+            {toast.type === 'error' ? (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <p className="text-sm font-medium">{toast.message}</p>
+            <button 
+              onClick={() => setToast(null)}
+              className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Title */}
       <div className="text-center mb-6 animate-fade-in">
         <p className="text-sm font-medium text-accent-400 tracking-widest uppercase mb-1">
@@ -308,7 +357,7 @@ export default function AddRun() {
         </p>
       </div>
 
-      {/* General Error */}
+      {/* General Error - keep for inline display too */}
       {errors.general && (
         <div className="flex items-start gap-3 p-4 rounded-xl bg-danger-500/10 border border-danger-500/30 mb-6 animate-fade-in">
           <AlertCircle className="w-5 h-5 text-danger-500 flex-shrink-0 mt-0.5" />

@@ -84,6 +84,16 @@ export default function Admin() {
     return () => clearInterval(interval);
   }, [refreshData]);
 
+  // Auto-dismiss message after 4 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/admin-login" replace />;
@@ -193,7 +203,7 @@ export default function Admin() {
       if (response.success) {
         setMessage({ 
           type: 'success', 
-          text: '✅ Run approved! Leaderboard updated.' 
+          text: 'Run approved! Leaderboard updated.' 
         });
         await refreshData(); // This updates leaderboard and dashboard
       } else {
@@ -226,7 +236,7 @@ export default function Admin() {
       if (response.success) {
         setMessage({ 
           type: 'success', 
-          text: '❌ Run rejected successfully.' 
+          text: 'Run rejected successfully.' 
         });
         await refreshData();
       } else {

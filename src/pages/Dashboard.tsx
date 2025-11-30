@@ -350,18 +350,18 @@ export default function Dashboard() {
       <div className="mb-8 animate-fade-in">
         <Card className={`overflow-hidden ${countdown.status === 'active' ? 'border-success-500/30' : countdown.status === 'ended' ? 'border-primary-600' : 'border-accent-500/30'}`}>
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            {/* Icon & Title */}
+            {/* Icon & Title - Icon hidden on mobile */}
             <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-xl ${countdown.status === 'active' ? 'bg-success-500/20' : countdown.status === 'ended' ? 'bg-primary-700' : 'bg-accent-500/20'}`}>
+              <div className={`hidden sm:flex p-3 rounded-xl ${countdown.status === 'active' ? 'bg-success-500/20' : countdown.status === 'ended' ? 'bg-primary-700' : 'bg-accent-500/20'}`}>
                 <Timer className={`w-6 h-6 ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`} />
               </div>
-              <div className="text-center sm:text-left">
-                <p className={`font-display font-bold text-lg ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`}>
-                  {countdown.status === 'before' && '🚀 Challenge Starts In'}
-                  {countdown.status === 'active' && '🏃 Time Remaining'}
-                  {countdown.status === 'ended' && '🏁 Challenge Completed!'}
+              <div className="text-center">
+                <p className={`font-display font-bold text-xl sm:text-lg ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`}>
+                  {countdown.status === 'before' && <><span className="hidden sm:inline">🚀 </span>Challenge Starts In</>}
+                  {countdown.status === 'active' && <><span className="hidden sm:inline">🏃 </span>Time Remaining</>}
+                  {countdown.status === 'ended' && <><span className="hidden sm:inline">🏁 </span>Challenge Completed!</>}
                 </p>
-                <p className="text-xs text-primary-500">
+                <p className="text-sm sm:text-xs text-primary-500">
                   {countdown.status === 'before' && 'Dec 1, 2025 - Jan 31, 2026'}
                   {countdown.status === 'active' && 'Keep running until Jan 31, 2026!'}
                   {countdown.status === 'ended' && 'Thank you for participating!'}

@@ -315,8 +315,8 @@ export default function AddRun() {
     <div className="max-w-md mx-auto px-4 py-8">
       {/* Fixed Toast Notification - positioned below navbar */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in px-4 w-full max-w-md">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg ${
+        <div className="fixed top-20 left-0 right-0 z-50 animate-fade-in px-4 flex justify-center">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg max-w-[calc(100vw-2rem)] ${
             toast.type === 'error' 
               ? 'bg-danger-500 text-white border border-danger-400' 
               : 'bg-success-500 text-white border border-success-400'
@@ -326,10 +326,10 @@ export default function AddRun() {
             ) : (
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
             )}
-            <p className="text-sm font-medium">{toast.message}</p>
+            <p className="text-sm font-medium flex-1">{toast.message}</p>
             <button 
               onClick={() => setToast(null)}
-              className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="p-1 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>

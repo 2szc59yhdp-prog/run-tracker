@@ -539,10 +539,9 @@ export default function Dashboard() {
             <>
               {/* Legend */}
               <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
-                <p className="font-medium text-primary-300 mb-1">Finisher Criteria (both required):</p>
-                <p>• Reach at least <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} km</span> total distance</p>
+                <p className="font-medium text-primary-300 mb-1">Performance Percentage Criteria:</p>
+                <p>• Complete <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} km</span> total distance</p>
                 <p>• Have at least <span className="text-accent-400 font-medium">{MIN_ACTIVE_DAYS} active days</span></p>
-                <p className="mt-2 text-primary-500 italic">Progress shows average completion toward both goals</p>
               </div>
               
               <div className="space-y-1">

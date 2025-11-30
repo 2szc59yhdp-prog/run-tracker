@@ -179,8 +179,12 @@ function checkDuplicatePhoto(photoHash) {
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
   
-  // Find PhotoHash column index
+  // Find column indices by name (not assuming fixed positions)
   const photoHashColIndex = headers.indexOf('PhotoHash');
+  const dateColIndex = headers.indexOf('Date');
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const nameColIndex = headers.indexOf('Name');
+  
   if (photoHashColIndex === -1) {
     // Column doesn't exist yet, no duplicates possible
     return { exists: false };
@@ -193,12 +197,16 @@ function checkDuplicatePhoto(photoHash) {
     
     if (existingHash && existingHash === photoHash) {
       // Found a duplicate - return info about the original run
+      const originalDate = dateColIndex >= 0 ? formatDate(row[dateColIndex]) : 'Unknown date';
+      const originalServiceNumber = serviceNumberColIndex >= 0 ? row[serviceNumberColIndex].toString() : '?';
+      const originalName = nameColIndex >= 0 ? row[nameColIndex].toString() : 'Unknown';
+      
       return {
         exists: true,
         originalRun: {
-          date: formatDate(row[1]),
-          serviceNumber: row[2].toString(),
-          name: row[3].toString()
+          date: originalDate,
+          serviceNumber: originalServiceNumber,
+          name: originalName
         }
       };
     }

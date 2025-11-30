@@ -883,29 +883,33 @@ export default function Dashboard() {
                       key={run.id}
                       className={`p-4 rounded-xl border ${run.runLabel === 2 ? 'bg-primary-800/40 border-purple-500/30' : 'bg-primary-700/20 border-primary-700/30'}`}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
+                      {/* Run Label - shown at top if multiple runs */}
+                      {run.totalRunsToday > 1 && (
+                        <div className="mb-2">
+                          <span className={`text-xs px-2 py-1 rounded font-bold ${
+                            run.runLabel === 1 ? 'bg-accent-500/20 text-accent-400' : 'bg-purple-500/20 text-purple-400'
+                          }`}>
+                            RUN {run.runLabel} of {run.totalRunsToday}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           {run.photoUrl && (
                             <a 
                               href={run.photoUrl.replace('thumbnail', 'uc').replace('&sz=w400', '')} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-accent-400 hover:text-accent-300"
+                              className="text-accent-400 hover:text-accent-300 flex-shrink-0"
                             >
                               <Image className="w-4 h-4" />
                             </a>
                           )}
-                          <User className="w-4 h-4 text-primary-400" />
-                          <span className="font-medium text-white">{run.name}</span>
-                          {run.totalRunsToday > 1 && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                              run.runLabel === 1 ? 'bg-accent-500/20 text-accent-400' : 'bg-purple-500/20 text-purple-400'
-                            }`}>
-                              Run {run.runLabel}
-                            </span>
-                          )}
+                          <User className="w-4 h-4 text-primary-400 flex-shrink-0" />
+                          <span className="font-medium text-white truncate">{run.name}</span>
                         </div>
-                        <span className="font-display font-bold text-accent-400">
+                        <span className="font-display font-bold text-accent-400 flex-shrink-0">
                           {run.distanceKm.toFixed(1)} km
                         </span>
                       </div>

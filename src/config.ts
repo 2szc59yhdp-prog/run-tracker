@@ -12,7 +12,7 @@
  */
 
 // Google Apps Script Web App URL
-export const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxReBmxHeL5dCaLhcwpbOQIxCkzr7xHXSn-V2hZ3xOe1-ee9YLYPDjuqudFlNQd4GmZ/exec';
+export const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyBSz_1Jb_oBTO3jg73kBJUQLIQVs7E2JYFb-V8wDZfdK1SJbnFt_Dp_829vpBdWS_p/exec';
 
 // Admin password - Must match the ADMIN_PASSWORD in your Apps Script properties
 export const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'RunTracker2025!';

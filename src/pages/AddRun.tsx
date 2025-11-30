@@ -34,13 +34,26 @@ export default function AddRun() {
   const { refreshData } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in Maldives timezone (UTC+5) to match backend validation
+  const getTodayInMaldives = () => {
+    const now = new Date();
+    // Format date in Maldives timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Indian/Maldives',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(now); // Returns YYYY-MM-DD format
+  };
+  
+  const [today, setToday] = useState(getTodayInMaldives());
   
   const [formData, setFormData] = useState<FormData>({
     serviceNumber: '',
     name: '',
     station: '',
-    date: today,
+    date: getTodayInMaldives(),
     distanceKm: '',
   });
   
@@ -49,6 +62,26 @@ export default function AddRun() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  
+  // Update date when page gains focus or every minute (in case user leaves page open)
+  useEffect(() => {
+    const updateDate = () => {
+      const newToday = getTodayInMaldives();
+      setToday(newToday);
+      setFormData(prev => ({ ...prev, date: newToday }));
+    };
+    
+    // Update when page gains focus
+    window.addEventListener('focus', updateDate);
+    
+    // Also check every minute in case date changes while on page
+    const interval = setInterval(updateDate, 60000);
+    
+    return () => {
+      window.removeEventListener('focus', updateDate);
+      clearInterval(interval);
+    };
+  }, []);
   
   // Pre-warm the API when page loads to reduce cold start delay
   useEffect(() => {

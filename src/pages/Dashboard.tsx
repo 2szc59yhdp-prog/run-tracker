@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink } from 'lucide-react';
 import Card, { StatCard } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
@@ -440,6 +440,23 @@ export default function Dashboard() {
             )}
           </div>
         </Card>
+      </div>
+
+      {/* Photo Upload Button - Links to PhotoCircle */}
+      <div className="mb-8 animate-fade-in">
+        <a
+          href="https://join.photocircleapp.com/R5W9BW072Z"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Camera className="w-6 h-6" />
+          <span className="text-lg">Share Your Run Photos</span>
+          <ExternalLink className="w-4 h-4 opacity-70" />
+        </a>
+        <p className="text-center text-primary-500 text-xs mt-2">
+          Join our PhotoCircle to share your run memories!
+        </p>
       </div>
 
       {/* Stats Grid - Only counts APPROVED runs */}

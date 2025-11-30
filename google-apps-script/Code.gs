@@ -1238,11 +1238,6 @@ function generateId() {
 }
 
 /**
- * Maldives timezone constant (UTC+5)
- */
-const MALDIVES_TIMEZONE = 'Indian/Maldives';
-
-/**
  * Formats a date to YYYY-MM-DD string in Maldives timezone
  * @param {Date|string} date - The date to format
  * @returns {string} Formatted date string
@@ -1250,10 +1245,15 @@ const MALDIVES_TIMEZONE = 'Indian/Maldives';
 function formatDate(date) {
   if (!date) return '';
   
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-  
-  return Utilities.formatDate(d, MALDIVES_TIMEZONE, 'yyyy-MM-dd');
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    return Utilities.formatDate(d, 'Indian/Maldives', 'yyyy-MM-dd');
+  } catch (e) {
+    Logger.log('formatDate error: ' + e.message);
+    return '';
+  }
 }
 
 /**
@@ -1264,10 +1264,15 @@ function formatDate(date) {
 function formatDateTime(date) {
   if (!date) return '';
   
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-  
-  return Utilities.formatDate(d, MALDIVES_TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    return Utilities.formatDate(d, 'Indian/Maldives', 'yyyy-MM-dd HH:mm:ss');
+  } catch (e) {
+    Logger.log('formatDateTime error: ' + e.message);
+    return '';
+  }
 }
 
 // ============================================================
@@ -1662,5 +1667,54 @@ function addSampleData() {
     const result = addRun(run);
     Logger.log('Added run for ' + run.name + ': ' + (result.success ? 'SUCCESS' : 'FAILED - ' + result.error));
   });
+}
+
+/**
+ * Debug function - run this to test getAllRuns step by step
+ */
+function debugGetAllRuns() {
+  try {
+    Logger.log('Step 1: Getting sheet...');
+    const config = getConfig();
+    Logger.log('Spreadsheet ID: ' + config.spreadsheetId);
+    
+    const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+    const sheet = spreadsheet.getSheetByName('Runs');
+    
+    if (!sheet) {
+      Logger.log('ERROR: Runs sheet not found!');
+      return;
+    }
+    
+    Logger.log('Step 2: Getting data...');
+    const data = sheet.getDataRange().getValues();
+    Logger.log('Total rows: ' + data.length);
+    Logger.log('Headers: ' + JSON.stringify(data[0]));
+    
+    if (data.length > 1) {
+      Logger.log('Step 3: First data row (raw): ' + JSON.stringify(data[1]));
+      
+      Logger.log('Step 4: Testing formatDate...');
+      const testDate = formatDate(data[1][1]);
+      Logger.log('Formatted date: ' + testDate);
+    }
+    
+    Logger.log('Step 5: Calling getAllRuns...');
+    const result = getAllRuns();
+    Logger.log('Success: ' + result.success);
+    Logger.log('Number of runs: ' + (result.data ? result.data.length : 0));
+    
+    if (result.data && result.data.length > 0) {
+      Logger.log('First run: ' + JSON.stringify(result.data[0]));
+    }
+    
+    if (result.error) {
+      Logger.log('Error: ' + result.error);
+    }
+    
+  } catch (e) {
+    Logger.log('CAUGHT ERROR: ' + e.message);
+    Logger.log('Stack: ' + e.stack);
+  }
 }
 

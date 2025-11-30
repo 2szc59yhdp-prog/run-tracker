@@ -75,12 +75,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Filter only APPROVED runs for leaderboard calculations
   const approvedRuns = runs.filter(run => run.status === 'approved');
 
-  // Calculate runner statistics from APPROVED runs only
+  // Filter out General Admin from participant counts (they are admins, not participants)
+  const participantRuns = approvedRuns.filter(run => run.station !== 'General Admin');
+
+  // Calculate runner statistics from APPROVED runs only (excluding General Admin)
   const runnerStats: RunnerStats[] = (() => {
     const statsMap = new Map<string, RunnerStats>();
     
-    // Only count approved runs for the leaderboard
-    approvedRuns.forEach(run => {
+    // Only count approved runs for the leaderboard (excluding General Admin)
+    participantRuns.forEach(run => {
       const existing = statsMap.get(run.serviceNumber);
       if (existing) {
         existing.totalDistance += run.distanceKm;
@@ -100,11 +103,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => b.totalDistance - a.totalDistance);
   })();
 
-  // Calculate dashboard statistics from APPROVED runs only
+  // Calculate dashboard statistics from APPROVED runs only (excluding General Admin)
   const dashboardStats: DashboardStats = {
-    totalDistance: approvedRuns.reduce((sum, run) => sum + run.distanceKm, 0),
+    totalDistance: participantRuns.reduce((sum, run) => sum + run.distanceKm, 0),
     uniqueRunners: runnerStats.length,
-    totalRuns: approvedRuns.length,
+    totalRuns: participantRuns.length,
   };
 
   // Get recent runs (last 20, sorted by date descending) - shows ALL runs with status

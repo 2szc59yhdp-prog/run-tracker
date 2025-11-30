@@ -335,6 +335,13 @@ function addRun(data) {
     return { success: false, error: 'All fields are required' };
   }
   
+  // Validate that date is today only (no backdates or future dates)
+  const today = new Date();
+  const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  if (data.date !== todayStr) {
+    return { success: false, error: 'You can only log runs for today' };
+  }
+  
   // Validate distance
   const distance = parseFloat(data.distanceKm);
   if (isNaN(distance) || distance <= 0) {

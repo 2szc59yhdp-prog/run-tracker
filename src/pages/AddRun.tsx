@@ -157,6 +157,8 @@ export default function AddRun() {
 
     if (!formData.date) {
       newErrors.date = 'Date is required';
+    } else if (formData.date !== today) {
+      newErrors.date = 'You can only log runs for today';
     }
 
     const distance = parseFloat(formData.distanceKm);
@@ -460,17 +462,19 @@ export default function AddRun() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Date"
+              label="Date (Today Only)"
               name="date"
               type="date"
               value={formData.date}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, date: e.target.value }));
-                setErrors(prev => ({ ...prev, date: undefined }));
+              onChange={() => {
+                // Date is locked to today - show error if user tries to change
+                setErrors(prev => ({ ...prev, date: 'You can only log runs for today' }));
               }}
+              min={today}
               max={today}
               error={errors.date}
               icon={<Calendar className="w-5 h-5" />}
+              disabled
             />
 
             <div className="space-y-2">

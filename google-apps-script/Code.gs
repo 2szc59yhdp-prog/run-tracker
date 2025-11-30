@@ -272,6 +272,7 @@ function getAllRuns() {
   const approvedByColIndex = headers.indexOf('ApprovedBy');
   const approvedByNameColIndex = headers.indexOf('ApprovedByName');
   const approvedAtColIndex = headers.indexOf('ApprovedAt');
+  const submittedAtColIndex = headers.indexOf('SubmittedAt');
   
   // Skip header row
   const runs = [];
@@ -291,7 +292,8 @@ function getAllRuns() {
         rejectionReason: rejectionReasonColIndex >= 0 && row[rejectionReasonColIndex] ? row[rejectionReasonColIndex].toString() : '',
         approvedBy: approvedByColIndex >= 0 && row[approvedByColIndex] ? row[approvedByColIndex].toString() : '',
         approvedByName: approvedByNameColIndex >= 0 && row[approvedByNameColIndex] ? row[approvedByNameColIndex].toString() : '',
-        approvedAt: approvedAtColIndex >= 0 && row[approvedAtColIndex] ? formatDate(row[approvedAtColIndex]) : ''
+        approvedAt: approvedAtColIndex >= 0 && row[approvedAtColIndex] ? formatDate(row[approvedAtColIndex]) : '',
+        submittedAt: submittedAtColIndex >= 0 && row[submittedAtColIndex] ? formatDateTime(row[submittedAtColIndex]) : ''
       });
     }
   }
@@ -376,9 +378,10 @@ function addRun(data) {
     }
   }
   
-  // Append new row (includes photo and status columns)
+  // Append new row (includes photo, status, and submission timestamp columns)
   // Default status is 'pending' - admin must approve
   const status = 'pending';
+  const submittedAt = new Date(); // Current timestamp when run is submitted
   
   sheet.appendRow([
     id,
@@ -389,7 +392,12 @@ function addRun(data) {
     distance,
     photoId,
     photoUrl,
-    status
+    status,
+    '', // RejectionReason
+    '', // ApprovedBy
+    '', // ApprovedByName
+    '', // ApprovedAt
+    submittedAt // SubmittedAt - new column for submission time
   ]);
   
   // Send email notification to all admins
@@ -1090,6 +1098,27 @@ function formatDate(date) {
   const day = String(d.getDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Formats a date object to ISO datetime string with time
+ * @param {Date} date - The date to format
+ * @returns {string} Formatted datetime string (YYYY-MM-DD HH:MM:SS)
+ */
+function formatDateTime(date) {
+  if (!date) return '';
+  
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 // ============================================================

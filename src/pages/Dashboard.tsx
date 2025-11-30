@@ -276,6 +276,18 @@ export default function Dashboard() {
     });
   };
 
+  // Format submission time (e.g., "10:30 AM")
+  const formatTime = (dateTimeStr?: string) => {
+    if (!dateTimeStr) return '';
+    const date = new Date(dateTimeStr.replace(' ', 'T')); // Convert "YYYY-MM-DD HH:MM:SS" to ISO format
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -667,7 +679,7 @@ export default function Dashboard() {
                 <table className="w-full hidden sm:table">
                   <thead>
                     <tr className="border-b border-primary-700">
-                      <th className="text-left py-3 px-2 text-primary-400 font-medium text-sm">Date</th>
+                      <th className="text-left py-3 px-2 text-primary-400 font-medium text-sm">Submitted</th>
                       <th className="text-left py-3 px-2 text-primary-400 font-medium text-sm">Name</th>
                       <th className="text-left py-3 px-2 text-primary-400 font-medium text-sm">Station</th>
                       <th className="text-right py-3 px-2 text-primary-400 font-medium text-sm">Distance</th>
@@ -677,8 +689,13 @@ export default function Dashboard() {
                   <tbody>
                     {filteredRuns.map((run) => (
                       <tr key={run.id} className="border-b border-primary-700/50 hover:bg-primary-700/20">
-                        <td className="py-3 px-2 text-primary-300 text-sm">
-                          {formatDate(run.date)}
+                        <td className="py-3 px-2 text-sm">
+                          <div>
+                            <p className="text-primary-300">{formatDate(run.date)}</p>
+                            {run.submittedAt && (
+                              <p className="text-primary-500 text-xs">{formatTime(run.submittedAt)}</p>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-2">
                           <div className="flex items-center gap-2">
@@ -744,6 +761,9 @@ export default function Dashboard() {
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {formatDate(run.date)}
+                          {run.submittedAt && (
+                            <span className="text-primary-500">• {formatTime(run.submittedAt)}</span>
+                          )}
                         </span>
                         <span className="flex items-center gap-1">
                           <Hash className="w-3 h-3" />

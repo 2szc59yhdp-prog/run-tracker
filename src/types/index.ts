@@ -23,6 +23,7 @@ export interface Run {
   approvedBy?: string;      // Service number of admin who approved/rejected
   approvedByName?: string;  // Name of admin who approved/rejected
   approvedAt?: string;      // Timestamp of approval/rejection
+  submittedAt?: string;     // Timestamp when run was submitted (YYYY-MM-DD HH:MM:SS)
 }
 
 export interface RegisteredUser {

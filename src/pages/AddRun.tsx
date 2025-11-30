@@ -313,13 +313,13 @@ export default function AddRun() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">
-      {/* Fixed Toast Notification */}
+      {/* Fixed Toast Notification - positioned below navbar */}
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in px-4 w-full max-w-md">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg ${
             toast.type === 'error' 
-              ? 'bg-danger-500/90 text-white border border-danger-400' 
-              : 'bg-success-500/90 text-white border border-success-400'
+              ? 'bg-danger-500 text-white border border-danger-400' 
+              : 'bg-success-500 text-white border border-success-400'
           }`}>
             {toast.type === 'error' ? (
               <AlertCircle className="w-5 h-5 flex-shrink-0" />

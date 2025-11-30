@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Hash, User, MapPin, Calendar, Route, CheckCircle, AlertCircle, Search, Loader2, Camera, X, Image } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { useApp } from '../context/AppContext';
-import { addRun, checkDuplicateRun, getUserByServiceNumber } from '../services/api';
+import { addRun, checkDuplicateRun, getUserByServiceNumber, warmupApi } from '../services/api';
 
 interface FormData {
   serviceNumber: string;
@@ -48,6 +48,11 @@ export default function AddRun() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Pre-warm the API when page loads to reduce cold start delay
+  useEffect(() => {
+    warmupApi();
+  }, []);
   const [userFound, setUserFound] = useState<UserData | null>(null);
   const [userNotFound, setUserNotFound] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
@@ -237,8 +242,8 @@ export default function AddRun() {
 
       if (response.success) {
         setIsSuccess(true);
-        // Refresh dashboard data
-        await refreshData();
+        // Refresh dashboard data in background (don't wait)
+        refreshData(true);
         // Navigate to dashboard after short delay
         setTimeout(() => {
           navigate('/dashboard');

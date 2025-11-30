@@ -9,6 +9,24 @@ import { APPS_SCRIPT_URL } from '../config';
 import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser } from '../types';
 
 /**
+ * Pre-warms the Google Apps Script API to reduce cold start delay
+ * This makes a lightweight request to wake up the serverless function
+ */
+export async function warmupApi(): Promise<void> {
+  try {
+    // Use a simple GET request with a ping action
+    // This wakes up the Google Apps Script without doing heavy work
+    fetch(`${APPS_SCRIPT_URL}?action=ping`, {
+      method: 'GET',
+    }).catch(() => {
+      // Silently ignore errors - this is just a warmup
+    });
+  } catch {
+    // Silently ignore errors
+  }
+}
+
+/**
  * Fetches all runs from the Google Sheet
  */
 export async function fetchAllRuns(): Promise<ApiResponse<Run[]>> {

@@ -161,6 +161,10 @@ function doGet(e) {
   
   try {
     switch (action) {
+      case 'ping':
+        // Lightweight warmup endpoint - just returns success immediately
+        result = { success: true, message: 'pong' };
+        break;
       case 'getRuns':
         result = getAllRuns();
         break;

@@ -302,14 +302,20 @@ function getAllRuns() {
 }
 
 /**
- * Checks if a run already exists for a given service number and date
+ * Checks runs for a given service number and date
+ * Returns count, total distance, and whether limits are reached
  * @param {string} serviceNumber - The service number to check
  * @param {string} date - The date to check (YYYY-MM-DD)
- * @returns {Object} Response indicating if duplicate exists
+ * @returns {Object} Response with count and total distance for that day
  */
 function checkDuplicateRun(serviceNumber, date) {
   const sheet = getRunsSheet();
   const data = sheet.getDataRange().getValues();
+  const MAX_RUNS_PER_DAY = 2;
+  const MAX_DISTANCE_PER_DAY = 10; // 10km max per day
+  
+  let runCount = 0;
+  let totalDistance = 0;
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -317,11 +323,24 @@ function checkDuplicateRun(serviceNumber, date) {
     const rowDate = formatDate(row[1]);
     
     if (rowServiceNumber === serviceNumber && rowDate === date) {
-      return { success: true, data: { exists: true } };
+      runCount++;
+      totalDistance += parseFloat(row[5]) || 0;
     }
   }
   
-  return { success: true, data: { exists: false } };
+  const remainingDistance = Math.max(0, MAX_DISTANCE_PER_DAY - totalDistance);
+  
+  return { 
+    success: true, 
+    data: { 
+      exists: runCount >= MAX_RUNS_PER_DAY,
+      count: runCount,
+      totalDistance: totalDistance,
+      remainingDistance: remainingDistance,
+      maxRunsReached: runCount >= MAX_RUNS_PER_DAY,
+      maxDistanceReached: totalDistance >= MAX_DISTANCE_PER_DAY
+    } 
+  };
 }
 
 /**
@@ -348,17 +367,30 @@ function addRun(data) {
     return { success: false, error: 'Distance must be a positive number' };
   }
   
-  // Validate max distance (10 KM)
-  if (distance > 10) {
-    return { success: false, error: 'Distance cannot exceed 10 KM' };
-  }
+  // Check daily limits (2 runs max, 10km total max per day)
+  const dailyCheck = checkDuplicateRun(data.serviceNumber, data.date);
   
-  // Check for duplicate
-  const duplicateCheck = checkDuplicateRun(data.serviceNumber, data.date);
-  if (duplicateCheck.data && duplicateCheck.data.exists) {
+  // Check if max runs reached (2 runs per day)
+  if (dailyCheck.data && dailyCheck.data.maxRunsReached) {
     return { 
       success: false, 
-      error: 'You have already logged your run for this date' 
+      error: 'You have already logged 2 runs for today. Maximum 2 runs per day allowed.' 
+    };
+  }
+  
+  // Check if adding this run would exceed 10km daily limit
+  const newTotalDistance = (dailyCheck.data?.totalDistance || 0) + distance;
+  if (newTotalDistance > 10) {
+    const remaining = dailyCheck.data?.remainingDistance || 0;
+    if (remaining <= 0) {
+      return { 
+        success: false, 
+        error: 'You have already reached your 10 km daily limit.' 
+      };
+    }
+    return { 
+      success: false, 
+      error: `This run would exceed your 10 km daily limit. You can only add up to ${remaining.toFixed(1)} km more today.` 
     };
   }
   

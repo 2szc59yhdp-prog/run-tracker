@@ -51,12 +51,20 @@ export async function fetchAllRuns(): Promise<ApiResponse<Run[]>> {
 }
 
 /**
- * Checks if a run already exists for a given service number and date
+ * Checks daily run limits for a given service number and date
+ * Returns count, total distance, and remaining allowance
  */
 export async function checkDuplicateRun(
   serviceNumber: string,
   date: string
-): Promise<ApiResponse<{ exists: boolean }>> {
+): Promise<ApiResponse<{ 
+  exists: boolean; 
+  count: number; 
+  totalDistance: number;
+  remainingDistance: number;
+  maxRunsReached: boolean;
+  maxDistanceReached: boolean;
+}>> {
   try {
     const params = new URLSearchParams({
       action: 'checkDuplicate',

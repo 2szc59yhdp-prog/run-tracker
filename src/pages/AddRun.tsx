@@ -185,7 +185,7 @@ export default function AddRun() {
     } else if (distance <= 0) {
       newErrors.distanceKm = 'Distance must be greater than 0';
     } else if (distance > 10) {
-      newErrors.distanceKm = 'Distance cannot exceed 10 KM';
+      newErrors.distanceKm = 'Single run cannot exceed 10 km (daily limit)';
     }
 
     // Photo is required
@@ -234,10 +234,30 @@ export default function AddRun() {
         formData.date
       );
 
-      if (duplicateCheck.success && duplicateCheck.data?.exists) {
+      if (duplicateCheck.success && duplicateCheck.data?.maxRunsReached) {
         setErrors({
-          general: 'You have already logged your run for this date. Only one run per person per day is allowed.',
+          general: 'You have already logged 2 runs for today. Maximum 2 runs per day allowed.',
         });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Check if adding this run would exceed 10km daily limit
+      const newDistance = parseFloat(formData.distanceKm);
+      const currentTotal = duplicateCheck.data?.totalDistance || 0;
+      const newTotal = currentTotal + newDistance;
+      
+      if (newTotal > 10) {
+        const remaining = duplicateCheck.data?.remainingDistance || 0;
+        if (remaining <= 0) {
+          setErrors({
+            general: 'You have already reached your 10 km daily limit.',
+          });
+        } else {
+          setErrors({
+            general: `This run would exceed your 10 km daily limit. You can only add up to ${remaining.toFixed(1)} km more today.`,
+          });
+        }
         setIsSubmitting(false);
         return;
       }

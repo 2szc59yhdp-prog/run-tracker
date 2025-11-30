@@ -287,6 +287,46 @@ export default function Dashboard() {
       )
     : recentRuns;
 
+  // Process runs to add run labels (Run 1, Run 2) for same-day submissions
+  // and sort to group same user's daily runs together
+  const processedRuns = useMemo(() => {
+    // First, count runs per user per day to assign labels
+    const runCounts = new Map<string, number>();
+    const runLabels = new Map<string, number>();
+    
+    // Sort by date desc, then by submittedAt asc (to get Run 1 before Run 2)
+    const sortedRuns = [...filteredRuns].sort((a, b) => {
+      // First sort by date descending
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      
+      // Then by service number to group same user's runs
+      if (a.serviceNumber !== b.serviceNumber) {
+        return a.serviceNumber.localeCompare(b.serviceNumber);
+      }
+      
+      // Then by submittedAt ascending (Run 1 first)
+      const aTime = a.submittedAt ? new Date(a.submittedAt.replace(' ', 'T')).getTime() : 0;
+      const bTime = b.submittedAt ? new Date(b.submittedAt.replace(' ', 'T')).getTime() : 0;
+      return aTime - bTime;
+    });
+    
+    // Assign run labels
+    sortedRuns.forEach(run => {
+      const key = `${run.serviceNumber}-${run.date}`;
+      const currentCount = runCounts.get(key) || 0;
+      runCounts.set(key, currentCount + 1);
+      runLabels.set(run.id, currentCount + 1);
+    });
+    
+    // Return runs with their labels
+    return sortedRuns.map(run => ({
+      ...run,
+      runLabel: runLabels.get(run.id) || 1,
+      totalRunsToday: runCounts.get(`${run.serviceNumber}-${run.date}`) || 1
+    }));
+  }, [filteredRuns]);
+
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16">
@@ -767,7 +807,7 @@ export default function Dashboard() {
                 {/* Results count */}
                 {serviceFilter && (
                   <p className="text-xs text-primary-500 mb-3">
-                    Showing {filteredRuns.length} of {recentRuns.length} runs
+                    Showing {processedRuns.length} of {recentRuns.length} runs
                   </p>
                 )}
                 
@@ -783,14 +823,23 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRuns.map((run) => (
-                      <tr key={run.id} className="border-b border-primary-700/50 hover:bg-primary-700/20">
+                    {processedRuns.map((run) => (
+                      <tr key={run.id} className={`border-b border-primary-700/50 hover:bg-primary-700/20 ${run.runLabel === 2 ? 'bg-primary-800/30' : ''}`}>
                         <td className="py-3 px-2 text-sm">
                           <div>
                             <p className="text-primary-300">{formatDate(run.date)}</p>
-                            {run.submittedAt && (
-                              <p className="text-primary-500 text-xs">{formatTime(run.submittedAt)}</p>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {run.submittedAt && (
+                                <span className="text-primary-500 text-xs">{formatTime(run.submittedAt)}</span>
+                              )}
+                              {run.totalRunsToday > 1 && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                  run.runLabel === 1 ? 'bg-accent-500/20 text-accent-400' : 'bg-purple-500/20 text-purple-400'
+                                }`}>
+                                  Run {run.runLabel}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="py-3 px-2">
@@ -829,10 +878,10 @@ export default function Dashboard() {
 
                 {/* Mobile Cards */}
                 <div className="sm:hidden space-y-3">
-                  {filteredRuns.map((run) => (
+                  {processedRuns.map((run) => (
                     <div
                       key={run.id}
-                      className="p-4 rounded-xl bg-primary-700/20 border border-primary-700/30"
+                      className={`p-4 rounded-xl border ${run.runLabel === 2 ? 'bg-primary-800/40 border-purple-500/30' : 'bg-primary-700/20 border-primary-700/30'}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
@@ -848,6 +897,13 @@ export default function Dashboard() {
                           )}
                           <User className="w-4 h-4 text-primary-400" />
                           <span className="font-medium text-white">{run.name}</span>
+                          {run.totalRunsToday > 1 && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                              run.runLabel === 1 ? 'bg-accent-500/20 text-accent-400' : 'bg-purple-500/20 text-purple-400'
+                            }`}>
+                              Run {run.runLabel}
+                            </span>
+                          )}
                         </div>
                         <span className="font-display font-bold text-accent-400">
                           {run.distanceKm.toFixed(1)} km

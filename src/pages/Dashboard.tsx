@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer } from 'lucide-react';
 import Card, { StatCard } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
 import { useApp } from '../context/AppContext';
 import { fetchAllUsers } from '../services/api';
 import type { RunStatus, RegisteredUser } from '../types';
+
+// Challenge dates
+const CHALLENGE_START = new Date('2025-12-01T00:00:00');
+const CHALLENGE_END = new Date('2026-01-31T23:59:59');
 
 // All stations for Station Performance Board (police stations only)
 const ALL_STATIONS = [
@@ -64,6 +68,43 @@ export default function Dashboard() {
   const [serviceFilter, setServiceFilter] = useState('');
   const [leaderboardFilter, setLeaderboardFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'before' as 'before' | 'active' | 'ended' });
+
+  // Countdown timer
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      
+      if (now < CHALLENGE_START) {
+        // Before challenge starts - countdown to start
+        const diff = CHALLENGE_START.getTime() - now.getTime();
+        setCountdown({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((diff % (1000 * 60)) / 1000),
+          status: 'before'
+        });
+      } else if (now <= CHALLENGE_END) {
+        // Challenge is active - countdown to end
+        const diff = CHALLENGE_END.getTime() - now.getTime();
+        setCountdown({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((diff % (1000 * 60)) / 1000),
+          status: 'active'
+        });
+      } else {
+        // Challenge ended
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'ended' });
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-refresh data every 5 seconds (silent - no loading spinner)
   useEffect(() => {
@@ -303,6 +344,62 @@ export default function Dashboard() {
         <p className="text-primary-400">
           Team statistics and leaderboard
         </p>
+      </div>
+
+      {/* Countdown Timer */}
+      <div className="mb-8 animate-fade-in">
+        <Card className={`overflow-hidden ${countdown.status === 'active' ? 'border-success-500/30' : countdown.status === 'ended' ? 'border-primary-600' : 'border-accent-500/30'}`}>
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            {/* Icon & Title */}
+            <div className="flex items-center gap-3">
+              <div className={`p-3 rounded-xl ${countdown.status === 'active' ? 'bg-success-500/20' : countdown.status === 'ended' ? 'bg-primary-700' : 'bg-accent-500/20'}`}>
+                <Timer className={`w-6 h-6 ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`} />
+              </div>
+              <div className="text-center sm:text-left">
+                <p className={`font-display font-bold text-lg ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`}>
+                  {countdown.status === 'before' && '🚀 Challenge Starts In'}
+                  {countdown.status === 'active' && '🏃 Time Remaining'}
+                  {countdown.status === 'ended' && '🏁 Challenge Completed!'}
+                </p>
+                <p className="text-xs text-primary-500">
+                  {countdown.status === 'before' && 'Dec 1, 2025 - Jan 31, 2026'}
+                  {countdown.status === 'active' && 'Keep running until Jan 31, 2026!'}
+                  {countdown.status === 'ended' && 'Thank you for participating!'}
+                </p>
+              </div>
+            </div>
+
+            {/* Countdown Numbers */}
+            {countdown.status !== 'ended' && (
+              <div className="flex gap-2 sm:gap-4 sm:ml-auto">
+                <div className="flex flex-col items-center">
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                    {String(countdown.days).padStart(2, '0')}
+                  </div>
+                  <span className="text-xs text-primary-500 mt-1">Days</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                    {String(countdown.hours).padStart(2, '0')}
+                  </div>
+                  <span className="text-xs text-primary-500 mt-1">Hours</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                    {String(countdown.minutes).padStart(2, '0')}
+                  </div>
+                  <span className="text-xs text-primary-500 mt-1">Mins</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                    {String(countdown.seconds).padStart(2, '0')}
+                  </div>
+                  <span className="text-xs text-primary-500 mt-1">Secs</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* Stats Grid - Only counts APPROVED runs */}

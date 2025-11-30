@@ -6,12 +6,6 @@ import { STORAGE_KEYS } from '../config';
 // Cache configuration
 const CACHE_KEY = 'run_tracker_runs_cache';
 const CACHE_TIMESTAMP_KEY = 'run_tracker_cache_timestamp';
-const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes - data is considered fresh for this long
-
-interface CachedData {
-  runs: Run[];
-  timestamp: number;
-}
 
 // Helper to get cached data from localStorage
 function getCachedRuns(): Run[] | null {
@@ -37,19 +31,6 @@ function setCachedRuns(runs: Run[]): void {
   } catch {
     // Storage full or unavailable, ignore
   }
-}
-
-// Check if cache is still fresh
-function isCacheFresh(): boolean {
-  try {
-    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-    if (timestamp) {
-      return Date.now() - parseInt(timestamp, 10) < CACHE_MAX_AGE;
-    }
-  } catch {
-    // Ignore errors
-  }
-  return false;
 }
 
 interface AppContextType {

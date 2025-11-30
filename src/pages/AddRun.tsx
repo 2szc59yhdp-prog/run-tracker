@@ -219,6 +219,15 @@ export default function AddRun() {
     });
   };
 
+  // Calculate SHA-256 hash of image for duplicate detection
+  const calculateImageHash = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -267,9 +276,11 @@ export default function AddRun() {
       if (photo) {
         try {
           const base64 = await fileToBase64(photo);
+          const hash = await calculateImageHash(photo);
           photoPayload = {
             base64,
             mimeType: photo.type,
+            hash, // SHA-256 hash for duplicate detection
           };
         } catch (photoError) {
           console.error('Error converting photo:', photoError);

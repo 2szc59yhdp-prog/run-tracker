@@ -146,6 +146,67 @@ function deletePhotoFromDrive(fileId) {
   }
 }
 
+/**
+ * Calculates MD5 hash of base64 image data
+ * @param {string} base64Data - Base64 encoded image data
+ * @returns {string} MD5 hash as hex string
+ */
+function calculatePhotoHash(base64Data) {
+  try {
+    const decodedData = Utilities.base64Decode(base64Data);
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, decodedData);
+    // Convert byte array to hex string
+    return digest.map(function(byte) {
+      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+    }).join('');
+  } catch (error) {
+    Logger.log('Error calculating photo hash: ' + error.message);
+    return null;
+  }
+}
+
+/**
+ * Checks if a photo hash already exists in the database
+ * @param {string} photoHash - The MD5 hash to check
+ * @returns {Object} Object with exists boolean and original run info if found
+ */
+function checkDuplicatePhoto(photoHash) {
+  if (!photoHash) {
+    return { exists: false };
+  }
+  
+  const sheet = getRunsSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  // Find PhotoHash column index
+  const photoHashColIndex = headers.indexOf('PhotoHash');
+  if (photoHashColIndex === -1) {
+    // Column doesn't exist yet, no duplicates possible
+    return { exists: false };
+  }
+  
+  // Search for matching hash
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const existingHash = row[photoHashColIndex] ? row[photoHashColIndex].toString() : '';
+    
+    if (existingHash && existingHash === photoHash) {
+      // Found a duplicate - return info about the original run
+      return {
+        exists: true,
+        originalRun: {
+          date: formatDate(row[1]),
+          serviceNumber: row[2].toString(),
+          name: row[3].toString()
+        }
+      };
+    }
+  }
+  
+  return { exists: false };
+}
+
 // ============================================================
 // HTTP HANDLERS
 // ============================================================
@@ -273,6 +334,7 @@ function getAllRuns() {
   const approvedByNameColIndex = headers.indexOf('ApprovedByName');
   const approvedAtColIndex = headers.indexOf('ApprovedAt');
   const submittedAtColIndex = headers.indexOf('SubmittedAt');
+  const duplicateOfColIndex = headers.indexOf('DuplicateOf');
   
   // Skip header row
   const runs = [];
@@ -293,7 +355,8 @@ function getAllRuns() {
         approvedBy: approvedByColIndex >= 0 && row[approvedByColIndex] ? row[approvedByColIndex].toString() : '',
         approvedByName: approvedByNameColIndex >= 0 && row[approvedByNameColIndex] ? row[approvedByNameColIndex].toString() : '',
         approvedAt: approvedAtColIndex >= 0 && row[approvedAtColIndex] ? formatDate(row[approvedAtColIndex]) : '',
-        submittedAt: submittedAtColIndex >= 0 && row[submittedAtColIndex] ? formatDateTime(row[submittedAtColIndex]) : ''
+        submittedAt: submittedAtColIndex >= 0 && row[submittedAtColIndex] ? formatDateTime(row[submittedAtColIndex]) : '',
+        duplicateOf: duplicateOfColIndex >= 0 && row[duplicateOfColIndex] ? row[duplicateOfColIndex].toString() : ''
       });
     }
   }
@@ -402,8 +465,26 @@ function addRun(data) {
   // Handle photo upload if provided
   let photoId = '';
   let photoUrl = '';
+  let photoHash = '';
+  let duplicateOf = ''; // Store info about original if duplicate detected
   
   if (data.photo && data.photo.base64 && data.photo.mimeType) {
+    // Calculate photo hash to check for duplicates
+    photoHash = calculatePhotoHash(data.photo.base64);
+    
+    if (photoHash) {
+      // Check if this exact screenshot has been used before
+      const duplicatePhotoCheck = checkDuplicatePhoto(photoHash);
+      
+      if (duplicatePhotoCheck.exists) {
+        // Flag as duplicate but allow upload - admin will review
+        const original = duplicatePhotoCheck.originalRun;
+        duplicateOf = `${original.date} | ${original.name} (#${original.serviceNumber})`;
+        Logger.log('Duplicate photo detected: ' + duplicateOf);
+      }
+    }
+    
+    // Proceed with upload (even if duplicate - admin will review)
     const timestamp = new Date().getTime();
     const extension = data.photo.mimeType.split('/')[1] || 'jpg';
     const fileName = `run_${data.serviceNumber}_${data.date}_${timestamp}.${extension}`;
@@ -419,7 +500,7 @@ function addRun(data) {
     }
   }
   
-  // Append new row (includes photo, status, and submission timestamp columns)
+  // Append new row (includes photo, status, hash, duplicate info, and submission timestamp columns)
   // Default status is 'pending' - admin must approve
   const status = 'pending';
   const submittedAt = new Date(); // Current timestamp when run is submitted
@@ -438,7 +519,9 @@ function addRun(data) {
     '', // ApprovedBy
     '', // ApprovedByName
     '', // ApprovedAt
-    submittedAt // SubmittedAt - new column for submission time
+    submittedAt, // SubmittedAt
+    photoHash, // PhotoHash - for duplicate detection
+    duplicateOf // DuplicateOf - original run info if duplicate screenshot
   ]);
   
   // Send email notification to all admins
@@ -1322,8 +1405,8 @@ function setupSheet() {
     sheet = spreadsheet.insertSheet(config.sheetName);
   }
   
-  // Set up headers (includes Photo and Status columns)
-  const headers = ['ID', 'Date', 'ServiceNumber', 'Name', 'Station', 'DistanceKm', 'PhotoId', 'PhotoUrl', 'Status'];
+  // Set up headers (includes Photo, Status, PhotoHash, and DuplicateOf columns)
+  const headers = ['ID', 'Date', 'ServiceNumber', 'Name', 'Station', 'DistanceKm', 'PhotoId', 'PhotoUrl', 'Status', 'RejectionReason', 'ApprovedBy', 'ApprovedByName', 'ApprovedAt', 'SubmittedAt', 'PhotoHash', 'DuplicateOf'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   
   // Format header row
@@ -1333,15 +1416,22 @@ function setupSheet() {
   headerRange.setFontColor('#ffffff');
   
   // Set column widths
-  sheet.setColumnWidth(1, 300); // ID
-  sheet.setColumnWidth(2, 120); // Date
-  sheet.setColumnWidth(3, 120); // ServiceNumber
-  sheet.setColumnWidth(4, 180); // Name
-  sheet.setColumnWidth(5, 150); // Station
-  sheet.setColumnWidth(6, 100); // DistanceKm
-  sheet.setColumnWidth(7, 300); // PhotoId
-  sheet.setColumnWidth(8, 400); // PhotoUrl
-  sheet.setColumnWidth(9, 100); // Status
+  sheet.setColumnWidth(1, 300);  // ID
+  sheet.setColumnWidth(2, 120);  // Date
+  sheet.setColumnWidth(3, 120);  // ServiceNumber
+  sheet.setColumnWidth(4, 180);  // Name
+  sheet.setColumnWidth(5, 150);  // Station
+  sheet.setColumnWidth(6, 100);  // DistanceKm
+  sheet.setColumnWidth(7, 300);  // PhotoId
+  sheet.setColumnWidth(8, 400);  // PhotoUrl
+  sheet.setColumnWidth(9, 100);  // Status
+  sheet.setColumnWidth(10, 200); // RejectionReason
+  sheet.setColumnWidth(11, 120); // ApprovedBy
+  sheet.setColumnWidth(12, 150); // ApprovedByName
+  sheet.setColumnWidth(13, 150); // ApprovedAt
+  sheet.setColumnWidth(14, 150); // SubmittedAt
+  sheet.setColumnWidth(15, 280); // PhotoHash
+  sheet.setColumnWidth(16, 300); // DuplicateOf
   
   // Freeze header row
   sheet.setFrozenRows(1);
@@ -1396,6 +1486,58 @@ function addNewColumnsToSheet() {
   }
   
   Logger.log('Column update complete!');
+}
+
+/**
+ * Adds PhotoHash column for duplicate screenshot detection
+ * Run this once to update your existing sheet structure
+ */
+function addPhotoHashColumn() {
+  const sheet = getRunsSheet();
+  if (!sheet) {
+    throw new Error('Runs sheet not found');
+  }
+  
+  // Check if column already exists
+  const headers = sheet.getRange(1, 1, 1, 20).getValues()[0];
+  const hasPhotoHash = headers.includes('PhotoHash');
+  
+  if (!hasPhotoHash) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('PhotoHash');
+    sheet.setColumnWidth(lastCol + 1, 280);
+    Logger.log('Added PhotoHash column for duplicate detection');
+  } else {
+    Logger.log('PhotoHash column already exists');
+  }
+  
+  Logger.log('PhotoHash column setup complete!');
+}
+
+/**
+ * Adds DuplicateOf column for flagging duplicate screenshots
+ * Run this once to update your existing sheet structure
+ */
+function addDuplicateOfColumn() {
+  const sheet = getRunsSheet();
+  if (!sheet) {
+    throw new Error('Runs sheet not found');
+  }
+  
+  // Check if column already exists
+  const headers = sheet.getRange(1, 1, 1, 20).getValues()[0];
+  const hasDuplicateOf = headers.includes('DuplicateOf');
+  
+  if (!hasDuplicateOf) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('DuplicateOf');
+    sheet.setColumnWidth(lastCol + 1, 300);
+    Logger.log('Added DuplicateOf column for duplicate flagging');
+  } else {
+    Logger.log('DuplicateOf column already exists');
+  }
+  
+  Logger.log('DuplicateOf column setup complete!');
 }
 
 /**

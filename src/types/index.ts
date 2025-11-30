@@ -24,6 +24,7 @@ export interface Run {
   approvedByName?: string;  // Name of admin who approved/rejected
   approvedAt?: string;      // Timestamp of approval/rejection
   submittedAt?: string;     // Timestamp when run was submitted (YYYY-MM-DD HH:MM:SS)
+  duplicateOf?: string;     // Info about original run if screenshot is duplicate (e.g., "2025-11-28 | John Doe (#1234)")
 }
 
 export interface RegisteredUser {
@@ -69,6 +70,7 @@ export interface DashboardStats {
 export interface PhotoPayload {
   base64: string;       // Base64 encoded image data (without data URL prefix)
   mimeType: string;     // e.g., 'image/jpeg', 'image/png'
+  hash?: string;        // SHA-256 hash for duplicate detection (calculated on frontend)
 }
 
 export interface AddRunPayload {

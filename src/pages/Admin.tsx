@@ -481,6 +481,8 @@ export default function Admin() {
                 className={`p-4 rounded-xl border transition-all ${
                   editingId === run.id
                     ? 'bg-primary-700/50 border-accent-500/50'
+                    : run.duplicateOf
+                    ? 'bg-red-500/5 border-red-500/30 ring-1 ring-red-500/20'
                     : run.status === 'pending'
                     ? 'bg-amber-500/5 border-amber-500/20'
                     : 'bg-primary-800/30 border-primary-700/30 hover:border-primary-600/50'
@@ -554,12 +556,26 @@ export default function Admin() {
                 ) : (
                   // View Mode
                   <div className="space-y-4">
+                    {/* Duplicate Badge - Top of Card */}
+                    {run.duplicateOf && (
+                      <div className="flex items-center gap-2 -mt-1 -mb-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                          ⚠️ DUPLICATE SCREENSHOT
+                        </span>
+                      </div>
+                    )}
+
                     {/* Photo Preview Section - Large and Prominent */}
                     {run.photoUrl && (
-                      <div className="bg-primary-900/50 rounded-xl p-4 border border-primary-700/50">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Image className="w-4 h-4 text-accent-400" />
-                          <span className="text-sm font-medium text-primary-300">Run Proof (Strava/Nike Screenshot)</span>
+                      <div className={`rounded-xl p-4 border ${run.duplicateOf ? 'bg-red-900/20 border-red-500/30' : 'bg-primary-900/50 border-primary-700/50'}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Image className="w-4 h-4 text-accent-400" />
+                            <span className="text-sm font-medium text-primary-300">Run Proof (Strava/Nike Screenshot)</span>
+                          </div>
+                          {run.duplicateOf && (
+                            <span className="text-xs text-red-400 font-medium">Previously used</span>
+                          )}
                         </div>
                         <button 
                           type="button"
@@ -588,6 +604,17 @@ export default function Admin() {
                         <div>
                           <p className="text-amber-400 font-medium text-sm">No proof uploaded</p>
                           <p className="text-amber-400/70 text-xs">This run has no screenshot attached for verification</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Duplicate Screenshot Warning */}
+                    {run.duplicateOf && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-red-400 font-medium text-sm">⚠️ Duplicate Screenshot Detected</p>
+                          <p className="text-red-400/70 text-xs">This screenshot was previously used: {run.duplicateOf}</p>
                         </div>
                       </div>
                     )}

@@ -355,8 +355,10 @@ function addRun(data) {
   }
   
   // Validate that date is today only (no backdates or future dates)
+  // Using Maldives timezone (UTC+5)
+  const MALDIVES_TIMEZONE = 'Indian/Maldives';
   const today = new Date();
-  const todayStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const todayStr = Utilities.formatDate(today, MALDIVES_TIMEZONE, 'yyyy-MM-dd');
   if (data.date !== todayStr) {
     return { success: false, error: 'You can only log runs for today' };
   }
@@ -1122,7 +1124,12 @@ function generateId() {
 }
 
 /**
- * Formats a date to YYYY-MM-DD string
+ * Maldives timezone constant (UTC+5)
+ */
+const MALDIVES_TIMEZONE = 'Indian/Maldives';
+
+/**
+ * Formats a date to YYYY-MM-DD string in Maldives timezone
  * @param {Date|string} date - The date to format
  * @returns {string} Formatted date string
  */
@@ -1132,15 +1139,11 @@ function formatDate(date) {
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
+  return Utilities.formatDate(d, MALDIVES_TIMEZONE, 'yyyy-MM-dd');
 }
 
 /**
- * Formats a date object to ISO datetime string with time
+ * Formats a date object to ISO datetime string with time in Maldives timezone
  * @param {Date} date - The date to format
  * @returns {string} Formatted datetime string (YYYY-MM-DD HH:MM:SS)
  */
@@ -1150,14 +1153,7 @@ function formatDateTime(date) {
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const seconds = String(d.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  return Utilities.formatDate(d, MALDIVES_TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
 }
 
 // ============================================================

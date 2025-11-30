@@ -62,6 +62,7 @@ function StatusBadge({ status, rejectionReason }: {
 export default function Dashboard() {
   const { dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
+  const [leaderboardFilter, setLeaderboardFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
 
   // Auto-refresh data every 5 seconds (silent - no loading spinner)
@@ -357,44 +358,103 @@ export default function Dashboard() {
         {/* Leaderboard - Only APPROVED runs */}
         <div className="animate-fade-in stagger-3">
           <Card>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-warning-500/20 text-warning-500">
-                <Award className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning-500/20 text-warning-500">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-white">
+                    Leaderboard
+                  </h2>
+                  <p className="text-xs text-primary-500">Based on approved runs only</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-xl font-semibold text-white">
-                  Leaderboard
-                </h2>
-                <p className="text-xs text-primary-500">Based on approved runs only</p>
-              </div>
+              
+              {/* Leaderboard Filter */}
+              {runnerStats.length > 0 && (
+                <div className="sm:ml-auto">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500" />
+                    <input
+                      type="text"
+                      placeholder="Search name or #"
+                      value={leaderboardFilter}
+                      onChange={(e) => setLeaderboardFilter(e.target.value)}
+                      className="w-full sm:w-44 pl-9 pr-8 py-2 bg-primary-800/50 border border-primary-700 rounded-lg text-white text-sm placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-warning-500/50 transition-all"
+                    />
+                    {leaderboardFilter && (
+                      <button
+                        onClick={() => setLeaderboardFilter('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-primary-500 hover:text-white transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {runnerStats.length === 0 ? (
               <p className="text-primary-400 text-center py-8">
                 No approved runs yet. Be the first!
               </p>
-            ) : (
+            ) : (() => {
+              // Filter runners based on search
+              const filteredRunners = leaderboardFilter
+                ? runnerStats.filter(runner => 
+                    runner.name.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
+                    runner.serviceNumber.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
+                    runner.station.toLowerCase().includes(leaderboardFilter.toLowerCase())
+                  )
+                : runnerStats;
+              
+              if (filteredRunners.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-primary-400 mb-2">No runners found for "{leaderboardFilter}"</p>
+                    <button
+                      onClick={() => setLeaderboardFilter('')}
+                      className="text-warning-400 hover:text-warning-300 text-sm underline"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
+                );
+              }
+              
+              return (
               <div className="space-y-1">
-                {runnerStats.map((runner, index) => (
+                {/* Results count when filtered */}
+                {leaderboardFilter && (
+                  <p className="text-xs text-primary-500 mb-3">
+                    Showing {filteredRunners.length} of {runnerStats.length} runners
+                  </p>
+                )}
+                {filteredRunners.map((runner) => {
+                  // Get the original rank (position in unfiltered list)
+                  const originalRank = runnerStats.findIndex(r => r.serviceNumber === runner.serviceNumber);
+                  return (
                   <div
                     key={runner.serviceNumber}
                     className={`
                       flex items-center gap-3 py-2 px-3 rounded-lg transition-all
-                      ${index === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5' : 
-                        index === 1 ? 'bg-primary-700/20' :
-                        index === 2 ? 'bg-primary-700/10' :
+                      ${originalRank === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5' : 
+                        originalRank === 1 ? 'bg-primary-700/20' :
+                        originalRank === 2 ? 'bg-primary-700/10' :
                         'hover:bg-primary-800/20'}
                     `}
                   >
                     {/* Rank */}
                     <div className={`
                       w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
-                      ${index === 0 ? 'bg-warning-500 text-primary-900' :
-                        index === 1 ? 'bg-primary-400 text-primary-900' :
-                        index === 2 ? 'bg-orange-600 text-white' :
+                      ${originalRank === 0 ? 'bg-warning-500 text-primary-900' :
+                        originalRank === 1 ? 'bg-primary-400 text-primary-900' :
+                        originalRank === 2 ? 'bg-orange-600 text-white' :
                         'bg-primary-700 text-primary-300'}
                     `}>
-                      {index + 1}
+                      {originalRank + 1}
                     </div>
 
                     {/* Info */}
@@ -429,16 +489,18 @@ export default function Dashboard() {
                       <div className="w-full h-1 bg-primary-700 rounded-full overflow-hidden mt-0.5">
                         <div 
                           className={`h-full rounded-full ${
-                            runner.totalDistance >= 100 ? 'bg-success-500' : index === 0 ? 'bg-warning-500' : 'bg-accent-500'
+                            runner.totalDistance >= 100 ? 'bg-success-500' : originalRank === 0 ? 'bg-warning-500' : 'bg-accent-500'
                           }`}
                           style={{ width: `${Math.min((runner.totalDistance / 100) * 100, 100)}%` }}
                         />
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
-            )}
+              );
+            })()}
           </Card>
         </div>
 

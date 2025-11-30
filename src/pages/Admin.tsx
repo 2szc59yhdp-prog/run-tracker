@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare } from 'lucide-react';
+import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -60,7 +60,7 @@ function StatusBadge({ status, rejectionReason, approvedBy, approvedByName }: {
 }
 
 export default function Admin() {
-  const { isAdmin, adminToken, adminUser, runs, isLoading, error, refreshData } = useApp();
+  const { isAdmin, adminToken, adminUser, runs, isLoading, isRefreshing, error, refreshData } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Run>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -340,6 +340,9 @@ export default function Admin() {
           <h1 className="font-display text-3xl font-bold text-white">
             Admin Panel
           </h1>
+          {isRefreshing && (
+            <RefreshCw className="w-5 h-5 text-accent-400 animate-spin" />
+          )}
         </div>
         <p className="text-primary-400">
           Review, approve or reject run submissions

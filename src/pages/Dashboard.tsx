@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw } from 'lucide-react';
 import Card, { StatCard } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
@@ -60,7 +60,7 @@ function StatusBadge({ status, rejectionReason }: {
 }
 
 export default function Dashboard() {
-  const { dashboardStats, runnerStats, recentRuns, isLoading, error, refreshData } = useApp();
+  const { dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
 
@@ -279,9 +279,14 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8 animate-fade-in">
-        <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight">
-          Dashboard
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight">
+            Dashboard
+          </h1>
+          {isRefreshing && (
+            <RefreshCw className="w-5 h-5 text-accent-400 animate-spin" />
+          )}
+        </div>
         <p className="text-primary-400">
           Team statistics and leaderboard
         </p>

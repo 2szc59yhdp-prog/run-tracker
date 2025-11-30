@@ -1,7 +1,56 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import type { Run, RunnerStats, DashboardStats, AdminUser } from '../types';
 import { fetchAllRuns, validateAdminLogin, validateAdminPassword } from '../services/api';
 import { STORAGE_KEYS } from '../config';
+
+// Cache configuration
+const CACHE_KEY = 'run_tracker_runs_cache';
+const CACHE_TIMESTAMP_KEY = 'run_tracker_cache_timestamp';
+const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes - data is considered fresh for this long
+
+interface CachedData {
+  runs: Run[];
+  timestamp: number;
+}
+
+// Helper to get cached data from localStorage
+function getCachedRuns(): Run[] | null {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    
+    if (cached && timestamp) {
+      const data = JSON.parse(cached) as Run[];
+      return data;
+    }
+  } catch {
+    // Invalid cache, ignore
+  }
+  return null;
+}
+
+// Helper to save runs to cache
+function setCachedRuns(runs: Run[]): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(runs));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch {
+    // Storage full or unavailable, ignore
+  }
+}
+
+// Check if cache is still fresh
+function isCacheFresh(): boolean {
+  try {
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    if (timestamp) {
+      return Date.now() - parseInt(timestamp, 10) < CACHE_MAX_AGE;
+    }
+  } catch {
+    // Ignore errors
+  }
+  return false;
+}
 
 interface AppContextType {
   // Data
@@ -12,6 +61,7 @@ interface AppContextType {
   
   // Loading states
   isLoading: boolean;
+  isRefreshing: boolean; // New: true when fetching in background
   error: string | null;
   
   // Admin state
@@ -29,12 +79,17 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Try to load cached data immediately for instant display
+  const [runs, setRuns] = useState<Run[]>(() => getCachedRuns() || []);
+  const [isLoading, setIsLoading] = useState(() => !getCachedRuns()); // Only show loading if no cache
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  
+  // Track if initial fetch is done
+  const initialFetchDone = useRef(false);
 
   // Filter only APPROVED runs for leaderboard calculations
   const approvedRuns = runs.filter(run => run.status === 'approved');
@@ -76,11 +131,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 20);
 
-  // Fetch data from API (silent = true for background refresh without loading spinner)
+  // Fetch data from API with stale-while-revalidate caching
+  // silent = true: background refresh, no loading spinner
+  // If we have cached data, show it immediately and fetch fresh data in background
   const refreshData = useCallback(async (silent = false) => {
-    if (!silent) {
+    const hasCachedData = runs.length > 0;
+    
+    // Only show full loading spinner if no cached data AND not silent
+    if (!silent && !hasCachedData) {
       setIsLoading(true);
     }
+    
+    // Show subtle refresh indicator when we have cached data
+    if (hasCachedData) {
+      setIsRefreshing(true);
+    }
+    
     setError(null);
     
     try {
@@ -91,21 +157,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const runsWithStatus = response.data.map(run => ({
           ...run,
           status: run.status || 'pending',
-        }));
-        setRuns(runsWithStatus as Run[]);
-      } else if (!silent) {
+        })) as Run[];
+        
+        setRuns(runsWithStatus);
+        
+        // Cache the fresh data
+        setCachedRuns(runsWithStatus);
+      } else if (!silent && !hasCachedData) {
+        // Only show error if we have no cached data to display
         setError(response.error || 'Failed to load data');
       }
     } catch (err) {
-      if (!silent) {
+      if (!silent && !hasCachedData) {
         setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       }
     } finally {
-      if (!silent) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
+      setIsRefreshing(false);
+      initialFetchDone.current = true;
     }
-  }, []);
+  }, [runs.length]);
 
   // Admin login with service number and password
   const loginAdmin = useCallback(async (serviceNumber: string, password: string): Promise<boolean> => {
@@ -182,6 +253,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dashboardStats,
         recentRuns,
         isLoading,
+        isRefreshing,
         error,
         isAdmin,
         adminToken,

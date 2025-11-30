@@ -500,29 +500,52 @@ function addRun(data) {
     }
   }
   
-  // Append new row (includes photo, status, hash, duplicate info, and submission timestamp columns)
   // Default status is 'pending' - admin must approve
   const status = 'pending';
   const submittedAt = new Date(); // Current timestamp when run is submitted
   
-  sheet.appendRow([
-    id,
-    new Date(data.date),
-    data.serviceNumber.toString().trim(),
-    data.name.toString().trim(),
-    data.station.toString().trim(),
-    distance,
-    photoId,
-    photoUrl,
-    status,
-    '', // RejectionReason
-    '', // ApprovedBy
-    '', // ApprovedByName
-    '', // ApprovedAt
-    submittedAt, // SubmittedAt
-    photoHash, // PhotoHash - for duplicate detection
-    duplicateOf // DuplicateOf - original run info if duplicate screenshot
-  ]);
+  // Get headers to find correct column positions
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  
+  // Find column indices (0-based for array, add 1 for sheet column)
+  const colIndex = {
+    id: headers.indexOf('ID'),
+    date: headers.indexOf('Date'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    name: headers.indexOf('Name'),
+    station: headers.indexOf('Station'),
+    distanceKm: headers.indexOf('DistanceKm'),
+    photoId: headers.indexOf('PhotoId'),
+    photoUrl: headers.indexOf('PhotoUrl'),
+    status: headers.indexOf('Status'),
+    rejectionReason: headers.indexOf('RejectionReason'),
+    approvedBy: headers.indexOf('ApprovedBy'),
+    approvedByName: headers.indexOf('ApprovedByName'),
+    approvedAt: headers.indexOf('ApprovedAt'),
+    submittedAt: headers.indexOf('SubmittedAt'),
+    photoHash: headers.indexOf('PhotoHash'),
+    duplicateOf: headers.indexOf('DuplicateOf')
+  };
+  
+  // Create row array with correct number of columns
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  
+  // Set values at correct positions
+  if (colIndex.id >= 0) newRow[colIndex.id] = id;
+  if (colIndex.date >= 0) newRow[colIndex.date] = new Date(data.date);
+  if (colIndex.serviceNumber >= 0) newRow[colIndex.serviceNumber] = data.serviceNumber.toString().trim();
+  if (colIndex.name >= 0) newRow[colIndex.name] = data.name.toString().trim();
+  if (colIndex.station >= 0) newRow[colIndex.station] = data.station.toString().trim();
+  if (colIndex.distanceKm >= 0) newRow[colIndex.distanceKm] = distance;
+  if (colIndex.photoId >= 0) newRow[colIndex.photoId] = photoId;
+  if (colIndex.photoUrl >= 0) newRow[colIndex.photoUrl] = photoUrl;
+  if (colIndex.status >= 0) newRow[colIndex.status] = status;
+  if (colIndex.submittedAt >= 0) newRow[colIndex.submittedAt] = submittedAt;
+  if (colIndex.photoHash >= 0) newRow[colIndex.photoHash] = photoHash;
+  if (colIndex.duplicateOf >= 0) newRow[colIndex.duplicateOf] = duplicateOf;
+  
+  // Append the row
+  sheet.appendRow(newRow);
   
   // Send email notification to all admins
   try {

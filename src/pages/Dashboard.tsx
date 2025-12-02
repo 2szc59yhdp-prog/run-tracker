@@ -600,7 +600,7 @@ export default function Dashboard() {
                     Showing {filteredRunners.length} of {runnerStats.length} runners
                   </p>
                 )}
-                <div className="max-h-[480px] overflow-y-auto pr-2">
+                <div className="max-h-[70vh] overflow-y-auto pr-2">
                 {filteredRunners.map((runner) => {
                   // Get the original rank (position in unfiltered list)
                   const originalRank = runnerStats.findIndex(r => r.serviceNumber === runner.serviceNumber);
@@ -824,7 +824,7 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto max-h-[620px] overflow-y-auto pr-2">
+              <div className="overflow-x-auto max-h-[70vh] overflow-y-auto pr-2">
                 {/* Results count */}
                 {serviceFilter && (
                   <p className="text-xs text-primary-500 mb-3">

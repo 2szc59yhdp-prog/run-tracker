@@ -215,6 +215,8 @@ export default function AddRun() {
     const distance = parseFloat(formData.distanceKm);
     if (!formData.distanceKm || isNaN(distance)) {
       newErrors.distanceKm = 'Distance is required';
+    } else if (!/^\d+(\.\d{1,2})?$/.test(formData.distanceKm)) {
+      newErrors.distanceKm = 'Use up to two decimals (e.g., 6.12)';
     } else if (distance <= 0) {
       newErrors.distanceKm = 'Distance must be greater than 0';
     } else if (distance > 10) {
@@ -297,7 +299,7 @@ export default function AddRun() {
           });
         } else {
           setErrors({
-            general: `This run would exceed your 10 km daily limit. You can only add up to ${remaining.toFixed(1)} km more today.`,
+            general: `This run would exceed your 10 km daily limit. You can only add up to ${remaining.toFixed(2)} km more today.`,
           });
         }
         setIsSubmitting(false);
@@ -603,7 +605,11 @@ export default function AddRun() {
                   type="number"
                   value={formData.distanceKm}
                   onChange={(e) => {
-                    const value = e.target.value;
+                    let value = e.target.value.replace(/[^0-9.]/g, '');
+                    if (value.includes('.')) {
+                      const [i, d] = value.split('.');
+                      value = d !== undefined ? `${i}.${d.slice(0, 2)}` : i;
+                    }
                     // Prevent entering more than 10
                     if (parseFloat(value) > 10) {
                       setErrors(prev => ({ ...prev, distanceKm: 'Distance cannot exceed 10 KM' }));
@@ -613,9 +619,10 @@ export default function AddRun() {
                     setFormData(prev => ({ ...prev, distanceKm: value }));
                   }}
                   placeholder="e.g., 5.5"
-                  step="0.1"
+                  step="0.01"
                   min="0.1"
                   max="10"
+                  inputMode="decimal"
                   className={`
                     w-full px-4 py-3 bg-primary-800/50 border rounded-xl text-white placeholder-primary-500
                     outline-none ring-0 focus:ring-2 focus:ring-inset transition-all duration-200 pl-12

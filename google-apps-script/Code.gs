@@ -375,6 +375,7 @@ function getAllRuns() {
 /**
  * Checks runs for a given service number and date
  * Returns count, total distance, and whether limits are reached
+ * NOTE: Only counts approved + pending runs (rejected runs don't count toward limit)
  * @param {string} serviceNumber - The service number to check
  * @param {string} date - The date to check (YYYY-MM-DD)
  * @returns {Object} Response with count and total distance for that day
@@ -382,20 +383,30 @@ function getAllRuns() {
 function checkDuplicateRun(serviceNumber, date) {
   const sheet = getRunsSheet();
   const data = sheet.getDataRange().getValues();
+  const headers = data[0];
   const MAX_RUNS_PER_DAY = 2;
   const MAX_DISTANCE_PER_DAY = 10; // 10km max per day
+  
+  // Find column indices
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const dateColIndex = headers.indexOf('Date');
+  const distanceColIndex = headers.indexOf('DistanceKm');
+  const statusColIndex = headers.indexOf('Status');
   
   let runCount = 0;
   let totalDistance = 0;
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const rowServiceNumber = row[2].toString();
-    const rowDate = formatDate(row[1]);
+    const rowServiceNumber = serviceNumberColIndex >= 0 ? row[serviceNumberColIndex].toString() : '';
+    const rowDate = dateColIndex >= 0 ? formatDate(row[dateColIndex]) : '';
+    const rowStatus = statusColIndex >= 0 ? row[statusColIndex].toString().toLowerCase() : 'pending';
     
-    if (rowServiceNumber === serviceNumber && rowDate === date) {
+    // Only count approved and pending runs (NOT rejected)
+    // Rejected runs don't count toward the daily limit
+    if (rowServiceNumber === serviceNumber && rowDate === date && rowStatus !== 'rejected') {
       runCount++;
-      totalDistance += parseFloat(row[5]) || 0;
+      totalDistance += parseFloat(distanceColIndex >= 0 ? row[distanceColIndex] : 0) || 0;
     }
   }
   
@@ -707,11 +718,26 @@ function updateRunStatus(data) {
     approvedAtColIndex = lastCol;
   }
   
-  // Find the row with matching ID
+  // Find the row with matching ID and get run details for email
   let rowIndex = -1;
+  let runDetails = null;
+  
+  // Find column indices for run details
+  const dateColIndex = headers.indexOf('Date');
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const nameColIndex = headers.indexOf('Name');
+  const distanceColIndex = headers.indexOf('DistanceKm');
+  
   for (let i = 1; i < dataRange.length; i++) {
     if (dataRange[i][0].toString() === data.id.toString()) {
       rowIndex = i + 1; // Sheet rows are 1-indexed
+      // Store run details for email notification
+      runDetails = {
+        date: dateColIndex >= 0 ? formatDate(dataRange[i][dateColIndex]) : '',
+        serviceNumber: serviceNumberColIndex >= 0 ? dataRange[i][serviceNumberColIndex].toString() : '',
+        name: nameColIndex >= 0 ? dataRange[i][nameColIndex].toString() : '',
+        distanceKm: distanceColIndex >= 0 ? parseFloat(dataRange[i][distanceColIndex]) || 0 : 0
+      };
       break;
     }
   }
@@ -735,6 +761,23 @@ function updateRunStatus(data) {
   sheet.getRange(rowIndex, approvedByColIndex + 1).setValue(approvedBy);
   sheet.getRange(rowIndex, approvedByNameColIndex + 1).setValue(approvedByName);
   sheet.getRange(rowIndex, approvedAtColIndex + 1).setValue(approvedAt);
+  
+  // Send email notification to user about approval/rejection
+  if (runDetails && (data.status === 'approved' || data.status === 'rejected')) {
+    try {
+      sendRunStatusNotification({
+        name: runDetails.name,
+        serviceNumber: runDetails.serviceNumber,
+        date: runDetails.date,
+        distanceKm: runDetails.distanceKm,
+        status: data.status,
+        rejectionReason: rejectionReason
+      });
+    } catch (e) {
+      Logger.log('Failed to send status notification: ' + e.message);
+      // Don't fail the status update if email fails
+    }
+  }
   
   return {
     success: true,
@@ -1417,6 +1460,151 @@ function testEmailNotification() {
     distanceKm: 5.5
   });
   Logger.log('Test notification sent!');
+}
+
+/**
+ * Gets a user's email by their service number
+ * @param {string} serviceNumber - The service number to look up
+ * @returns {string|null} The user's email or null if not found
+ */
+function getUserEmail(serviceNumber) {
+  const sheet = getUsersSheet();
+  if (!sheet) {
+    return null;
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const emailColIndex = headers.indexOf('Email');
+  
+  if (serviceNumberColIndex === -1 || emailColIndex === -1) {
+    return null;
+  }
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[serviceNumberColIndex].toString() === serviceNumber.toString()) {
+      const email = row[emailColIndex] ? row[emailColIndex].toString().trim() : '';
+      return email && email.includes('@') ? email : null;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Sends email notification to user when their run is approved or rejected
+ * @param {Object} runData - Run details (name, serviceNumber, date, distanceKm, status, rejectionReason)
+ */
+function sendRunStatusNotification(runData) {
+  const userEmail = getUserEmail(runData.serviceNumber);
+  
+  if (!userEmail) {
+    Logger.log('No email found for user: ' + runData.serviceNumber);
+    return;
+  }
+  
+  const isApproved = runData.status === 'approved';
+  const statusEmoji = isApproved ? '✅' : '❌';
+  const statusText = isApproved ? 'Approved' : 'Rejected';
+  const statusColor = isApproved ? '#27ae60' : '#e74c3c';
+  
+  const subject = `${statusEmoji} Your Run Has Been ${statusText} - 100K Run Challenge`;
+  
+  const formattedDate = runData.date;
+  
+  let rejectionSection = '';
+  if (!isApproved && runData.rejectionReason) {
+    rejectionSection = `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Reason</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #e74c3c; font-weight: bold;">${runData.rejectionReason}</td>
+      </tr>
+    `;
+  }
+  
+  let actionMessage = '';
+  if (isApproved) {
+    actionMessage = '<p style="color: #27ae60; font-weight: bold;">Great job! Your run has been verified and added to your total.</p>';
+  } else {
+    actionMessage = '<p style="color: #e74c3c;">Please review the reason above and submit a new run with the correct screenshot.</p>';
+  }
+  
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+      <div style="background: ${statusColor}; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">${statusEmoji} Run ${statusText}</h1>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+        <p style="margin: 0 0 15px; color: #333;">Hi ${runData.name},</p>
+        
+        <p style="margin: 0 0 15px; color: #333;">Your run submission has been reviewed:</p>
+        
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Date</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Distance</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${runData.distanceKm} km</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Status</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+          </tr>
+          ${rejectionSection}
+        </table>
+        
+        <div style="margin-top: 20px;">
+          ${actionMessage}
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="https://run.huvadhoofulusclub.events/dashboard" 
+             style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            View Dashboard →
+          </a>
+        </div>
+        
+        <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">
+          This is an automated notification from the 100K Run Challenge system.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  const plainBody = `
+Run ${statusText}
+
+Hi ${runData.name},
+
+Your run submission has been reviewed:
+
+Date: ${formattedDate}
+Distance: ${runData.distanceKm} km
+Status: ${statusText}
+${!isApproved && runData.rejectionReason ? 'Reason: ' + runData.rejectionReason : ''}
+
+${isApproved ? 'Great job! Your run has been verified and added to your total.' : 'Please review the reason and submit a new run with the correct screenshot.'}
+
+View Dashboard: https://run.huvadhoofulusclub.events/dashboard
+  `;
+  
+  try {
+    MailApp.sendEmail({
+      to: userEmail,
+      subject: subject,
+      body: plainBody,
+      htmlBody: htmlBody
+    });
+    Logger.log('Status notification sent to: ' + userEmail);
+  } catch (e) {
+    Logger.log('Failed to send status notification to ' + userEmail + ': ' + e.message);
+  }
 }
 
 // ============================================================

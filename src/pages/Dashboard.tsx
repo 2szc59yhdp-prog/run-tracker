@@ -909,9 +909,16 @@ export default function Dashboard() {
             <>
               {/* Legend */}
               <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
-                <p className="font-medium text-primary-300 mb-1">Performance Percentage Criteria:</p>
-                <p>• Complete <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} km</span> total distance</p>
-                <p>• Have at least <span className="text-accent-400 font-medium">{MIN_ACTIVE_DAYS} active days</span></p>
+                <p className="font-medium text-primary-300 mb-1">Performance % Criteria:</p>
+                <p>• Calculated using the top 5 runners from each station</p>
+                <p>• Missing slots count as zero</p>
+                <p>• Based only on approved runs</p>
+                <p>
+                  • Runner progress is measured by completing
+                  <span className="text-accent-400 font-medium"> {MIN_DISTANCE_KM} KM</span>
+                  and achieving
+                  <span className="text-accent-400 font-medium"> {MIN_ACTIVE_DAYS} active days</span>
+                </p>
               </div>
               
               <div className="space-y-1">

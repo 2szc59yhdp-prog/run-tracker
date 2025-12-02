@@ -163,47 +163,6 @@ export default function Dashboard() {
 
   const TODAY_STR = new Date().toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
 
-  const motivationImages = useMemo(() => [
-    '/Motivation/1.webp',
-    '/Motivation/2.jpg',
-    '/Motivation/3.jpg',
-    '/Motivation/4.jpg',
-    '/Motivation/5.webp',
-    '/Motivation/6.jpg',
-    '/Motivation/7.jpg',
-    '/Motivation/8.jpg',
-    '/Motivation/9.jpg',
-    '/Motivation/10.webp',
-  ], []);
-  const [motivationIndex, setMotivationIndex] = useState(0);
-  const [prevMotivationIndex, setPrevMotivationIndex] = useState<number | null>(null);
-  useEffect(() => {
-    motivationImages.forEach((src) => {
-      const img = document.createElement('img');
-      img.src = src;
-      if (img.decode) {
-        img.decode().catch(() => {});
-      }
-    });
-  }, [motivationImages]);
-
-  useEffect(() => {
-    if (motivationImages.length === 0) return;
-    const interval = setInterval(async () => {
-      const nextIdx = (motivationIndex + 1) % motivationImages.length;
-      const nextSrc = motivationImages[nextIdx];
-      try {
-        const img = document.createElement('img');
-        img.src = nextSrc;
-        if (img.decode) {
-          await img.decode();
-        }
-      } catch {}
-      setPrevMotivationIndex(motivationIndex);
-      setMotivationIndex(nextIdx);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [motivationImages.length, motivationIndex]);
 
 
   // Calculate station performance from runner stats
@@ -562,35 +521,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {motivationImages.length > 0 && (
-        <div className="mb-8 animate-fade-in">
-          <Card className="overflow-hidden relative !p-0 rounded-xl border border-primary-700/40 shadow-lg shadow-accent-500/10">
-            <div className="relative w-full h-56 sm:h-64 md:h-72">
-              <img
-                src={motivationImages[motivationIndex]}
-                alt=""
-                className="slider-img absolute inset-0 w-full h-full object-cover blur-[10px] scale-105 brightness-75 pointer-events-none"
-                aria-hidden="true"
-              />
-              <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-black/20 to-transparent"></div>
-              {prevMotivationIndex !== null && (
-                <img
-                  key={`prev-${prevMotivationIndex}-${motivationIndex}`}
-                  src={motivationImages[prevMotivationIndex]}
-                  alt="Motivation"
-                  className="slider-img absolute inset-0 w-full h-full object-cover object-center z-10 animate-slide-out-left pointer-events-none"
-                />
-              )}
-              <img
-                key={`cur-${motivationIndex}`}
-                src={motivationImages[motivationIndex]}
-                alt="Motivation"
-                className="slider-img absolute inset-0 w-full h-full object-cover object-center z-20 animate-slide-in-right pointer-events-none"
-              />
-            </div>
-          </Card>
-        </div>
-      )}
+      
 
       {/* Photo Upload Button - Links to PhotoCircle */}
       <div className="mb-8 animate-fade-in">

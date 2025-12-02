@@ -757,11 +757,11 @@ export default function Dashboard() {
                     {/* Distance & Progress */}
                     <div className="text-right flex-shrink-0 min-w-[90px]">
                       <p className="font-display font-bold text-white text-sm">
-                        {runner.totalDistance.toFixed(1)}
+                        {runner.totalDistance.toFixed(2)}
                         <span className="text-xs text-primary-500 font-normal">/ 100 km</span>
                       </p>
                       <p className="text-xs text-primary-500">
-                        {(100 - runner.totalDistance).toFixed(1)} km left
+                        {(100 - runner.totalDistance).toFixed(2)} km left
                       </p>
                       <div className="w-full h-1 bg-primary-700 rounded-full overflow-hidden mt-0.5">
                         <div 

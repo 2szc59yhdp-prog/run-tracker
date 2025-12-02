@@ -170,13 +170,14 @@ export default function Dashboard() {
   // A "finisher" must: reach 100km AND have 40+ active days
   // Live progress = average of each runner's progress (min of distance% and days%)
   const stationPerformance = useMemo(() => {
-    const stationMap = new Map<string, { 
-      distance: number; 
-      runners: number; 
+    const stationMap = new Map<string, {
+      distance: number;
+      runners: number;
       runCount: number;
       finishers: number;
       participants: number;
-      totalProgress: number; // Sum of all runners' progress percentages
+      totalProgress: number;
+      runnerProgresses: number[];
     }>();
     
     // Get participant count per station from registered users
@@ -189,13 +190,14 @@ export default function Dashboard() {
     
     // Initialize all known stations
     ALL_STATIONS.forEach(station => {
-      stationMap.set(station, { 
-        distance: 0, 
-        runners: 0, 
-        runCount: 0, 
+      stationMap.set(station, {
+        distance: 0,
+        runners: 0,
+        runCount: 0,
         finishers: 0,
         participants: participantCounts.get(station) || 0,
-        totalProgress: 0
+        totalProgress: 0,
+        runnerProgresses: [],
       });
     });
     
@@ -208,7 +210,8 @@ export default function Dashboard() {
           runCount: 0,
           finishers: 0,
           participants: count,
-          totalProgress: 0
+          totalProgress: 0,
+          runnerProgresses: [],
         });
       }
     });
@@ -222,52 +225,53 @@ export default function Dashboard() {
       dayCursor.setDate(dayCursor.getDate() + 1);
     }
 
-    const datesByUser = new Map<string, Set<string>>();
+    const runsByUser = new Map<string, { totalDistance: number; dates: Set<string>; runCount: number; station?: string }>();
     runs.forEach(run => {
       if (run.status !== 'approved' || !run.serviceNumber) return;
-      const set = datesByUser.get(run.serviceNumber) || new Set<string>();
-      set.add(run.date);
-      datesByUser.set(run.serviceNumber, set);
+      const entry = runsByUser.get(run.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), runCount: 0, station: run.station };
+      entry.totalDistance += Number(run.distanceKm || 0);
+      entry.dates.add(run.date);
+      entry.runCount += 1;
+      entry.station = run.station || entry.station;
+      runsByUser.set(run.serviceNumber, entry);
     });
 
-    // Process runner stats (from approved runs)
-    runnerStats.forEach(runner => {
-      if (!runner.station) return;
-      
-      // If station doesn't exist in map, add it
-      if (!stationMap.has(runner.station)) {
-        stationMap.set(runner.station, {
+    const participants = registeredUsers.filter(u => u.station && u.station !== 'General Admin');
+    participants.forEach(u => {
+      const station = u.station;
+      if (!station) return;
+      if (!stationMap.has(station)) {
+        stationMap.set(station, {
           distance: 0,
           runners: 0,
           runCount: 0,
           finishers: 0,
-          participants: participantCounts.get(runner.station) || 0,
-          totalProgress: 0
+          participants: participantCounts.get(station) || 0,
+          totalProgress: 0,
+          runnerProgresses: [],
         });
       }
-      
-      const existing = stationMap.get(runner.station)!;
-      
-      const userDates = datesByUser.get(runner.serviceNumber) || new Set<string>();
-      const activeDays = userDates.size;
-      const distanceProgress = Math.min((runner.totalDistance / MIN_DISTANCE_KM) * 100, 100);
+      const existing = stationMap.get(station)!;
+      const entry = runsByUser.get(u.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), runCount: 0, station };
+      const activeDays = entry.dates.size;
+      const distanceProgress = Math.min((entry.totalDistance / MIN_DISTANCE_KM) * 100, 100);
       const daysProgress = Math.min((activeDays / MIN_ACTIVE_DAYS) * 100, 100);
       let runnerProgress = Math.min(distanceProgress, daysProgress);
-      const dailyActive = allDays.length > 0 && allDays.every(d => userDates.has(d));
+      const dailyActive = allDays.length > 0 && allDays.every(d => entry.dates.has(d));
       if (dailyActive) {
         runnerProgress = Math.min(runnerProgress * 1.15, 100);
       }
-      
-      const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && activeDays >= MIN_ACTIVE_DAYS;
-      
-      stationMap.set(runner.station, {
-        distance: existing.distance + runner.totalDistance,
-        runners: existing.runners + 1,
-        runCount: existing.runCount + runner.runCount,
+      const isFinisher = entry.totalDistance >= MIN_DISTANCE_KM && activeDays >= MIN_ACTIVE_DAYS;
+      const next = {
+        distance: existing.distance + entry.totalDistance,
+        runners: existing.runners + (entry.totalDistance > 0 ? 1 : 0),
+        runCount: existing.runCount + entry.runCount,
         finishers: existing.finishers + (isFinisher ? 1 : 0),
         participants: existing.participants,
         totalProgress: existing.totalProgress + runnerProgress,
-      });
+        runnerProgresses: [...existing.runnerProgresses, runnerProgress],
+      };
+      stationMap.set(station, next);
     });
 
     const todayApprovedActiveUsersByStation = new Map<string, Set<string>>();
@@ -287,10 +291,10 @@ export default function Dashboard() {
     return Array.from(stationMap.entries())
       .filter(([station]) => !excludedStations.includes(station) && ALL_STATIONS.includes(station))
       .map(([station, data]) => {
-        // Average progress = total progress of active runners / total participants
-        // This gives credit for runners who are making progress
-        const avgProgress = data.participants > 0 ? data.totalProgress / data.participants : 0;
-        
+        const sorted = [...data.runnerProgresses].sort((a, b) => b - a);
+        const slots = 3;
+        const top = [sorted[0] || 0, sorted[1] || 0, sorted[2] || 0];
+        const performancePercent = (top[0] + top[1] + top[2]) / slots;
         return {
           station,
           totalDistance: data.distance,
@@ -298,9 +302,9 @@ export default function Dashboard() {
           runCount: data.runCount,
           finishers: data.finishers,
           participants: data.participants,
-          // Live performance = average progress of all participants toward finishing
-          performancePercent: avgProgress,
+          performancePercent,
           activeRunnersToday: (todayApprovedActiveUsersByStation.get(station)?.size || 0),
+          runnerProgresses: data.runnerProgresses,
         };
       })
       .sort((a, b) => {

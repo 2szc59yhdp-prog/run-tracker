@@ -210,6 +210,23 @@ export default function Dashboard() {
       }
     });
     
+    const now = new Date();
+    const endDate = now <= CHALLENGE_END ? now : CHALLENGE_END;
+    const allDays: string[] = [];
+    const dayCursor = new Date(CHALLENGE_START);
+    while (dayCursor <= endDate) {
+      allDays.push(dayCursor.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' }));
+      dayCursor.setDate(dayCursor.getDate() + 1);
+    }
+
+    const datesByUser = new Map<string, Set<string>>();
+    runs.forEach(run => {
+      if (run.status !== 'approved' || !run.serviceNumber) return;
+      const set = datesByUser.get(run.serviceNumber) || new Set<string>();
+      set.add(run.date);
+      datesByUser.set(run.serviceNumber, set);
+    });
+
     // Process runner stats (from approved runs)
     runnerStats.forEach(runner => {
       if (!runner.station) return;
@@ -228,14 +245,17 @@ export default function Dashboard() {
       
       const existing = stationMap.get(runner.station)!;
       
-      // Calculate individual runner's progress
-      // Progress is the MINIMUM of distance% and days% (since both are required)
+      const userDates = datesByUser.get(runner.serviceNumber) || new Set<string>();
+      const activeDays = userDates.size;
       const distanceProgress = Math.min((runner.totalDistance / MIN_DISTANCE_KM) * 100, 100);
-      const daysProgress = Math.min((runner.runCount / MIN_ACTIVE_DAYS) * 100, 100);
-      const runnerProgress = Math.min(distanceProgress, daysProgress);
+      const daysProgress = Math.min((activeDays / MIN_ACTIVE_DAYS) * 100, 100);
+      let runnerProgress = Math.min(distanceProgress, daysProgress);
+      const dailyActive = allDays.length > 0 && allDays.every(d => userDates.has(d));
+      if (dailyActive) {
+        runnerProgress = Math.min(runnerProgress * 1.15, 100);
+      }
       
-      // Check if this runner qualifies as a finisher (100% on both)
-      const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && runner.runCount >= MIN_ACTIVE_DAYS;
+      const isFinisher = runner.totalDistance >= MIN_DISTANCE_KM && activeDays >= MIN_ACTIVE_DAYS;
       
       stationMap.set(runner.station, {
         distance: existing.distance + runner.totalDistance,

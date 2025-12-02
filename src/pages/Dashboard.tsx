@@ -218,12 +218,9 @@ export default function Dashboard() {
     
     const now = new Date();
     const endDate = now <= CHALLENGE_END ? now : CHALLENGE_END;
-    const allDays: string[] = [];
-    const dayCursor = new Date(CHALLENGE_START);
-    while (dayCursor <= endDate) {
-      allDays.push(dayCursor.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' }));
-      dayCursor.setDate(dayCursor.getDate() + 1);
-    }
+    const challengeDayCount = Math.floor((endDate.getTime() - CHALLENGE_START.getTime()) / 86400000) + 1;
+    const startStr = CHALLENGE_START.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
+    const endStr = endDate.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
 
     const runsByUser = new Map<string, { totalDistance: number; dates: Set<string>; runCount: number; station?: string }>();
     runs.forEach(run => {
@@ -253,11 +250,13 @@ export default function Dashboard() {
       }
       const existing = stationMap.get(station)!;
       const entry = runsByUser.get(u.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), runCount: 0, station };
-      const activeDays = entry.dates.size;
+      let coveredDays = 0;
+      entry.dates.forEach(d => { if (d >= startStr && d <= endStr) coveredDays += 1; });
+      const activeDays = coveredDays;
       const distanceProgress = Math.min((entry.totalDistance / MIN_DISTANCE_KM) * 100, 100);
       const daysProgress = Math.min((activeDays / MIN_ACTIVE_DAYS) * 100, 100);
       let runnerProgress = Math.min(distanceProgress, daysProgress);
-      const dailyActive = allDays.length > 0 && allDays.every(d => entry.dates.has(d));
+      const dailyActive = challengeDayCount > 0 && coveredDays === challengeDayCount;
       if (dailyActive) {
         runnerProgress = Math.min(runnerProgress * 1.15, 100);
       }
@@ -292,9 +291,12 @@ export default function Dashboard() {
       .filter(([station]) => !excludedStations.includes(station) && ALL_STATIONS.includes(station))
       .map(([station, data]) => {
         const sorted = [...data.runnerProgresses].sort((a, b) => b - a);
-        const slots = 3;
-        const top = [sorted[0] || 0, sorted[1] || 0, sorted[2] || 0];
-        const performancePercent = (top[0] + top[1] + top[2]) / slots;
+        const slots = 5;
+        let sumTop = 0;
+        for (let i = 0; i < slots; i++) {
+          sumTop += sorted[i] ?? 0;
+        }
+        const performancePercent = sumTop / slots;
         return {
           station,
           totalDistance: data.distance,

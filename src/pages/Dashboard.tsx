@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink } from 'lucide-react';
-import Card, { StatCard } from '../components/Card';
+import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
 import { useApp } from '../context/AppContext';
@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [leaderboardFilter, setLeaderboardFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'before' as 'before' | 'active' | 'ended' });
+  const [showParticipants, setShowParticipants] = useState(false);
 
   // Countdown timer
   useEffect(() => {
@@ -540,40 +541,71 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats Grid - Only counts APPROVED runs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 animate-fade-in stagger-1">
-        <StatCard
-          icon={<TrendingUp className="w-6 h-6" />}
-          label="Total Distance"
-          value={dashboardStats.totalDistance.toFixed(1)}
-          suffix="km"
-          colorClass="text-accent-400"
-        />
-        <StatCard
-          icon={<Users className="w-6 h-6" />}
-          label="Unique Runners"
-          value={dashboardStats.uniqueRunners}
-          colorClass="text-success-500"
-        />
-        <StatCard
-          icon={<Award className="w-6 h-6" />}
-          label="Approved Runs"
-          value={dashboardStats.totalRuns}
-          colorClass="text-warning-500"
-        />
+      <div className="mb-8 animate-fade-in stagger-1">
+        <Card className="!p-3 sm:!p-4">
+          <div className="flex items-stretch gap-2 sm:gap-4">
+            <div className="flex-1 min-w-0 flex flex-col items-center gap-1 sm:gap-2">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-accent-500/20 text-accent-400">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 text-center">
+                <p className="text-[11px] sm:text-xs text-primary-500">Total Distance</p>
+                <div className="font-display text-lg sm:text-xl font-bold text-white flex items-baseline justify-center gap-1">
+                  <span>{dashboardStats.totalDistance.toFixed(1)}</span>
+                  <span className="text-[11px] sm:text-xs text-primary-500">km</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col items-center gap-1 sm:gap-2">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-success-500/20 text-success-400">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 text-center">
+                <p className="text-[11px] sm:text-xs text-primary-500">Unique Runners</p>
+                <div className="font-display text-lg sm:text-xl font-bold text-white flex items-baseline justify-center">
+                  <span>{dashboardStats.uniqueRunners}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col items-center gap-1 sm:gap-2">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-warning-500/20 text-warning-400">
+                <Award className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 text-center">
+                <p className="text-[11px] sm:text-xs text-primary-500">Approved Runs</p>
+                <div className="font-display text-lg sm:text-xl font-bold text-white flex items-baseline justify-center">
+                  <span>{dashboardStats.totalRuns}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Participants by Station - Compact List */}
-      <div className="mb-6 animate-fade-in stagger-2">
+      <div className="mb-4 flex justify-end">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setShowParticipants((v) => !v)}
+          icon={<Users className="w-4 h-4" />}
+          aria-pressed={showParticipants}
+          className={`w-full py-4 px-6 from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-amber-600/25 focus:ring-warning-500 ${showParticipants ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-primary-900' : ''}`}
+        >
+          {showParticipants ? 'Hide Participants' : 'Participants'}
+        </Button>
+      </div>
+
+      <div
+        aria-hidden={!showParticipants}
+        className={`mb-6 transition-all duration-300 ${showParticipants ? 'opacity-100 max-h-[1000px]' : 'opacity-0 max-h-0'} overflow-hidden`}
+      >
         <Card className="!p-4 sm:!p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-success-500/20 text-success-500">
                 <Users className="w-4 h-4" />
               </div>
-              <h2 className="font-display text-lg font-semibold text-white">
-                Participants
-              </h2>
+              <h2 className="font-display text-lg font-semibold text-white">Participants</h2>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-primary-500">Total:</span>
@@ -583,18 +615,9 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1.5">
             {participantsByStation.map((item) => (
-              <div
-                key={item.station}
-                className="flex items-center justify-between py-1.5 border-b border-primary-700/30 last:border-0"
-              >
+              <div key={item.station} className="flex items-center justify-between py-1.5 border-b border-primary-700/30 last:border-0">
                 <span className="text-sm text-primary-300 truncate mr-2">{item.station}</span>
-                <span className={`flex-shrink-0 text-sm font-display font-bold ${
-                  item.count > 0 
-                    ? 'text-success-400' 
-                    : 'text-primary-600'
-                }`}>
-                  {item.count}
-                </span>
+                <span className={`flex-shrink-0 text-sm font-display font-bold ${item.count > 0 ? 'text-success-400' : 'text-primary-600'}`}>{item.count}</span>
               </div>
             ))}
           </div>

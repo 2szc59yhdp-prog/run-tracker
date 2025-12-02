@@ -706,9 +706,9 @@ export default function AddRun() {
       <div className="mt-6 p-4 rounded-xl bg-primary-800/30 border border-primary-700/30 animate-fade-in stagger-2">
         <h3 className="font-medium text-primary-200 mb-2">💡 Tips</h3>
         <ul className="text-sm text-primary-400 space-y-1">
-          <li>• You can only log one run per day</li>
-          <li>• Maximum distance is 10 KM per run</li>
-          <li>• Screenshot proof from Strava is <span className="text-accent-400 font-medium">required</span></li>
+          <li>• You can log 2 runs per day. (both run totals should not exceed 10KM)</li>
+          <li>• Maximum Distance is 10 KM per DAY</li>
+          <li>• Screenshot Proof from STRAVA is <span className="text-accent-400 font-medium">required</span></li>
         </ul>
       </div>
     </div>

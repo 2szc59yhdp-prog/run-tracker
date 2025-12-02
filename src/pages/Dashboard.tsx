@@ -279,13 +279,15 @@ export default function Dashboard() {
   }, [runnerStats, registeredUsers]);
 
 
-  // Filter recent runs by service number
+  // Show only today's runs (Maldives timezone) and then apply service filter
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
+  const todayRuns = recentRuns.filter(run => run.date === todayStr);
   const filteredRuns = serviceFilter.trim()
-    ? recentRuns.filter(run => 
+    ? todayRuns.filter(run => 
         run.serviceNumber.toLowerCase().includes(serviceFilter.toLowerCase()) ||
         run.name.toLowerCase().includes(serviceFilter.toLowerCase())
       )
-    : recentRuns;
+    : todayRuns;
 
   // Process runs to add run labels (Run 1, Run 2) for same-day submissions
   // and sort to group same user's daily runs together
@@ -826,7 +828,7 @@ export default function Dashboard() {
                 {/* Results count */}
                 {serviceFilter && (
                   <p className="text-xs text-primary-500 mb-3">
-                    Showing {processedRuns.length} of {recentRuns.length} runs
+                    Showing {processedRuns.length} of {todayRuns.length} runs
                   </p>
                 )}
                 

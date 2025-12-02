@@ -64,7 +64,7 @@ function StatusBadge({ status, rejectionReason }: {
 }
 
 export default function Dashboard() {
-  const { dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData } = useApp();
+  const { runs, dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
   const [leaderboardFilter, setLeaderboardFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
@@ -161,6 +161,8 @@ export default function Dashboard() {
   const MIN_DISTANCE_KM = 100; // Must reach 100km
   const MIN_ACTIVE_DAYS = 40;  // Must have at least 40 active days
 
+  const TODAY_STR = new Date().toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
+
   // Calculate station performance from runner stats
   // A "finisher" must: reach 100km AND have 40+ active days
   // Live progress = average of each runner's progress (min of distance% and days%)
@@ -245,6 +247,15 @@ export default function Dashboard() {
       });
     });
 
+    const todayApprovedActiveUsersByStation = new Map<string, Set<string>>();
+    runs.forEach(run => {
+      if (run.status === 'approved' && run.date === TODAY_STR && run.station && run.station !== 'General Admin') {
+        const set = todayApprovedActiveUsersByStation.get(run.station) || new Set<string>();
+        set.add(run.serviceNumber);
+        todayApprovedActiveUsersByStation.set(run.station, set);
+      }
+    });
+
     // Stations to exclude from the performance board
     const excludedStations = ['General Admin', 'Gdh.Atoll Police', 'SPSR', 'SPSR RR&HV'];
     
@@ -266,6 +277,7 @@ export default function Dashboard() {
           participants: data.participants,
           // Live performance = average progress of all participants toward finishing
           performancePercent: avgProgress,
+          activeRunnersToday: (todayApprovedActiveUsersByStation.get(station)?.size || 0),
         };
       })
       .sort((a, b) => {
@@ -276,12 +288,55 @@ export default function Dashboard() {
         // Tiebreaker: total distance
         return b.totalDistance - a.totalDistance;
       });
-  }, [runnerStats, registeredUsers]);
+  }, [runnerStats, registeredUsers, runs]);
+
+  const consistentRunners = useMemo(() => {
+    const now = new Date();
+    const endDate = now <= CHALLENGE_END ? now : CHALLENGE_END;
+
+    const allDays: string[] = [];
+    const dayCursor = new Date(CHALLENGE_START);
+    while (dayCursor <= endDate) {
+      allDays.push(dayCursor.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' }));
+      dayCursor.setDate(dayCursor.getDate() + 1);
+    }
+
+    const datesByUser = new Map<string, Set<string>>();
+    runs.forEach(run => {
+      if (run.status !== 'approved' || !run.serviceNumber || run.station === 'General Admin') return;
+      const set = datesByUser.get(run.serviceNumber) || new Set<string>();
+      set.add(run.date);
+      datesByUser.set(run.serviceNumber, set);
+    });
+
+    const participants = registeredUsers.filter(u => u.station !== 'General Admin');
+    const result = participants.map(u => {
+      const set = datesByUser.get(u.serviceNumber) || new Set<string>();
+      let inactiveDays = 0;
+      for (const d of allDays) {
+        if (!set.has(d)) inactiveDays += 1;
+      }
+      let streak = 0;
+      for (let i = allDays.length - 1; i >= 0; i--) {
+        if (set.has(allDays[i])) streak += 1; else break;
+      }
+      const isDaily = inactiveDays === 0 && allDays.length > 0;
+      const isConsistent = streak >= 5 || isDaily;
+      return { serviceNumber: u.serviceNumber, name: u.name, station: u.station, streak, inactiveDays, isDaily, isConsistent };
+    });
+
+    return result.sort((a, b) => {
+      if (a.isDaily !== b.isDaily) return a.isDaily ? -1 : 1;
+      if (a.isConsistent !== b.isConsistent) return a.isConsistent ? -1 : 1;
+      if (b.streak !== a.streak) return b.streak - a.streak;
+      if (a.inactiveDays !== b.inactiveDays) return a.inactiveDays - b.inactiveDays;
+      return a.name.localeCompare(b.name);
+    });
+  }, [runs, registeredUsers]);
 
 
   // Show only today's runs (Maldives timezone) and then apply service filter
-  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
-  const todayRuns = recentRuns.filter(run => run.date === todayStr);
+  const todayRuns = recentRuns.filter(run => run.date === TODAY_STR);
   const filteredRuns = serviceFilter.trim()
     ? todayRuns.filter(run => 
         run.serviceNumber.toLowerCase().includes(serviceFilter.toLowerCase()) ||
@@ -674,8 +729,112 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Station Performance Board */}
         <div className="animate-fade-in stagger-4">
+          <Card>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
+                <Footprints className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-white">
+                  Consistent Runners
+                </h2>
+                <p className="text-xs text-primary-500">Consistency status for all participants</p>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-60 blur-[1px] animate-pulse"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.85)] animate-pulse"></span>
+                  </span>
+                  <span className="text-primary-300">Green dot - Daily Runners since beginning of challenge</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-warning-400 opacity-60 blur-[1px] animate-pulse"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.85)] animate-pulse"></span>
+                  </span>
+                  <span className="text-primary-300">Yellow dot - In-active but gained 5 days active streak</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-danger-400 opacity-60 blur-[1px] animate-pulse"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-danger-500 shadow-[0_0_8px_rgba(239,68,68,0.85)] animate-pulse"></span>
+                  </span>
+                  <span className="text-primary-300">Red dot - In-active</span>
+                </div>
+              </div>
+            </div>
+
+            {consistentRunners.length === 0 ? (
+              <p className="text-primary-400 text-center py-8">
+                No consistent runners yet.
+              </p>
+            ) : (
+              <div className="max-h-[70vh] overflow-y-auto pr-2">
+                <div className="space-y-1">
+                {consistentRunners.map((r) => (
+                  <div
+                    key={r.serviceNumber}
+                    className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-primary-800/20"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white text-sm truncate">
+                          {r.name}
+                        </p>
+                        <span className="text-xs text-primary-500">#{r.serviceNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-primary-400">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-[180px] sm:max-w-[220px]">{r.station}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {(() => {
+                        const daily = r.isDaily;
+                        const consistent = r.isConsistent && !daily;
+                        const pingClass = daily
+                          ? 'bg-success-400'
+                          : consistent
+                            ? 'bg-warning-400'
+                            : 'bg-danger-400';
+                        const dotClass = daily
+                          ? 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.85)]'
+                          : consistent
+                            ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.85)]'
+                            : 'bg-danger-500 shadow-[0_0_8px_rgba(239,68,68,0.85)]';
+                        const textClass = daily
+                          ? 'text-success-400'
+                          : consistent
+                            ? 'text-yellow-400'
+                            : 'text-danger-400';
+                        return (
+                          <>
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className={`absolute inline-flex h-full w-full rounded-full ${pingClass} opacity-60 blur-[1px] animate-pulse`}></span>
+                              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${dotClass} animate-pulse`}></span>
+                            </span>
+                            <span className={`${textClass} text-xs font-medium`}>
+                              {daily ? 'Daily' : consistent ? 'Consistent' : `In-active ${r.inactiveDays} day${r.inactiveDays !== 1 ? 's' : ''}`}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Station Performance Board */}
+        <div className="animate-fade-in stagger-5">
           <Card>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-gradient-to-br from-accent-500/20 to-purple-500/20 text-accent-400">
@@ -735,11 +894,14 @@ export default function Dashboard() {
                         <p className={`font-medium text-sm truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
                           {station.station}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-primary-400">
-                          <span>{station.participants} participants</span>
+                      <div className="flex items-center gap-2 text-xs text-primary-400">
+                        <span>{station.participants} participants</span>
+                        <span className="text-warning-400">{station.activeRunnersToday} active today</span>
+                        {station.finishers > 0 && (
                           <span className="text-success-400">{station.finishers} finished</span>
-                          <span className="text-accent-400">{station.totalDistance.toFixed(1)} km</span>
-                        </div>
+                        )}
+                        <span className="text-accent-400">{station.totalDistance.toFixed(1)} km</span>
+                      </div>
                       </div>
 
                       {/* Performance */}

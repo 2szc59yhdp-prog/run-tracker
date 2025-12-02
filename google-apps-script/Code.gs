@@ -343,6 +343,7 @@ function getAllRuns() {
   const approvedAtColIndex = headers.indexOf('ApprovedAt');
   const submittedAtColIndex = headers.indexOf('SubmittedAt');
   const duplicateOfColIndex = headers.indexOf('DuplicateOf');
+  const distanceDisplayColIndex = headers.indexOf('DistanceDisplay');
   
   // Skip header row
   const runs = [];
@@ -356,6 +357,7 @@ function getAllRuns() {
         name: row[3].toString(),
         station: row[4].toString(),
         distanceKm: parseFloat(row[5]) || 0,
+        distanceDisplay: distanceDisplayColIndex >= 0 && row[distanceDisplayColIndex] ? row[distanceDisplayColIndex].toString() : '',
         photoId: photoIdColIndex >= 0 && row[photoIdColIndex] ? row[photoIdColIndex].toString() : '',
         photoUrl: photoUrlColIndex >= 0 && row[photoUrlColIndex] ? row[photoUrlColIndex].toString() : '',
         status: statusColIndex >= 0 && row[statusColIndex] ? row[statusColIndex].toString() : 'pending',
@@ -524,7 +526,15 @@ function addRun(data) {
   const submittedAt = new Date(); // Current timestamp when run is submitted
   
   // Get headers to find correct column positions
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  // Ensure DistanceDisplay column exists
+  let distanceDisplayColIndex = headers.indexOf('DistanceDisplay');
+  if (distanceDisplayColIndex === -1) {
+    const lastCol = sheet.getLastColumn();
+    sheet.getRange(1, lastCol + 1).setValue('DistanceDisplay');
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    distanceDisplayColIndex = headers.indexOf('DistanceDisplay');
+  }
   
   // Find column indices (0-based for array, add 1 for sheet column)
   const colIndex = {
@@ -534,6 +544,7 @@ function addRun(data) {
     name: headers.indexOf('Name'),
     station: headers.indexOf('Station'),
     distanceKm: headers.indexOf('DistanceKm'),
+    distanceDisplay: headers.indexOf('DistanceDisplay'),
     photoId: headers.indexOf('PhotoId'),
     photoUrl: headers.indexOf('PhotoUrl'),
     status: headers.indexOf('Status'),
@@ -556,6 +567,7 @@ function addRun(data) {
   if (colIndex.name >= 0) newRow[colIndex.name] = data.name.toString().trim();
   if (colIndex.station >= 0) newRow[colIndex.station] = data.station.toString().trim();
   if (colIndex.distanceKm >= 0) newRow[colIndex.distanceKm] = distance;
+  if (colIndex.distanceDisplay >= 0) newRow[colIndex.distanceDisplay] = (data.distanceDisplay && typeof data.distanceDisplay === 'string') ? data.distanceDisplay : distance.toFixed(2);
   if (colIndex.photoId >= 0) newRow[colIndex.photoId] = photoId;
   if (colIndex.photoUrl >= 0) newRow[colIndex.photoUrl] = photoUrl;
   if (colIndex.status >= 0) newRow[colIndex.status] = status;
@@ -573,7 +585,8 @@ function addRun(data) {
       serviceNumber: data.serviceNumber,
       station: data.station,
       date: data.date,
-      distanceKm: distance
+      distanceKm: distance,
+      distanceDisplay: (data.distanceDisplay && typeof data.distanceDisplay === 'string') ? data.distanceDisplay : distance.toFixed(2)
     });
   } catch (e) {
     Logger.log('Failed to send email notification: ' + e.message);
@@ -627,15 +640,24 @@ function updateRun(data) {
     return { success: false, error: 'Run not found' };
   }
   
-  // Update the row
+  // Update the row using headers
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const idx = {
+    date: headers.indexOf('Date'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    name: headers.indexOf('Name'),
+    station: headers.indexOf('Station'),
+    distanceKm: headers.indexOf('DistanceKm'),
+    distanceDisplay: headers.indexOf('DistanceDisplay')
+  };
+
   const distance = parseFloat(data.distanceKm) || 0;
-  sheet.getRange(rowIndex, 2, 1, 5).setValues([[
-    new Date(data.date),
-    data.serviceNumber.toString().trim(),
-    data.name.toString().trim(),
-    data.station.toString().trim(),
-    distance
-  ]]);
+  if (idx.date >= 0) sheet.getRange(rowIndex, idx.date + 1).setValue(new Date(data.date));
+  if (idx.serviceNumber >= 0) sheet.getRange(rowIndex, idx.serviceNumber + 1).setValue(data.serviceNumber.toString().trim());
+  if (idx.name >= 0) sheet.getRange(rowIndex, idx.name + 1).setValue(data.name.toString().trim());
+  if (idx.station >= 0) sheet.getRange(rowIndex, idx.station + 1).setValue(data.station.toString().trim());
+  if (idx.distanceKm >= 0) sheet.getRange(rowIndex, idx.distanceKm + 1).setValue(distance);
+  if (idx.distanceDisplay >= 0) sheet.getRange(rowIndex, idx.distanceDisplay + 1).setValue((data.distanceDisplay && typeof data.distanceDisplay === 'string') ? data.distanceDisplay : distance.toFixed(2));
   
   return {
     success: true,
@@ -1366,7 +1388,7 @@ function sendNewRunNotification(runData) {
           </tr>
           <tr>
             <td style="padding: 10px; color: #666;">Distance</td>
-            <td style="padding: 10px; color: #2186eb; font-weight: bold; font-size: 18px;">${runData.distanceKm} km</td>
+            <td style="padding: 10px; color: #2186eb; font-weight: bold; font-size: 18px;">${runData.distanceDisplay || runData.distanceKm} km</td>
           </tr>
         </table>
         
@@ -1391,7 +1413,7 @@ Name: ${runData.name}
 Service Number: #${runData.serviceNumber}
 Station: ${runData.station}
 Date: ${formattedDate}
-Distance: ${runData.distanceKm} km
+Distance: ${runData.distanceDisplay || runData.distanceKm} km
 
 Review at: https://run.huvadhoofulusclub.events/admin
   `;
@@ -1550,7 +1572,7 @@ function sendRunStatusNotification(runData) {
           </tr>
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Distance</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${runData.distanceKm} km</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${runData.distanceDisplay || runData.distanceKm} km</td>
           </tr>
           <tr>
             <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Status</td>
@@ -1585,7 +1607,7 @@ Hi ${runData.name},
 Your run submission has been reviewed:
 
 Date: ${formattedDate}
-Distance: ${runData.distanceKm} km
+    Distance: ${runData.distanceDisplay || runData.distanceKm} km
 Status: ${statusText}
 ${!isApproved && runData.rejectionReason ? 'Reason: ' + runData.rejectionReason : ''}
 
@@ -1905,4 +1927,3 @@ function debugGetAllRuns() {
     Logger.log('Stack: ' + e.stack);
   }
 }
-

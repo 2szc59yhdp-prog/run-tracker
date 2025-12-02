@@ -880,7 +880,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-3 px-2 text-primary-300 text-sm">{run.station}</td>
                         <td className="py-3 px-2 text-right font-display font-semibold text-white">
-                          {run.distanceKm.toFixed(1)} km
+                          {(run.distanceDisplay ?? run.distanceKm).toString()} km
                         </td>
                         <td className="py-3 px-2 text-center">
                           <StatusBadge 
@@ -927,7 +927,7 @@ export default function Dashboard() {
                           <span className="font-medium text-white truncate">{run.name}</span>
                         </div>
                         <span className="font-display font-bold text-accent-400 flex-shrink-0">
-                          {run.distanceKm.toFixed(1)} km
+                          {(run.distanceDisplay ?? run.distanceKm).toString()} km
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-primary-400 mb-2">

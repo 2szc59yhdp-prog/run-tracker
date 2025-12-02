@@ -147,6 +147,7 @@ export default function Admin() {
       name: run.name,
       station: run.station,
       distanceKm: run.distanceKm,
+      distanceDisplay: run.distanceDisplay ?? run.distanceKm.toFixed(2),
     });
     setMessage(null);
   };
@@ -162,18 +163,19 @@ export default function Admin() {
     setIsSaving(true);
     setMessage(null);
 
-    try {
-      const response = await updateRun(
-        {
-          id: editForm.id,
-          date: editForm.date!,
-          serviceNumber: editForm.serviceNumber!,
-          name: editForm.name!,
-          station: editForm.station!,
-          distanceKm: editForm.distanceKm!,
-        },
-        adminToken
-      );
+      try {
+        const response = await updateRun(
+          {
+            id: editForm.id,
+            date: editForm.date!,
+            serviceNumber: editForm.serviceNumber!,
+            name: editForm.name!,
+            station: editForm.station!,
+            distanceKm: editForm.distanceKm!,
+            distanceDisplay: editForm.distanceDisplay ?? editForm.distanceKm?.toFixed(2),
+          },
+          adminToken
+        );
 
       if (response.success) {
         setMessage({ type: 'success', text: 'Run updated successfully!' });
@@ -516,14 +518,21 @@ export default function Admin() {
                       <Input
                         label="Distance (KM)"
                         type="number"
-                        step="0.1"
-                        value={editForm.distanceKm?.toString() || ''}
-                        onChange={(e) =>
+                        step="0.01"
+                        inputMode="decimal"
+                        value={(editForm.distanceDisplay ?? editForm.distanceKm?.toString()) || ''}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/[^0-9.]/g, '');
+                          if (value.includes('.')) {
+                            const [i, d] = value.split('.');
+                            value = d !== undefined ? `${i}.${d.slice(0, 2)}` : i;
+                          }
                           setEditForm((prev) => ({
                             ...prev,
-                            distanceKm: parseFloat(e.target.value) || 0,
-                          }))
-                        }
+                            distanceKm: value ? parseFloat(value) : 0,
+                            distanceDisplay: value,
+                          }));
+                        }}
                       />
                       <Input
                         label="Date"
@@ -639,7 +648,7 @@ export default function Admin() {
                       </div>
                       <div className="bg-primary-800/30 rounded-lg p-3">
                         <p className="text-xs text-primary-500 mb-1">Distance</p>
-                        <p className="text-white text-lg font-bold">{run.distanceKm.toFixed(1)} <span className="text-sm font-normal text-primary-400">km</span></p>
+                        <p className="text-white text-lg font-bold">{(run.distanceDisplay ?? run.distanceKm).toString()} <span className="text-sm font-normal text-primary-400">km</span></p>
                       </div>
                       <div className="bg-primary-800/30 rounded-lg p-3">
                         <p className="text-xs text-primary-500 mb-1">Status</p>

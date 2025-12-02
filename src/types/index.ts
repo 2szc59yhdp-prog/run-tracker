@@ -16,6 +16,7 @@ export interface Run {
   name: string;
   station: string;
   distanceKm: number;
+  distanceDisplay?: string;
   photoId?: string;     // Google Drive file ID
   photoUrl?: string;    // Photo thumbnail URL
   status: RunStatus;    // Approval status
@@ -79,6 +80,7 @@ export interface AddRunPayload {
   name: string;
   station: string;
   distanceKm: number;
+  distanceDisplay?: string;
   photo?: PhotoPayload; // Optional photo upload
 }
 
@@ -105,4 +107,3 @@ export interface AdminUser {
   serviceNumber: string;
   name: string;
 }
-

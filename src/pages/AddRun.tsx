@@ -330,6 +330,7 @@ export default function AddRun() {
         station: formData.station.trim(),
         date: formData.date,
         distanceKm: parseFloat(formData.distanceKm),
+        distanceDisplay: formData.distanceKm,
         photo: photoPayload,
       });
 

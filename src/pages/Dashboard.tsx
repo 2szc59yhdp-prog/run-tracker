@@ -177,12 +177,30 @@ export default function Dashboard() {
   ], []);
   const [motivationIndex, setMotivationIndex] = useState(0);
   const [prevMotivationIndex, setPrevMotivationIndex] = useState<number | null>(null);
+  useEffect(() => {
+    motivationImages.forEach((src) => {
+      const img = document.createElement('img');
+      img.src = src;
+      if (img.decode) {
+        img.decode().catch(() => {});
+      }
+    });
+  }, [motivationImages]);
 
   useEffect(() => {
     if (motivationImages.length === 0) return;
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      const nextIdx = (motivationIndex + 1) % motivationImages.length;
+      const nextSrc = motivationImages[nextIdx];
+      try {
+        const img = document.createElement('img');
+        img.src = nextSrc;
+        if (img.decode) {
+          await img.decode();
+        }
+      } catch {}
       setPrevMotivationIndex(motivationIndex);
-      setMotivationIndex((idx) => (idx + 1) % motivationImages.length);
+      setMotivationIndex(nextIdx);
     }, 6000);
     return () => clearInterval(interval);
   }, [motivationImages.length, motivationIndex]);
@@ -551,7 +569,7 @@ export default function Dashboard() {
               <img
                 src={motivationImages[motivationIndex]}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover blur-[10px] scale-105 brightness-75"
+                className="slider-img absolute inset-0 w-full h-full object-cover blur-[10px] scale-105 brightness-75 pointer-events-none"
                 aria-hidden="true"
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-black/20 to-transparent"></div>
@@ -560,14 +578,14 @@ export default function Dashboard() {
                   key={`prev-${prevMotivationIndex}-${motivationIndex}`}
                   src={motivationImages[prevMotivationIndex]}
                   alt="Motivation"
-                  className="absolute inset-0 w-full h-full object-cover object-center z-10 animate-slide-out-left"
+                  className="slider-img absolute inset-0 w-full h-full object-cover object-center z-10 animate-slide-out-left pointer-events-none"
                 />
               )}
               <img
                 key={`cur-${motivationIndex}`}
                 src={motivationImages[motivationIndex]}
                 alt="Motivation"
-                className="absolute inset-0 w-full h-full object-cover object-center z-20 animate-slide-in-right"
+                className="slider-img absolute inset-0 w-full h-full object-cover object-center z-20 animate-slide-in-right pointer-events-none"
               />
             </div>
           </Card>

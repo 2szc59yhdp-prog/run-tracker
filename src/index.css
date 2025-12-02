@@ -175,3 +175,9 @@ button {
 .animate-slide-out-left {
   animation: slideFadeOutLeft 0.6s ease-in forwards;
 }
+
+.slider-img {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}

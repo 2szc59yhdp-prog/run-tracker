@@ -648,7 +648,7 @@ export default function Admin() {
                       </div>
                       <div className="bg-primary-800/30 rounded-lg p-3">
                         <p className="text-xs text-primary-500 mb-1">Distance</p>
-                        <p className="text-white text-lg font-bold">{(run.distanceDisplay ?? run.distanceKm).toString()} <span className="text-sm font-normal text-primary-400">km</span></p>
+                        <p className="text-white text-lg font-bold">{(run.distanceDisplay && run.distanceDisplay.trim() !== '' ? run.distanceDisplay : run.distanceKm.toFixed(2))} <span className="text-sm font-normal text-primary-400">km</span></p>
                       </div>
                       <div className="bg-primary-800/30 rounded-lg p-3">
                         <p className="text-xs text-primary-500 mb-1">Status</p>

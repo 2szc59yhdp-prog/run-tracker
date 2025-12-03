@@ -31,7 +31,7 @@ interface UserData {
 
 export default function AddRun() {
   const navigate = useNavigate();
-  const { refreshData } = useApp();
+  const { runs, refreshData } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get today's date in Maldives timezone (UTC+5) to match backend validation
@@ -279,11 +279,18 @@ export default function AddRun() {
       );
 
       if (duplicateCheck.success && duplicateCheck.data?.maxRunsReached) {
-        setErrors({
-          general: 'You have already logged 2 runs for today. Maximum 2 runs per day allowed.',
-        });
-        setIsSubmitting(false);
-        return;
+        const hasRejectedToday = runs.some(r => 
+          r.serviceNumber === formData.serviceNumber.trim() && 
+          r.date === formData.date && 
+          r.status === 'rejected'
+        );
+        if (!hasRejectedToday) {
+          setErrors({
+            general: 'You have already logged 2 runs for today. Maximum 2 runs per day allowed.',
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
       
       // Check if adding this run would exceed 10km daily limit

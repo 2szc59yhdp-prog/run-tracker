@@ -402,10 +402,8 @@ function checkDuplicateRun(serviceNumber, date) {
     const row = data[i];
     const rowServiceNumber = serviceNumberColIndex >= 0 ? row[serviceNumberColIndex].toString() : '';
     const rowDate = dateColIndex >= 0 ? formatDate(row[dateColIndex]) : '';
-    const rowStatus = statusColIndex >= 0 ? row[statusColIndex].toString().toLowerCase() : 'pending';
+    const rowStatus = statusColIndex >= 0 ? row[statusColIndex].toString().toLowerCase().trim() : 'pending';
     
-    // Only count approved and pending runs (NOT rejected)
-    // Rejected runs don't count toward the daily limit
     if (rowServiceNumber === serviceNumber && rowDate === date && rowStatus !== 'rejected') {
       runCount++;
       totalDistance += parseFloat(distanceColIndex >= 0 ? row[distanceColIndex] : 0) || 0;

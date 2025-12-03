@@ -280,9 +280,9 @@ export default function AddRun() {
 
       if (duplicateCheck.success && duplicateCheck.data?.maxRunsReached) {
         const hasRejectedToday = runs.some(r => 
-          r.serviceNumber === formData.serviceNumber.trim() && 
+          (r.serviceNumber || '').trim() === formData.serviceNumber.trim() && 
           r.date === formData.date && 
-          r.status === 'rejected'
+          ((r.status || '').toLowerCase().trim() === 'rejected')
         );
         if (!hasRejectedToday) {
           setErrors({

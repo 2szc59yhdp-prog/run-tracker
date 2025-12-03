@@ -384,20 +384,27 @@ function getAllRuns() {
 function checkDuplicateRun(serviceNumber, date) {
   const sheet = getRunsSheet();
   const data = sheet.getDataRange().getValues();
+  const headers = data[0];
   const MAX_RUNS_PER_DAY = 2;
   const MAX_DISTANCE_PER_DAY = 10; // 10km max per day
+  
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const dateColIndex = headers.indexOf('Date');
+  const distanceColIndex = headers.indexOf('DistanceKm');
+  const statusColIndex = headers.indexOf('Status');
   
   let runCount = 0;
   let totalDistance = 0;
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const rowServiceNumber = row[2].toString();
-    const rowDate = formatDate(row[1]);
+    const rowServiceNumber = serviceNumberColIndex >= 0 ? row[serviceNumberColIndex].toString() : '';
+    const rowDate = dateColIndex >= 0 ? formatDate(row[dateColIndex]) : '';
+    const rowStatus = statusColIndex >= 0 ? row[statusColIndex].toString().toLowerCase().trim() : 'pending';
     
-    if (rowServiceNumber === serviceNumber && rowDate === date) {
+    if (rowServiceNumber === serviceNumber && rowDate === date && rowStatus !== 'rejected') {
       runCount++;
-      totalDistance += parseFloat(row[5]) || 0;
+      totalDistance += parseFloat(distanceColIndex >= 0 ? row[distanceColIndex] : 0) || 0;
     }
   }
   

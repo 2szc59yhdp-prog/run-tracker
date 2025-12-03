@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const initialFetchDone = useRef(false);
 
   // Filter only APPROVED runs for leaderboard calculations
-  const approvedRuns = runs.filter(run => run.status === 'approved');
+  const approvedRuns = runs.filter(run => (run.status || 'pending').toLowerCase().trim() === 'approved');
 
   // Filter out General Admin from participant counts (they are admins, not participants)
   const participantRuns = approvedRuns.filter(run => run.station !== 'General Admin');
@@ -140,7 +140,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // Ensure all runs have a status (default to 'pending' for backwards compatibility)
         const runsWithStatus = response.data.map(run => ({
           ...run,
-          status: run.status || 'pending',
+          status: (run.status || 'pending').toLowerCase().trim(),
         })) as Run[];
         
         setRuns(runsWithStatus);

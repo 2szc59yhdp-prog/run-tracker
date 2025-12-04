@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal } from 'lucide-react';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
@@ -741,6 +741,11 @@ export default function Dashboard() {
                           {runner.name}
                         </p>
                         <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
+                        {runner.totalDistance >= 100 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-500/20 text-success-400 border border-success-500/30">
+                            <Medal className="w-3 h-3" /> 100K
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
                         <span className="flex items-center gap-1">

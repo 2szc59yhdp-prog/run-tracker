@@ -808,21 +808,21 @@ export default function Dashboard() {
                     <span className="absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-60 blur-[1px] animate-pulse"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.85)] animate-pulse"></span>
                   </span>
-                  <span className="text-primary-300">Green dot - Daily Runners since beginning of challenge</span>
+                  <span className="text-primary-300">- Daily Runners since beginning of challenge</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="absolute inline-flex h-full w-full rounded-full bg-warning-400 opacity-60 blur-[1px] animate-pulse"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.85)] animate-pulse"></span>
                   </span>
-                  <span className="text-primary-300">Yellow dot - In-active but gained 5 days active streak</span>
+                  <span className="text-primary-300">- Previously In-active, now reclassified as active after five active days</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="absolute inline-flex h-full w-full rounded-full bg-danger-400 opacity-60 blur-[1px] animate-pulse"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-danger-500 shadow-[0_0_8px_rgba(239,68,68,0.85)] animate-pulse"></span>
                   </span>
-                  <span className="text-primary-300">Red dot - In-active</span>
+                  <span className="text-primary-300">- In-active</span>
                 </div>
               </div>
             </div>

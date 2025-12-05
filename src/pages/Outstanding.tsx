@@ -106,6 +106,13 @@ export default function Outstanding() {
     setShowAddModal(false);
   };
 
+  const handleClear = (id: string) => {
+    const next = list.filter((o) => o.id !== id);
+    setList(next);
+    localStorage.setItem('outstandings', JSON.stringify(next));
+    setMessage({ type: 'success', text: 'Outstanding cleared' });
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center gap-3">
@@ -135,6 +142,7 @@ export default function Outstanding() {
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Reason</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Added By</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Date</th>
+                <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -151,6 +159,16 @@ export default function Outstanding() {
                     <td className="py-3 px-4 text-primary-300">{o.reason}</td>
                     <td className="py-3 px-4 text-primary-300">#{o.addedByServiceNumber}</td>
                     <td className="py-3 px-4 text-primary-300">{new Date(o.date).toLocaleString()}</td>
+                    <td className="py-3 px-4">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleClear(o.id)}
+                        className="bg-success-500/20 hover:bg-success-500/30 text-success-400 border-success-500/30"
+                      >
+                        Cleared
+                      </Button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -199,4 +217,3 @@ export default function Outstanding() {
     </div>
   );
 }
-

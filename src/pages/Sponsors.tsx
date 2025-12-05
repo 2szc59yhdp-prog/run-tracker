@@ -291,8 +291,8 @@ export default function Sponsors() {
       </Card>
 
       {showAddSponsor && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] overflow-y-auto">
-          <Card className="w-full max-w-lg my-8">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
+          <Card className="w-full max-w-lg my-8 relative z-[10000]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Add Sponsor</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
@@ -316,8 +316,8 @@ export default function Sponsors() {
       )}
 
       {showUseFunds && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[100] overflow-y-auto">
-          <Card className="w-full max-w-lg my-8">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
+          <Card className="w-full max-w-lg my-8 relative z-[10000]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Use Funds</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>

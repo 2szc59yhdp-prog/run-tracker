@@ -5,7 +5,7 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import { Award, Hash, User, MapPin, Plus, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { getUserByServiceNumber } from '../services/api';
+import { getUserByServiceNumber, fetchOutstandings, addOutstandingApi, clearOutstandingApi } from '../services/api';
 import type { RegisteredUser } from '../types';
 
 interface OutstandingEntry {
@@ -20,7 +20,7 @@ interface OutstandingEntry {
 
 export default function Outstanding() {
   const navigate = useNavigate();
-  const { isAdmin } = useApp();
+  const { isAdmin, adminToken } = useApp();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchSN, setSearchSN] = useState('');
@@ -35,12 +35,10 @@ export default function Outstanding() {
   }, [isAdmin, navigate]);
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('outstandings') || '[]');
-      setList(Array.isArray(stored) ? stored : []);
-    } catch {
-      setList([]);
-    }
+    (async () => {
+      const res = await fetchOutstandings();
+      if (res.success && res.data) setList(res.data);
+    })();
   }, []);
 
   useEffect(() => {
@@ -99,18 +97,42 @@ export default function Outstanding() {
       date: new Date().toISOString(),
     };
 
-    const next = [entry, ...list];
-    setList(next);
-    localStorage.setItem('outstandings', JSON.stringify(next));
-    setMessage({ type: 'success', text: 'Outstanding added' });
-    setShowAddModal(false);
+    if (!adminToken || !isAdmin) {
+      setMessage({ type: 'error', text: 'Admin session required' });
+      return;
+    }
+    addOutstandingApi({
+      serviceNumber: entry.serviceNumber,
+      name: entry.name,
+      station: entry.station,
+      reason: entry.reason,
+      addedByServiceNumber: entry.addedByServiceNumber,
+    }, adminToken).then(async (res) => {
+      if (res.success) {
+        const listRes = await fetchOutstandings();
+        if (listRes.success && listRes.data) setList(listRes.data);
+        setMessage({ type: 'success', text: 'Outstanding added' });
+        setShowAddModal(false);
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to add outstanding' });
+      }
+    });
   };
 
   const handleClear = (id: string) => {
-    const next = list.filter((o) => o.id !== id);
-    setList(next);
-    localStorage.setItem('outstandings', JSON.stringify(next));
-    setMessage({ type: 'success', text: 'Outstanding cleared' });
+    if (!adminToken || !isAdmin) {
+      setMessage({ type: 'error', text: 'Admin session required' });
+      return;
+    }
+    clearOutstandingApi(id, adminToken).then(async (res) => {
+      if (res.success) {
+        const listRes = await fetchOutstandings();
+        if (listRes.success && listRes.data) setList(listRes.data);
+        setMessage({ type: 'success', text: 'Outstanding cleared' });
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to clear outstanding' });
+      }
+    });
   };
 
   return (

@@ -8,6 +8,36 @@
 import { APPS_SCRIPT_URL } from '../config';
 import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser } from '../types';
 
+export interface Sponsor {
+  id: string;
+  businessName: string;
+  details?: string;
+  amountSponsored: number;
+  contactName: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  createdAt?: string;
+}
+
+export interface FundUsageEntry {
+  id: string;
+  purpose: string;
+  amountUsed: number;
+  serviceNumber: string;
+  sponsorId?: string;
+  date: string;
+}
+
+export interface OutstandingEntry {
+  id: string;
+  serviceNumber: string;
+  name: string;
+  station?: string;
+  reason: string;
+  addedByServiceNumber: string;
+  date: string;
+}
+
 /**
  * Pre-warms the Google Apps Script API to reduce cold start delay
  * This makes a lightweight request to wake up the serverless function
@@ -472,6 +502,95 @@ export async function updateUserAdminStatus(
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update admin status',
     };
+  }
+}
+
+export async function fetchSponsors(): Promise<ApiResponse<Sponsor[]>> {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getSponsors`, { method: 'GET' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch sponsors' };
+  }
+}
+
+export async function addSponsorApi(payload: Omit<Sponsor, 'id' | 'createdAt'>, adminToken: string): Promise<ApiResponse<{ id: string }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addSponsor', adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add sponsor' };
+  }
+}
+
+export async function fetchFundUsages(): Promise<ApiResponse<FundUsageEntry[]>> {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getFundUsages`, { method: 'GET' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch fund usages' };
+  }
+}
+
+export async function addFundUsageApi(payload: Omit<FundUsageEntry, 'id' | 'date'>, adminToken: string): Promise<ApiResponse<{ id: string }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addFundUsage', adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add fund usage' };
+  }
+}
+
+export async function fetchOutstandings(): Promise<ApiResponse<OutstandingEntry[]>> {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getOutstandings`, { method: 'GET' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch outstandings' };
+  }
+}
+
+export async function addOutstandingApi(payload: Omit<OutstandingEntry, 'id' | 'date'>, adminToken: string): Promise<ApiResponse<{ id: string }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addOutstanding', adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add outstanding' };
+  }
+}
+
+export async function clearOutstandingApi(id: string, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'clearOutstanding', id, adminToken }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to clear outstanding' };
   }
 }
 

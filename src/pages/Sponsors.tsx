@@ -3,6 +3,8 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { Building2, HandCoins, Plus, X, Wallet, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { fetchSponsors, fetchFundUsages, addSponsorApi, addFundUsageApi, type Sponsor as SponsorApi, type FundUsageEntry } from '../services/api';
 
 interface Sponsor {
   id: string;
@@ -24,6 +26,7 @@ interface FundUsage {
 }
 
 export default function Sponsors() {
+  const { adminToken, isAdmin } = useApp();
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [fundUsages, setFundUsages] = useState<FundUsage[]>([]);
   const [showAddSponsor, setShowAddSponsor] = useState(false);
@@ -36,37 +39,12 @@ export default function Sponsors() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem('sponsors') || '[]');
-      const primary = JSON.parse(localStorage.getItem('fundUsages') || '[]');
-      const alt1 = JSON.parse(localStorage.getItem('useFunds') || '[]');
-      const alt2 = JSON.parse(localStorage.getItem('fundUsage') || '[]');
-      const alt3 = JSON.parse(localStorage.getItem('fundsUsed') || '[]');
-      const merged = [primary, alt1, alt2, alt3]
-        .filter(Array.isArray)
-        .reduce((acc: any[], curr: any[]) => acc.concat(curr), []);
-      const seen = new Set<string>();
-      const normalized = merged
-        .map((u: any) => ({
-          id: u.id || crypto.randomUUID(),
-          purpose: String(u.purpose || ''),
-          amountUsed: Number(u.amountUsed || u.amount || 0),
-          serviceNumber: String(u.serviceNumber || u.officer || ''),
-          sponsorId: u.sponsorId || u.sponsorIdRef || undefined,
-          date: u.date || new Date().toISOString(),
-        }))
-        .filter((u: FundUsage) => {
-          if (seen.has(u.id)) return false;
-          seen.add(u.id);
-          return true;
-        });
-      setSponsors(Array.isArray(s) ? s : []);
-      setFundUsages(normalized);
-      localStorage.setItem('fundUsages', JSON.stringify(normalized));
-    } catch {
-      setSponsors([]);
-      setFundUsages([]);
-    }
+    (async () => {
+      const s = await fetchSponsors();
+      if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+      const f = await fetchFundUsages();
+      if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+    })();
   }, []);
 
   const totalSponsors = sponsors.length;
@@ -124,11 +102,27 @@ export default function Sponsors() {
       contactEmail: sponsorForm.contactEmail?.trim() || undefined,
     };
 
-    const next = [newSponsor, ...sponsors];
-    setSponsors(next);
-    localStorage.setItem('sponsors', JSON.stringify(next));
-    setMessage({ type: 'success', text: 'Sponsor added' });
-    setShowAddSponsor(false);
+    if (!adminToken || !isAdmin) {
+      setMessage({ type: 'error', text: 'Admin session required' });
+      return;
+    }
+    addSponsorApi({
+      businessName: newSponsor.businessName,
+      details: newSponsor.details,
+      amountSponsored: newSponsor.amountSponsored,
+      contactName: newSponsor.contactName,
+      contactPhone: newSponsor.contactPhone,
+      contactEmail: newSponsor.contactEmail,
+    }, adminToken).then(async (res) => {
+      if (res.success) {
+        const s = await fetchSponsors();
+        if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+        setMessage({ type: 'success', text: 'Sponsor added' });
+        setShowAddSponsor(false);
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to add sponsor' });
+      }
+    });
   };
 
   const handleSaveUsage = (e: React.FormEvent) => {
@@ -149,11 +143,25 @@ export default function Sponsors() {
       date: new Date().toISOString(),
     };
 
-    const next = [newUsage, ...fundUsages];
-    setFundUsages(next);
-    localStorage.setItem('fundUsages', JSON.stringify(next));
-    setMessage({ type: 'success', text: 'Usage recorded' });
-    setShowUseFunds(false);
+    if (!adminToken || !isAdmin) {
+      setMessage({ type: 'error', text: 'Admin session required' });
+      return;
+    }
+    addFundUsageApi({
+      purpose: newUsage.purpose,
+      amountUsed: newUsage.amountUsed,
+      serviceNumber: newUsage.serviceNumber,
+      sponsorId: newUsage.sponsorId,
+    }, adminToken).then(async (res) => {
+      if (res.success) {
+        const f = await fetchFundUsages();
+        if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+        setMessage({ type: 'success', text: 'Usage recorded' });
+        setShowUseFunds(false);
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to record usage' });
+      }
+    });
   };
 
   return (

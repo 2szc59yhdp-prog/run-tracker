@@ -77,6 +77,45 @@ function getUsersSheet() {
   return spreadsheet.getSheetByName('Users');
 }
 
+function getSponsorsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('Sponsors');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('Sponsors');
+    sheet.getRange(1, 1, 1, 8).setValues([[
+      'ID', 'BusinessName', 'Details', 'AmountSponsored', 'ContactName', 'ContactPhone', 'ContactEmail', 'CreatedAt'
+    ]]);
+  }
+  return sheet;
+}
+
+function getFundUsageSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('FundUsage');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('FundUsage');
+    sheet.getRange(1, 1, 1, 6).setValues([[
+      'ID', 'Purpose', 'AmountUsed', 'ServiceNumber', 'SponsorId', 'Date'
+    ]]);
+  }
+  return sheet;
+}
+
+function getOutstandingsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('Outstanding');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('Outstanding');
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'ID', 'ServiceNumber', 'Name', 'Station', 'Reason', 'AddedByServiceNumber', 'Date'
+    ]]);
+  }
+  return sheet;
+}
+
 /**
  * Gets or creates the Run Photos folder in Google Drive
  * @returns {Folder} The photos folder
@@ -246,6 +285,15 @@ function doGet(e) {
       case 'getUsers':
         result = getAllUsers();
         break;
+      case 'getSponsors':
+        result = getAllSponsors();
+        break;
+      case 'getFundUsages':
+        result = getAllFundUsages();
+        break;
+      case 'getOutstandings':
+        result = getAllOutstandings();
+        break;
       case 'getUserByServiceNumber':
         result = getUserByServiceNumber(e.parameter.serviceNumber);
         break;
@@ -300,6 +348,18 @@ function doPost(e) {
         break;
       case 'deleteUser':
         result = deleteUser(data);
+        break;
+      case 'addSponsor':
+        result = addSponsor(data);
+        break;
+      case 'addFundUsage':
+        result = addFundUsage(data);
+        break;
+      case 'addOutstanding':
+        result = addOutstanding(data);
+        break;
+      case 'clearOutstanding':
+        result = clearOutstanding(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -372,6 +432,191 @@ function getAllRuns() {
   }
   
   return { success: true, data: runs };
+}
+
+function getAllSponsors() {
+  const sheet = getSponsorsSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) {
+      list.push({
+        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
+        businessName: headers.indexOf('BusinessName') >= 0 && row[headers.indexOf('BusinessName')] ? row[headers.indexOf('BusinessName')].toString() : '',
+        details: headers.indexOf('Details') >= 0 && row[headers.indexOf('Details')] ? row[headers.indexOf('Details')].toString() : '',
+        amountSponsored: headers.indexOf('AmountSponsored') >= 0 ? (parseFloat(row[headers.indexOf('AmountSponsored')]) || 0) : 0,
+        contactName: headers.indexOf('ContactName') >= 0 && row[headers.indexOf('ContactName')] ? row[headers.indexOf('ContactName')].toString() : '',
+        contactPhone: headers.indexOf('ContactPhone') >= 0 && row[headers.indexOf('ContactPhone')] ? row[headers.indexOf('ContactPhone')].toString() : '',
+        contactEmail: headers.indexOf('ContactEmail') >= 0 && row[headers.indexOf('ContactEmail')] ? row[headers.indexOf('ContactEmail')].toString() : '',
+        createdAt: headers.indexOf('CreatedAt') >= 0 && row[headers.indexOf('CreatedAt')] ? formatDateTime(row[headers.indexOf('CreatedAt')]) : ''
+      });
+    }
+  }
+  return { success: true, data: list };
+}
+
+function addSponsor(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.businessName || data.amountSponsored == null || !data.contactName) {
+    return { success: false, error: 'Missing required fields' };
+  }
+  const sheet = getSponsorsSheet();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  const id = generateId();
+  const createdAt = new Date();
+  const col = {
+    id: headers.indexOf('ID'),
+    businessName: headers.indexOf('BusinessName'),
+    details: headers.indexOf('Details'),
+    amountSponsored: headers.indexOf('AmountSponsored'),
+    contactName: headers.indexOf('ContactName'),
+    contactPhone: headers.indexOf('ContactPhone'),
+    contactEmail: headers.indexOf('ContactEmail'),
+    createdAt: headers.indexOf('CreatedAt'),
+  };
+  if (col.id >= 0) newRow[col.id] = id;
+  if (col.businessName >= 0) newRow[col.businessName] = data.businessName.toString().trim();
+  if (col.details >= 0) newRow[col.details] = (data.details || '').toString().trim();
+  if (col.amountSponsored >= 0) newRow[col.amountSponsored] = parseFloat(data.amountSponsored);
+  if (col.contactName >= 0) newRow[col.contactName] = data.contactName.toString().trim();
+  if (col.contactPhone >= 0) newRow[col.contactPhone] = (data.contactPhone || '').toString().trim();
+  if (col.contactEmail >= 0) newRow[col.contactEmail] = (data.contactEmail || '').toString().trim();
+  if (col.createdAt >= 0) newRow[col.createdAt] = createdAt;
+  sheet.appendRow(newRow);
+  return { success: true, data: { id: id } };
+}
+
+function getAllFundUsages() {
+  const sheet = getFundUsageSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) {
+      list.push({
+        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
+        purpose: headers.indexOf('Purpose') >= 0 && row[headers.indexOf('Purpose')] ? row[headers.indexOf('Purpose')].toString() : '',
+        amountUsed: headers.indexOf('AmountUsed') >= 0 ? (parseFloat(row[headers.indexOf('AmountUsed')]) || 0) : 0,
+        serviceNumber: headers.indexOf('ServiceNumber') >= 0 && row[headers.indexOf('ServiceNumber')] ? row[headers.indexOf('ServiceNumber')].toString() : '',
+        sponsorId: headers.indexOf('SponsorId') >= 0 && row[headers.indexOf('SponsorId')] ? row[headers.indexOf('SponsorId')].toString() : '',
+        date: headers.indexOf('Date') >= 0 && row[headers.indexOf('Date')] ? formatDateTime(row[headers.indexOf('Date')]) : ''
+      });
+    }
+  }
+  return { success: true, data: list };
+}
+
+function addFundUsage(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.purpose || data.amountUsed == null || !data.serviceNumber) {
+    return { success: false, error: 'Missing required fields' };
+  }
+  const sheet = getFundUsageSheet();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  const id = generateId();
+  const date = new Date();
+  const col = {
+    id: headers.indexOf('ID'),
+    purpose: headers.indexOf('Purpose'),
+    amountUsed: headers.indexOf('AmountUsed'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    sponsorId: headers.indexOf('SponsorId'),
+    date: headers.indexOf('Date'),
+  };
+  if (col.id >= 0) newRow[col.id] = id;
+  if (col.purpose >= 0) newRow[col.purpose] = data.purpose.toString().trim();
+  if (col.amountUsed >= 0) newRow[col.amountUsed] = parseFloat(data.amountUsed);
+  if (col.serviceNumber >= 0) newRow[col.serviceNumber] = data.serviceNumber.toString().trim();
+  if (col.sponsorId >= 0) newRow[col.sponsorId] = (data.sponsorId || '').toString().trim();
+  if (col.date >= 0) newRow[col.date] = date;
+  sheet.appendRow(newRow);
+  return { success: true, data: { id: id } };
+}
+
+function getAllOutstandings() {
+  const sheet = getOutstandingsSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) {
+      list.push({
+        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
+        serviceNumber: headers.indexOf('ServiceNumber') >= 0 && row[headers.indexOf('ServiceNumber')] ? row[headers.indexOf('ServiceNumber')].toString() : '',
+        name: headers.indexOf('Name') >= 0 && row[headers.indexOf('Name')] ? row[headers.indexOf('Name')].toString() : '',
+        station: headers.indexOf('Station') >= 0 && row[headers.indexOf('Station')] ? row[headers.indexOf('Station')].toString() : '',
+        reason: headers.indexOf('Reason') >= 0 && row[headers.indexOf('Reason')] ? row[headers.indexOf('Reason')].toString() : '',
+        addedByServiceNumber: headers.indexOf('AddedByServiceNumber') >= 0 && row[headers.indexOf('AddedByServiceNumber')] ? row[headers.indexOf('AddedByServiceNumber')].toString() : '',
+        date: headers.indexOf('Date') >= 0 && row[headers.indexOf('Date')] ? formatDateTime(row[headers.indexOf('Date')]) : ''
+      });
+    }
+  }
+  return { success: true, data: list };
+}
+
+function addOutstanding(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.serviceNumber || !data.name || !data.reason || !data.addedByServiceNumber) {
+    return { success: false, error: 'Missing required fields' };
+  }
+  const sheet = getOutstandingsSheet();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  const id = generateId();
+  const date = new Date();
+  const col = {
+    id: headers.indexOf('ID'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    name: headers.indexOf('Name'),
+    station: headers.indexOf('Station'),
+    reason: headers.indexOf('Reason'),
+    addedByServiceNumber: headers.indexOf('AddedByServiceNumber'),
+    date: headers.indexOf('Date'),
+  };
+  if (col.id >= 0) newRow[col.id] = id;
+  if (col.serviceNumber >= 0) newRow[col.serviceNumber] = data.serviceNumber.toString().trim();
+  if (col.name >= 0) newRow[col.name] = data.name.toString().trim();
+  if (col.station >= 0) newRow[col.station] = (data.station || '').toString().trim();
+  if (col.reason >= 0) newRow[col.reason] = data.reason.toString().trim();
+  if (col.addedByServiceNumber >= 0) newRow[col.addedByServiceNumber] = data.addedByServiceNumber.toString().trim();
+  if (col.date >= 0) newRow[col.date] = date;
+  sheet.appendRow(newRow);
+  return { success: true, data: { id: id } };
+}
+
+function clearOutstanding(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+  const sheet = getOutstandingsSheet();
+  const values = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0] && values[i][0].toString() === data.id.toString()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  if (rowIndex === -1) {
+    return { success: false, error: 'Entry not found' };
+  }
+  sheet.deleteRow(rowIndex);
+  return { success: true };
 }
 
 /**

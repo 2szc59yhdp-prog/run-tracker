@@ -20,7 +20,7 @@ interface OutstandingEntry {
 
 export default function Outstanding() {
   const navigate = useNavigate();
-  const { isAdmin, adminToken } = useApp();
+  const { isAdmin, adminToken, adminUser } = useApp();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchSN, setSearchSN] = useState('');
@@ -124,7 +124,7 @@ export default function Outstanding() {
       setMessage({ type: 'error', text: 'Admin session required' });
       return;
     }
-    clearOutstandingApi(id, adminToken).then(async (res) => {
+    clearOutstandingApi(id, adminToken, adminUser?.serviceNumber || '').then(async (res) => {
       if (res.success) {
         const listRes = await fetchOutstandings();
         if (listRes.success && listRes.data) setList(listRes.data);

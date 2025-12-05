@@ -580,11 +580,11 @@ export async function addOutstandingApi(payload: Omit<OutstandingEntry, 'id' | '
   }
 }
 
-export async function clearOutstandingApi(id: string, adminToken: string): Promise<ApiResponse<void>> {
+export async function clearOutstandingApi(id: string, adminToken: string, actorServiceNumber: string): Promise<ApiResponse<void>> {
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'clearOutstanding', id, adminToken }),
+      body: JSON.stringify({ action: 'clearOutstanding', id, adminToken, actorServiceNumber }),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();

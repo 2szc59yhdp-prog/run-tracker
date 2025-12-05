@@ -600,6 +600,10 @@ function clearOutstanding(data) {
   if (!validateAdminToken(data.adminToken)) {
     return { success: false, error: 'Unauthorized: Invalid admin token' };
   }
+  // Only service number 5568 can clear outstanding entries
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== '5568') {
+    return { success: false, error: 'Only service number 5568 can clear outstanding entries' };
+  }
   if (!data.id) {
     return { success: false, error: 'ID is required' };
   }

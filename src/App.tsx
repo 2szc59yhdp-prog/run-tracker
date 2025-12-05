@@ -6,6 +6,7 @@ import AddRun from './pages/AddRun';
 import AdminLogin from './pages/AdminLogin';
 import Admin from './pages/Admin';
 import { RegisteredUsers } from './pages/RegisteredUsers';
+import Sponsors from './pages/Sponsors';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="admin-login" element={<AdminLogin />} />
           <Route path="admin" element={<Admin />} />
           <Route path="admin/users" element={<RegisteredUsers />} />
+          <Route path="admin/sponsors" element={<Sponsors />} />
         </Route>
       </Routes>
     </AppProvider>
@@ -25,4 +27,3 @@ function App() {
 }
 
 export default App;
-

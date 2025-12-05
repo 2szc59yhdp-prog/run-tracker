@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw, Building2 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -60,6 +60,7 @@ function StatusBadge({ status, rejectionReason, approvedBy, approvedByName }: {
 }
 
 export default function Admin() {
+  const navigate = useNavigate();
   const { isAdmin, adminToken, adminUser, runs, isLoading, isRefreshing, error, refreshData } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Run>>({});
@@ -359,6 +360,20 @@ export default function Admin() {
         <p className="text-primary-400">
           Review, approve or reject run submissions
         </p>
+      </div>
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in">
+        <Card hover className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary-700/50 text-accent-400">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-primary-400 text-sm font-medium">Sponsors</p>
+              <p className="text-white font-display font-bold">Manage sponsors & funds</p>
+            </div>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/admin/sponsors')}>Open</Button>
+        </Card>
       </div>
 
       {/* Message */}

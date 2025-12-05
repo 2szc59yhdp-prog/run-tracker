@@ -7,6 +7,7 @@ import AdminLogin from './pages/AdminLogin';
 import Admin from './pages/Admin';
 import { RegisteredUsers } from './pages/RegisteredUsers';
 import Sponsors from './pages/Sponsors';
+import Outstanding from './pages/Outstanding';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="admin" element={<Admin />} />
           <Route path="admin/users" element={<RegisteredUsers />} />
           <Route path="admin/sponsors" element={<Sponsors />} />
+          <Route path="admin/outstanding" element={<Outstanding />} />
         </Route>
       </Routes>
     </AppProvider>

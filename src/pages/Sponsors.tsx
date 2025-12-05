@@ -292,12 +292,12 @@ export default function Sponsors() {
 
       {showAddSponsor && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
-          <Card className="w-full max-w-lg my-8 relative z-[10000]">
+          <Card className="w-full max-w-[600px] md:max-w-[720px] my-8 relative z-[10000] !overflow-visible">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Add Sponsor</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
-            <form onSubmit={handleSaveSponsor} className="space-y-3">
+            <form onSubmit={handleSaveSponsor} className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
               <Input label="Business Name" value={sponsorForm.businessName || ''} onChange={(e) => setSponsorForm({ ...sponsorForm, businessName: e.target.value })} required error={errors.businessName} />
               <Input label="Details" value={sponsorForm.details || ''} onChange={(e) => setSponsorForm({ ...sponsorForm, details: e.target.value })} />
               <Input label="Amount Sponsored" type="number" inputMode="numeric" value={sponsorForm.amountSponsored as any || ''} onChange={(e) => setSponsorForm({ ...sponsorForm, amountSponsored: Number(e.target.value) })} required error={errors.amountSponsored} />
@@ -317,12 +317,12 @@ export default function Sponsors() {
 
       {showUseFunds && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
-          <Card className="w-full max-w-lg my-8 relative z-[10000]">
+          <Card className="w-full max-w-[600px] md:max-w-[720px] my-8 relative z-[10000] !overflow-visible">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Use Funds</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
-            <form onSubmit={handleSaveUsage} className="space-y-3">
+            <form onSubmit={handleSaveUsage} className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
               <Input label="Purpose" value={fundForm.purpose || ''} onChange={(e) => setFundForm({ ...fundForm, purpose: e.target.value })} required error={errors.purpose} />
               <Input label="Amount Used" type="number" inputMode="numeric" value={fundForm.amountUsed as any || ''} onChange={(e) => setFundForm({ ...fundForm, amountUsed: Number(e.target.value) })} required error={errors.amountUsed} />
               <Input label="Requesting Officer Service Number" value={fundForm.serviceNumber || ''} onChange={(e) => setFundForm({ ...fundForm, serviceNumber: e.target.value })} required error={errors.serviceNumber} />

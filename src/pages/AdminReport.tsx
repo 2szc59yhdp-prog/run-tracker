@@ -39,6 +39,8 @@ export default function AdminReport() {
   const [startDate, setStartDate] = useState<string>('2025-12-01')
   const [endDate, setEndDate] = useState<string>('2026-01-31')
   const [generating, setGenerating] = useState(false)
+  const [scale, setScale] = useState<number>(1)
+  const containerRef = useRef<HTMLDivElement>(null)
   const page1Ref = useRef<HTMLDivElement>(null)
   const page2Ref = useRef<HTMLDivElement>(null)
 
@@ -143,6 +145,19 @@ export default function AdminReport() {
     }
   }
 
+  useEffect(() => {
+    const updateScale = () => {
+      const el = containerRef.current
+      if (!el) return
+      const w = el.offsetWidth
+      const s = Math.min(1, w / 794)
+      setScale(s)
+    }
+    updateScale()
+    window.addEventListener('resize', updateScale)
+    return () => window.removeEventListener('resize', updateScale)
+  }, [])
+
   const totalDistance = useMemo(() => filteredRuns.reduce((s, r) => s + Number(r.distanceKm || 0), 0), [filteredRuns])
   const totalApprovedRuns = filteredRuns.length
   const uniqueRunners = new Set(filteredRuns.map((r) => r.serviceNumber)).size
@@ -165,13 +180,14 @@ export default function AdminReport() {
         </div>
       </Card>
 
-      <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px]">
-        <div className="p-5">
-          <div className="text-center mb-4">
-            <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
-            <h2 className="font-display text-2xl font-bold text-white">100K Run Challenge Weekly Statistic Report</h2>
-            <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
-          </div>
+      <div ref={containerRef} className="mx-auto w-full sm:w-auto">
+        <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+          <div className="p-5">
+            <div className="text-center mb-4">
+              <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
+              <h2 className="font-display text-2xl font-bold text-white">100K Run Challenge Weekly Statistic Report</h2>
+              <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
+            </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
@@ -224,9 +240,9 @@ export default function AdminReport() {
           <div className="mt-4 text-center text-[11px] text-primary-500">
             This document is electronically generated and does not require a signature.
           </div>
+          </div>
         </div>
-      </div>
-      <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px] mt-6">
+        <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
           <div className="text-center mb-4">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -257,6 +273,7 @@ export default function AdminReport() {
             </table>
           </div>
           <div className="mt-4 text-center text-[11px] text-primary-500">No SPSR, SPSR RR&HV, or Gdh.Atoll Police included.</div>
+        </div>
         </div>
       </div>
     </div>

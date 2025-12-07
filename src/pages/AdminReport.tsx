@@ -43,6 +43,9 @@ export default function AdminReport() {
   const containerRef = useRef<HTMLDivElement>(null)
   const page1Ref = useRef<HTMLDivElement>(null)
   const page2Ref = useRef<HTMLDivElement>(null)
+  const PAGE1_ROWS = 28
+  const MIN_DISTANCE_KM = 100
+  const MIN_ACTIVE_DAYS = 40
 
   useEffect(() => {
     if (!isAdmin) {
@@ -100,29 +103,40 @@ export default function AdminReport() {
   }, [filteredRuns, users])
 
   const stationBoard = useMemo(() => {
-    const agg = new Map<(typeof STATION_ORDER)[number], { totalDistance: number; runners: number; runCount: number }>()
-    STATION_ORDER.forEach((s) => agg.set(s, { totalDistance: 0, runners: 0, runCount: 0 }))
-    const seen = new Map<string, (typeof STATION_ORDER)[number]>()
+    const agg = new Map<(typeof STATION_ORDER)[number], { totalDistance: number; runners: number; runCount: number; performancePercent: number; progressSum: number }>()
+    STATION_ORDER.forEach((s) => agg.set(s, { totalDistance: 0, runners: 0, runCount: 0, performancePercent: 0, progressSum: 0 }))
+    const byUser = new Map<string, { totalDistance: number; dates: Set<string>; station: (typeof STATION_ORDER)[number] | null }>()
     filteredRuns.forEach((r) => {
       const mapped = STATION_MAP[r.station] as (typeof STATION_ORDER)[number] | undefined
       if (!mapped) return
+      const u = byUser.get(r.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), station: mapped ?? null }
+      u.totalDistance += Number(r.distanceKm || 0)
+      u.dates.add(r.date)
+      u.station = mapped ?? u.station
+      byUser.set(r.serviceNumber, u)
       const cur = agg.get(mapped)!
       cur.totalDistance += Number(r.distanceKm || 0)
       cur.runCount += 1
       agg.set(mapped, cur)
-      if (!seen.has(r.serviceNumber)) {
-        seen.set(r.serviceNumber, mapped)
-        cur.runners += 1
-        agg.set(mapped, cur)
-      }
     })
-    users.forEach((u) => {
-      const mapped = STATION_MAP[u.station]
-      if (!mapped || u.station === 'General Admin') return
-      if (!agg.has(mapped)) agg.set(mapped, { totalDistance: 0, runners: 0, runCount: 0 })
+    // compute runner progress and aggregate performance
+    byUser.forEach(({ totalDistance, dates, station }) => {
+      if (!station) return
+      const activeDays = dates.size
+      const distanceProgress = Math.min((totalDistance / MIN_DISTANCE_KM) * 100, 100)
+      const daysProgress = Math.min((activeDays / MIN_ACTIVE_DAYS) * 100, 100)
+      const progress = Math.min(distanceProgress, daysProgress)
+      const cur = agg.get(station)!
+      cur.runners += 1
+      cur.progressSum += progress
+      agg.set(station, cur)
     })
-    return STATION_ORDER.map((station) => ({ station, ...(agg.get(station) || { totalDistance: 0, runners: 0, runCount: 0 }) }))
-  }, [filteredRuns, users])
+    return STATION_ORDER.map((station) => {
+      const cur = agg.get(station) || { totalDistance: 0, runners: 0, runCount: 0, performancePercent: 0, progressSum: 0 }
+      const performancePercent = cur.runners > 0 ? cur.progressSum / cur.runners : 0
+      return { station, totalDistance: cur.totalDistance, runners: cur.runners, runCount: cur.runCount, performancePercent }
+    })
+  }, [filteredRuns])
 
   const generatePdf = async () => {
     setGenerating(true)
@@ -213,26 +227,26 @@ export default function AdminReport() {
                     <th className="text-left px-3 py-2">Pos</th>
                     <th className="text-left px-3 py-2">Name</th>
                     <th className="text-left px-3 py-2">Station</th>
-                    <th className="text-right px-3 py-2">Active Days</th>
-                    <th className="text-right px-3 py-2">Runs</th>
-                    <th className="text-right px-3 py-2">Distance</th>
+                    <th className="text-center px-3 py-2">Active Days</th>
+                    <th className="text-center px-3 py-2">Runs</th>
+                    <th className="text-center px-3 py-2">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.slice(0, 28).map((r) => (
+                  {leaderboard.slice(0, PAGE1_ROWS).map((r) => (
                     <tr key={r.serviceNumber} className="border-t border-primary-700">
                       <td className="px-3 py-1 text-primary-300">{r.position}</td>
                       <td className="px-3 py-1 text-white">{r.name}</td>
                       <td className="px-3 py-1 text-primary-300">{STATION_MAP[r.station] || r.station}</td>
-                      <td className="px-3 py-1 text-right text-primary-300">{r.activeDays}</td>
-                      <td className="px-3 py-1 text-right text-primary-300">{r.runCount}</td>
-                      <td className="px-3 py-1 text-right text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
+                      <td className="px-3 py-1 text-center text-primary-300">{r.activeDays}</td>
+                      <td className="px-3 py-1 text-center text-primary-300">{r.runCount}</td>
+                      <td className="px-3 py-1 text-center text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {leaderboard.length > 28 && (
-                <div className="px-3 py-2 text-xs text-primary-500">Showing top 28 due to one-page limit</div>
+              {leaderboard.length > PAGE1_ROWS && (
+                <div className="px-3 py-2 text-xs text-primary-500">Continued on Page 2</div>
               )}
             </div>
           </div>
@@ -246,27 +260,59 @@ export default function AdminReport() {
         <div className="p-5">
           <div className="text-center mb-4">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
-            <h2 className="font-display text-2xl font-bold text-white">Station Performance</h2>
+            <h2 className="font-display text-2xl font-bold text-white">Leaderboard (continued) & Station Performance</h2>
             <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
           </div>
+          {/* Leaderboard continued on page 2 (compact) */}
+          {leaderboard.length > PAGE1_ROWS && (
+            <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
+              <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-primary-500">
+                    <th className="text-left px-2 py-1">Pos</th>
+                    <th className="text-left px-2 py-1">Name</th>
+                    <th className="text-left px-2 py-1">Station</th>
+                    <th className="text-center px-2 py-1">Active Days</th>
+                    <th className="text-center px-2 py-1">Runs</th>
+                    <th className="text-center px-2 py-1">Distance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.slice(PAGE1_ROWS).map((r) => (
+                    <tr key={r.serviceNumber} className="border-t border-primary-700">
+                      <td className="px-2 py-1 text-primary-300">{r.position}</td>
+                      <td className="px-2 py-1 text-white">{r.name}</td>
+                      <td className="px-2 py-1 text-primary-300">{STATION_MAP[r.station] || r.station}</td>
+                      <td className="px-2 py-1 text-center text-primary-300">{r.activeDays}</td>
+                      <td className="px-2 py-1 text-center text-primary-300">{r.runCount}</td>
+                      <td className="px-2 py-1 text-center text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div className="rounded-xl border border-primary-700 bg-primary-800/40">
             <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-primary-500">
                   <th className="text-left px-3 py-2">Station</th>
-                  <th className="text-right px-3 py-2">Runners</th>
-                  <th className="text-right px-3 py-2">Runs</th>
-                  <th className="text-right px-3 py-2">Distance</th>
+                  <th className="text-center px-3 py-2">Runners</th>
+                  <th className="text-center px-3 py-2">Runs</th>
+                  <th className="text-center px-3 py-2">Distance</th>
+                  <th className="text-center px-3 py-2">Performance %</th>
                 </tr>
               </thead>
               <tbody>
                 {stationBoard.map((s) => (
                   <tr key={s.station} className="border-t border-primary-700">
                     <td className="px-3 py-1 text-white">{s.station}</td>
-                    <td className="px-3 py-1 text-right text-primary-300">{s.runners}</td>
-                    <td className="px-3 py-1 text-right text-primary-300">{s.runCount}</td>
-                    <td className="px-3 py-1 text-right text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
+                    <td className="px-3 py-1 text-center text-primary-300">{s.runners}</td>
+                    <td className="px-3 py-1 text-center text-primary-300">{s.runCount}</td>
+                    <td className="px-3 py-1 text-center text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
+                    <td className="px-3 py-1 text-center text-accent-400 font-medium">{s.performancePercent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

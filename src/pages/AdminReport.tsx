@@ -219,7 +219,7 @@ export default function AdminReport() {
       </Card>
 
       <div ref={containerRef} className="mx-auto w-full sm:w-auto">
-        <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page1Ref} className="mx-auto bg-white rounded-xl overflow-hidden border border-primary-700 relative" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">
               <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -259,10 +259,11 @@ export default function AdminReport() {
                 <tbody>
                   {leaderboard.slice(0, PAGE1_ROWS).map((r) => {
                     const zero = r.runCount === 0
+                    const posStyle = r.position === 1 ? { color: '#FFD700' } : r.position === 2 ? { color: '#C0C0C0' } : r.position === 3 ? { color: '#CD7F32' } : undefined
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
+                        <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-900'}`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
@@ -278,12 +279,17 @@ export default function AdminReport() {
             </div>
           </div>
 
-          <div className="mt-4 text-center text-[11px] text-primary-500">
-            This document is electronically generated and does not require a signature.
+            <div className="mt-4 text-center text-[11px] text-primary-500">
+              This document is electronically generated and does not require a signature.
+            </div>
           </div>
+          <div className="absolute inset-x-0 bottom-0 h-40 overflow-hidden pointer-events-none">
+            <div className="absolute -bottom-4 left-0 w-full h-28 bg-gradient-to-t from-accent-500/15 to-transparent" />
+            <div className="absolute -bottom-6 left-1/5 w-64 h-64 bg-accent-600/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-10 right-1/6 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl" />
           </div>
         </div>
-        <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page2Ref} className="mx-auto bg-white rounded-xl overflow-hidden border border-primary-700 mt-6 relative" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
           <div className="text-center mb-6">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -306,16 +312,20 @@ export default function AdminReport() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.slice(PAGE1_ROWS).map((r) => (
-                    <tr key={r.serviceNumber} className="border-t border-primary-700">
-                      <td className="px-2 py-1 text-primary-300">{r.position}</td>
-                      <td className="px-2 py-1 text-white">{r.name}</td>
-                      <td className="px-2 py-1 text-primary-300">{STATION_MAP[r.station] || r.station}</td>
-                      <td className="px-2 py-1 text-center text-primary-300">{r.activeDays}</td>
-                      <td className="px-2 py-1 text-center text-primary-300">{r.runCount}</td>
-                      <td className="px-2 py-1 text-center text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
-                    </tr>
-                  ))}
+                  {leaderboard.slice(PAGE1_ROWS).map((r) => {
+                    const zero = r.runCount === 0
+                    const posStyle = r.position === 1 ? { color: '#FFD700' } : r.position === 2 ? { color: '#C0C0C0' } : r.position === 3 ? { color: '#CD7F32' } : undefined
+                    return (
+                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
+                        <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-900'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -346,9 +356,14 @@ export default function AdminReport() {
             </table>
           </div>
           <div className="mt-4 text-center text-[11px] text-primary-500">No SPSR, SPSR RR&HV, or Gdh.Atoll Police included.</div>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-40 overflow-hidden pointer-events-none">
+            <div className="absolute -bottom-4 left-0 w-full h-28 bg-gradient-to-t from-accent-500/15 to-transparent" />
+            <div className="absolute -bottom-6 left-1/5 w-64 h-64 bg-accent-600/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-10 right-1/6 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl" />
+          </div>
         </div>
         </div>
-      </div>
     </div>
   )
 }

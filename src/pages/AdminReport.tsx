@@ -174,6 +174,9 @@ export default function AdminReport() {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' })
       const w = pdf.internal.pageSize.getWidth()
       const h = pdf.internal.pageSize.getHeight()
+      if ((document as any).fonts && (document as any).fonts.ready) {
+        await (document as any).fonts.ready
+      }
       const prev1 = page1Ref.current?.style.transform
       const prev2 = page2Ref.current?.style.transform
       const prevDisp1 = page1Ref.current?.style.display
@@ -195,13 +198,14 @@ export default function AdminReport() {
         page2Ref.current.style.position = 'absolute'
         page2Ref.current.style.left = '-10000px'
       }
+      const dpr = Math.ceil(window.devicePixelRatio || 2)
       if (page1Ref.current) {
-        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: null })
+        const c1 = await html2canvas(page1Ref.current, { scale: dpr, backgroundColor: null, foreignObjectRendering: true })
         pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       pdf.addPage()
       if (page2Ref.current) {
-        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: null })
+        const c2 = await html2canvas(page2Ref.current, { scale: dpr, backgroundColor: null, foreignObjectRendering: true })
         pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       if (page1Ref.current && prev1 !== undefined) page1Ref.current.style.transform = prev1

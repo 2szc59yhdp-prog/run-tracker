@@ -344,7 +344,7 @@ export default function AdminReport() {
       </div>
 
       <div ref={containerRef} className="hidden sm:flex mx-auto w-full sm:w-auto px-2 sm:px-0 flex-col items-center">
-        <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page1Ref} className="mx-auto bg-primary-900 overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">
               <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -370,7 +370,7 @@ export default function AdminReport() {
           <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
-              <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
                   <col style={{ width: '6%' }} />
                   <col style={{ width: '38%' }} />
@@ -381,12 +381,12 @@ export default function AdminReport() {
                 </colgroup>
                 <thead>
                   <tr className="text-primary-500">
-                    <th className="text-left px-2 py-1">Pos</th>
-                    <th className="text-left px-2 py-1">Name</th>
-                    <th className="text-left px-2 py-1">Station</th>
-                    <th className="text-center px-2 py-1">Approved Runs</th>
-                    <th className="text-center px-2 py-1">Rejected Runs</th>
-                    <th className="text-center px-2 py-1">Distance</th>
+                    <th className="text-left px-2 py-1 align-middle">Pos</th>
+                    <th className="text-left px-2 py-1 align-middle">Name</th>
+                    <th className="text-left px-2 py-1 align-middle">Station</th>
+                    <th className="text-center px-2 py-1 align-middle">Approved Runs</th>
+                    <th className="text-center px-2 py-1 align-middle">Rejected Runs</th>
+                    <th className="text-center px-2 py-1 align-middle">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -396,13 +396,13 @@ export default function AdminReport() {
                     const rowBg = r.position === 1 ? 'bg-[#FFD700]/15' : r.position === 2 ? 'bg-[#C0C0C0]/15' : r.position === 3 ? 'bg-[#CD7F32]/15' : (zero ? 'bg-danger-500/10' : '')
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${rowBg}`}>
-                        <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
-                      </tr>
+                        <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                        <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
+                        <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                  </tr>
                     )
                   })}
                 </tbody>
@@ -418,7 +418,7 @@ export default function AdminReport() {
             </div>
           </div>
         </div>
-        <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page2Ref} className="mx-auto bg-primary-900 overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
           <div className="text-center mb-6">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -429,7 +429,7 @@ export default function AdminReport() {
           {leaderboard.length > PAGE1_ROWS && (
             <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
-              <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
                   <col style={{ width: '6%' }} />
                   <col style={{ width: '36%' }} />
@@ -440,12 +440,12 @@ export default function AdminReport() {
                 </colgroup>
                 <thead>
                   <tr className="text-primary-500">
-                    <th className="text-left px-2 py-1">Pos</th>
-                    <th className="text-left px-2 py-1">Name</th>
-                    <th className="text-left px-2 py-1">Station</th>
-                    <th className="text-center px-2 py-1">Approved Runs</th>
-                    <th className="text-center px-2 py-1">Rejected Runs</th>
-                    <th className="text-center px-2 py-1">Distance</th>
+                    <th className="text-left px-2 py-1 align-middle">Pos</th>
+                    <th className="text-left px-2 py-1 align-middle">Name</th>
+                    <th className="text-left px-2 py-1 align-middle">Station</th>
+                    <th className="text-center px-2 py-1 align-middle">Approved Runs</th>
+                    <th className="text-center px-2 py-1 align-middle">Rejected Runs</th>
+                    <th className="text-center px-2 py-1 align-middle">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -455,13 +455,13 @@ export default function AdminReport() {
                     const rowBg = r.position === 1 ? 'bg-[#FFD700]/15' : r.position === 2 ? 'bg-[#C0C0C0]/15' : r.position === 3 ? 'bg-[#CD7F32]/15' : (zero ? 'bg-danger-500/10' : '')
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${rowBg}`}>
-                        <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
-                      </tr>
+                        <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                        <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
+                        <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                  </tr>
                     )
                   })}
                 </tbody>

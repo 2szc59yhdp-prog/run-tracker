@@ -184,7 +184,7 @@ export default function AdminReport() {
         backgroundColor: null,
         useCORS: true,
         allowTaint: true,
-        foreignObjectRendering: false,
+        foreignObjectRendering: true,
         scrollX: 0,
         scrollY: 0,
         onclone: (doc: Document) => {
@@ -475,24 +475,31 @@ export default function AdminReport() {
           )}
           <div className="rounded-xl border border-primary-700 bg-primary-800/40">
             <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
-            <table className="w-full text-sm table-fixed" style={{ tableLayout: 'fixed' }}>
+            <table className="text-sm table-fixed border-collapse" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums', width: 754 }}>
+              <colgroup>
+                <col style={{ width: '270px' }} />
+                <col style={{ width: '100px' }} />
+                <col style={{ width: '100px' }} />
+                <col style={{ width: '120px' }} />
+                <col style={{ width: '164px' }} />
+              </colgroup>
               <thead>
                 <tr className="text-primary-500">
-                  <th className="text-left px-3 py-2">Station</th>
-                  <th className="text-center px-3 py-2">Runners</th>
-                  <th className="text-center px-3 py-2">Runs</th>
-                  <th className="text-center px-3 py-2">Distance</th>
-                  <th className="text-center px-3 py-2">Performance %</th>
+                  <th className="text-left px-3 py-2 align-middle">Station</th>
+                  <th className="text-center px-3 py-2 align-middle">Runners</th>
+                  <th className="text-center px-3 py-2 align-middle">Runs</th>
+                  <th className="text-center px-3 py-2 align-middle">Distance</th>
+                  <th className="text-center px-3 py-2 align-middle">Performance %</th>
                 </tr>
               </thead>
               <tbody>
                 {stationBoard.map((s) => (
                   <tr key={s.station} className="border-t border-primary-700">
-                    <td className="px-3 py-1 text-white">{s.station}</td>
-                    <td className="px-3 py-1 text-center text-primary-300">{s.runners}</td>
-                    <td className="px-3 py-1 text-center text-primary-300">{s.runCount}</td>
-                    <td className="px-3 py-1 text-center text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
-                    <td className="px-3 py-1 text-center text-accent-400 font-medium">{s.performancePercent.toFixed(1)}%</td>
+                    <td className="px-3 py-1 align-middle text-white">{s.station}</td>
+                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap">{s.runners}</td>
+                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap">{s.runCount}</td>
+                    <td className="px-3 py-1 align-middle text-center text-success-400 font-medium whitespace-nowrap">{s.totalDistance.toFixed(1)}</td>
+                    <td className="px-3 py-1 align-middle text-center text-accent-400 font-medium whitespace-nowrap">{s.performancePercent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

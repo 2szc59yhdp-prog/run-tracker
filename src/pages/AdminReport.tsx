@@ -269,7 +269,7 @@ export default function AdminReport() {
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-900'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
@@ -319,7 +319,7 @@ export default function AdminReport() {
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-900'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>

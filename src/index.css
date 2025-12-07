@@ -181,3 +181,9 @@ button {
   backface-visibility: hidden;
   transform: translateZ(0);
 }
+/* PDF capture typography stabilization */
+.pdf-capture .pdf-numeric {
+  font-family: monospace;
+  line-height: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}

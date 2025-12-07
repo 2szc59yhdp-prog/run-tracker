@@ -191,7 +191,7 @@ export default function AdminReport() {
           const container = doc.querySelector('[data-report-container="true"]') as HTMLElement | null
           const p1 = doc.querySelector('[data-report-page="1"]') as HTMLElement | null
           const p2 = doc.querySelector('[data-report-page="2"]') as HTMLElement | null
-          if (container) container.style.display = 'block'
+          if (container) { container.style.display = 'block'; container.classList.add('pdf-capture') }
           ;[p1, p2].forEach((p) => {
             if (p) {
               p.style.transform = 'scale(1)'
@@ -307,8 +307,8 @@ export default function AdminReport() {
                       <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                       <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                       <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                      <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                      <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                      <td className={`px-2 py-1 text-center pdf-numeric ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                      <td className={`px-2 py-1 text-center pdf-numeric ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                     </tr>
                   )
                 })}
@@ -404,9 +404,9 @@ export default function AdminReport() {
                         <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                   </tr>
                     )
                   })}
@@ -463,9 +463,9 @@ export default function AdminReport() {
                         <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap pdf-numeric ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                   </tr>
                     )
                   })}
@@ -496,10 +496,10 @@ export default function AdminReport() {
                 {stationBoard.map((s) => (
                   <tr key={s.station} className="border-t border-primary-700">
                     <td className="px-3 py-1 align-middle text-white">{s.station}</td>
-                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap">{s.runners}</td>
-                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap">{s.runCount}</td>
-                    <td className="px-3 py-1 align-middle text-center text-success-400 font-medium whitespace-nowrap">{s.totalDistance.toFixed(1)}</td>
-                    <td className="px-3 py-1 align-middle text-center text-accent-400 font-medium whitespace-nowrap">{s.performancePercent.toFixed(1)}%</td>
+                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap pdf-numeric">{s.runners}</td>
+                    <td className="px-3 py-1 align-middle text-center text-primary-300 whitespace-nowrap pdf-numeric">{s.runCount}</td>
+                    <td className="px-3 py-1 align-middle text-center text-success-400 font-medium whitespace-nowrap pdf-numeric">{s.totalDistance.toFixed(1)}</td>
+                    <td className="px-3 py-1 align-middle text-center text-accent-400 font-medium whitespace-nowrap pdf-numeric">{s.performancePercent.toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

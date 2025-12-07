@@ -197,15 +197,17 @@ export default function AdminReport() {
 
   useEffect(() => {
     const updateScale = () => {
-      const el = containerRef.current
-      if (!el) return
-      const w = el.offsetWidth
+      const w = Math.max(320, window.innerWidth - 16)
       const s = Math.min(1, w / 794)
       setScale(s)
     }
     updateScale()
     window.addEventListener('resize', updateScale)
-    return () => window.removeEventListener('resize', updateScale)
+    window.addEventListener('orientationchange', updateScale)
+    return () => {
+      window.removeEventListener('resize', updateScale)
+      window.removeEventListener('orientationchange', updateScale)
+    }
   }, [])
 
   const totalDistance = useMemo(() => filteredApproved.reduce((s, r) => s + Number(r.distanceKm || 0), 0), [filteredApproved])
@@ -214,7 +216,7 @@ export default function AdminReport() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 sm:mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-accent-500/20 text-accent-400"><FileText className="w-5 h-5" /></div>
           <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">100K Run Challenge Weekly Statistic Report</h1>
@@ -222,15 +224,15 @@ export default function AdminReport() {
         <Button onClick={generatePdf} disabled={generating} icon={<FileText className="w-4 h-4" />}>Download PDF</Button>
       </div>
 
-      <Card className="mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <Card className="mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredApproved.length + filteredRejected.length} runs in range</Button></div>
           </div>
       </Card>
 
-      <div ref={containerRef} className="mx-auto w-full sm:w-auto">
+      <div ref={containerRef} className="mx-auto w-full sm:w-auto px-2 sm:px-0 flex flex-col items-center">
         <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">

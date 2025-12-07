@@ -152,7 +152,7 @@ export default function AdminReport() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-accent-500/20 text-accent-400"><FileText className="w-5 h-5" /></div>
-          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">Madaveli Police 100K Run Challenge Weekly Statistic Report</h1>
+          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">100K Run Challenge Weekly Statistic Report</h1>
         </div>
         <Button onClick={generatePdf} disabled={generating} icon={<FileText className="w-4 h-4" />}>Download PDF</Button>
       </div>
@@ -169,7 +169,7 @@ export default function AdminReport() {
         <div className="p-5">
           <div className="text-center mb-4">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
-            <h2 className="font-display text-2xl font-bold text-white">Madaveli Police 100K Run Challenge Weekly Statistic Report</h2>
+            <h2 className="font-display text-2xl font-bold text-white">100K Run Challenge Weekly Statistic Report</h2>
             <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
           </div>
 
@@ -226,7 +226,7 @@ export default function AdminReport() {
           </div>
         </div>
       </div>
-      <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w:[794px] h-[1123px] mt-6">
+      <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px] mt-6">
         <div className="p-5">
           <div className="text-center mb-4">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>

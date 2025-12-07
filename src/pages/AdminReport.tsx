@@ -252,6 +252,14 @@ export default function AdminReport() {
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
               <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '40%' }} />
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead>
                   <tr className="text-primary-500">
                     <th className="text-left px-2 py-1">Pos</th>
@@ -269,7 +277,7 @@ export default function AdminReport() {
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
@@ -302,6 +310,14 @@ export default function AdminReport() {
             <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
               <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '38%' }} />
+                  <col style={{ width: '24%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead>
                   <tr className="text-primary-500">
                     <th className="text-left px-2 py-1">Pos</th>
@@ -319,7 +335,7 @@ export default function AdminReport() {
                     return (
                       <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
-                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>

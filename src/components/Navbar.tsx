@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircle, Users2, Hash } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Shield, LogOut, Users, X, Lock, AlertCircle, Users2, Hash, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
@@ -120,6 +120,10 @@ export default function Navbar() {
                       <Users size={18} />
                       <span>Users</span>
                     </NavLink>
+                    <NavLink to="/admin/report" className={navLinkClass}>
+                      <FileText size={18} />
+                      <span>Reports</span>
+                    </NavLink>
                     <div className="flex items-center gap-3 pl-2 border-l border-primary-700 ml-2">
                       {adminUser?.name && (
                         <span className="text-sm text-primary-300">
@@ -199,6 +203,18 @@ export default function Navbar() {
                       }
                     >
                       <Users size={20} />
+                    </NavLink>
+                    <NavLink
+                      to="/admin/report"
+                      className={({ isActive }) =>
+                        `p-3 rounded-lg transition-all ${
+                          isActive
+                            ? 'bg-accent-600 text-white'
+                            : 'text-primary-300 hover:bg-primary-800'
+                        }`
+                      }
+                    >
+                      <FileText size={20} />
                     </NavLink>
                     <button
                       onClick={logoutAdmin}

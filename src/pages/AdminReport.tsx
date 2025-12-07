@@ -1,0 +1,230 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Calendar, FileText, Trophy, Users, Building2 } from 'lucide-react'
+import Card from '../components/Card'
+import Button from '../components/Button'
+import Input from '../components/Input'
+import { useApp } from '../context/AppContext'
+import { fetchAllUsers } from '../services/api'
+import type { RegisteredUser } from '../types'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
+
+export default function AdminReport() {
+  const { runs, isAdmin } = useApp()
+  const navigate = useNavigate()
+  const [users, setUsers] = useState<RegisteredUser[]>([])
+  const [startDate, setStartDate] = useState<string>('2025-12-01')
+  const [endDate, setEndDate] = useState<string>('2026-01-31')
+  const [generating, setGenerating] = useState(false)
+  const reportRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate('/admin-login')
+      return
+    }
+    (async () => {
+      const res = await fetchAllUsers()
+      if (res.success && res.data) setUsers(res.data)
+    })()
+  }, [isAdmin, navigate])
+
+  const filteredRuns = useMemo(() => {
+    const s = startDate
+    const e = endDate
+    return runs.filter(
+      (r) => r.status === 'approved' && r.date >= s && r.date <= e && r.station !== 'General Admin'
+    )
+  }, [runs, startDate, endDate])
+
+  const leaderboard = useMemo(() => {
+    const map = new Map<string, { serviceNumber: string; name: string; station: string; totalDistance: number; runCount: number; activeDays: number }>()
+    const datesByUser = new Map<string, Set<string>>()
+    filteredRuns.forEach((r) => {
+      const key = r.serviceNumber
+      const prev = map.get(key) || { serviceNumber: r.serviceNumber, name: r.name, station: r.station, totalDistance: 0, runCount: 0, activeDays: 0 }
+      prev.totalDistance += Number(r.distanceKm || 0)
+      prev.runCount += 1
+      map.set(key, prev)
+      const set = datesByUser.get(key) || new Set<string>()
+      set.add(r.date)
+      datesByUser.set(key, set)
+    })
+    users.forEach((u) => {
+      if (u.station !== 'General Admin' && !map.has(u.serviceNumber)) {
+        map.set(u.serviceNumber, { serviceNumber: u.serviceNumber, name: u.name, station: u.station, totalDistance: 0, runCount: 0, activeDays: 0 })
+      }
+    })
+    for (const [sn, set] of datesByUser.entries()) {
+      const entry = map.get(sn)
+      if (entry) entry.activeDays = set.size
+    }
+    const arr = Array.from(map.values()).sort((a, b) => b.totalDistance - a.totalDistance || a.name.localeCompare(b.name))
+    const positions = new Map<string, number>()
+    let lastDistance = -1
+    let lastRank = 0
+    arr.forEach((entry, idx) => {
+      if (entry.totalDistance !== lastDistance) {
+        lastDistance = entry.totalDistance
+        lastRank = idx + 1
+      }
+      positions.set(entry.serviceNumber, lastRank)
+    })
+    return arr.map((e) => ({ ...e, position: positions.get(e.serviceNumber)! }))
+  }, [filteredRuns, users])
+
+  const stationBoard = useMemo(() => {
+    const stationMap = new Map<string, { totalDistance: number; runners: number; runCount: number }>()
+    const seenRunnerStation = new Map<string, string>()
+    filteredRuns.forEach((r) => {
+      const st = r.station || 'Unknown'
+      const cur = stationMap.get(st) || { totalDistance: 0, runners: 0, runCount: 0 }
+      cur.totalDistance += Number(r.distanceKm || 0)
+      cur.runCount += 1
+      stationMap.set(st, cur)
+      if (!seenRunnerStation.has(r.serviceNumber)) {
+        seenRunnerStation.set(r.serviceNumber, st)
+        cur.runners += 1
+        stationMap.set(st, cur)
+      }
+    })
+    users.forEach((u) => {
+      if (u.station !== 'General Admin' && !stationMap.has(u.station)) {
+        stationMap.set(u.station, { totalDistance: 0, runners: 0, runCount: 0 })
+      }
+    })
+    return Array.from(stationMap.entries())
+      .map(([station, data]) => ({ station, ...data }))
+      .sort((a, b) => b.totalDistance - a.totalDistance)
+  }, [filteredRuns, users])
+
+  const generatePdf = async () => {
+    if (!reportRef.current) return
+    setGenerating(true)
+    try {
+      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: null })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
+      pdf.save(`Run_Club_Report_${startDate}_to_${endDate}.pdf`)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const totalDistance = useMemo(() => filteredRuns.reduce((s, r) => s + Number(r.distanceKm || 0), 0), [filteredRuns])
+  const totalApprovedRuns = filteredRuns.length
+  const uniqueRunners = new Set(filteredRuns.map((r) => r.serviceNumber)).size
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-accent-500/20 text-accent-400"><FileText className="w-5 h-5" /></div>
+          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">Statistics Report</h1>
+        </div>
+        <Button onClick={generatePdf} disabled={generating} icon={<FileText className="w-4 h-4" />}>Download PDF</Button>
+      </div>
+
+      <Card className="mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredRuns.length} runs in range</Button></div>
+        </div>
+      </Card>
+
+      <div ref={reportRef} id="reportCanvas" className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px]">
+        <div className="p-5">
+          <div className="text-center mb-4">
+            <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
+            <h2 className="font-display text-2xl font-bold text-white">Club Portal • Statistics Report</h2>
+            <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+              <div className="flex items-center gap-2 text-primary-300"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-sm">Total Distance</span></div>
+              <p className="font-display text-xl font-bold text-white">{totalDistance.toFixed(1)} km</p>
+            </div>
+            <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+              <div className="flex items-center gap-2 text-primary-300"><Users className="w-4 h-4 text-success-400" /><span className="text-sm">Unique Runners</span></div>
+              <p className="font-display text-xl font-bold text-white">{uniqueRunners}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+              <div className="flex items-center gap-2 text-primary-300"><Calendar className="w-4 h-4 text-warning-400" /><span className="text-sm">Approved Runs</span></div>
+              <p className="font-display text-xl font-bold text-white">{totalApprovedRuns}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl border border-primary-700 bg-primary-800/40">
+              <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-primary-500">
+                    <th className="text-left px-3 py-2">Pos</th>
+                    <th className="text-left px-3 py-2">Name</th>
+                    <th className="text-left px-3 py-2">Station</th>
+                    <th className="text-right px-3 py-2">Active Days</th>
+                    <th className="text-right px-3 py-2">Runs</th>
+                    <th className="text-right px-3 py-2">Distance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.slice(0, 30).map((r) => (
+                    <tr key={r.serviceNumber} className="border-t border-primary-700">
+                      <td className="px-3 py-1 text-primary-300">{r.position}</td>
+                      <td className="px-3 py-1 text-white">{r.name}</td>
+                      <td className="px-3 py-1 text-primary-300">{r.station}</td>
+                      <td className="px-3 py-1 text-right text-primary-300">{r.activeDays}</td>
+                      <td className="px-3 py-1 text-right text-primary-300">{r.runCount}</td>
+                      <td className="px-3 py-1 text-right text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {leaderboard.length > 30 && (
+                <div className="px-3 py-2 text-xs text-primary-500">Showing top 30 due to one-page limit</div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-primary-700 bg-primary-800/40">
+              <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Station Performance</span></div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-primary-500">
+                    <th className="text-left px-3 py-2">Station</th>
+                    <th className="text-right px-3 py-2">Runners</th>
+                    <th className="text-right px-3 py-2">Runs</th>
+                    <th className="text-right px-3 py-2">Distance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stationBoard.slice(0, 15).map((s) => (
+                    <tr key={s.station} className="border-t border-primary-700">
+                      <td className="px-3 py-1 text-white">{s.station}</td>
+                      <td className="px-3 py-1 text-right text-primary-300">{s.runners}</td>
+                      <td className="px-3 py-1 text-right text-primary-300">{s.runCount}</td>
+                      <td className="px-3 py-1 text-right text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {stationBoard.length > 15 && (
+                <div className="px-3 py-2 text-xs text-primary-500">Showing top 15 due to one-page limit</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 text-center text-[11px] text-primary-500">
+            Generated by Club Portal • This document is electronically generated and does not require a signature.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

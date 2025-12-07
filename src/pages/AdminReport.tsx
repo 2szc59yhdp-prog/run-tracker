@@ -173,12 +173,12 @@ export default function AdminReport() {
       if (page1Ref.current) page1Ref.current.style.transform = 'scale(1)'
       if (page2Ref.current) page2Ref.current.style.transform = 'scale(1)'
       if (page1Ref.current) {
-        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: '#ffffff' })
+        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: null })
         pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       pdf.addPage()
       if (page2Ref.current) {
-        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: '#ffffff' })
+        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: null })
         pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       if (page1Ref.current && prev1 !== undefined) page1Ref.current.style.transform = prev1
@@ -225,7 +225,7 @@ export default function AdminReport() {
       </Card>
 
       <div ref={containerRef} className="mx-auto w-full sm:w-auto">
-        <div ref={page1Ref} className="mx-auto bg-white rounded-xl overflow-hidden border border-primary-700 relative" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">
               <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -289,13 +289,8 @@ export default function AdminReport() {
               This document is electronically generated and does not require a signature.
             </div>
           </div>
-          <div className="absolute inset-x-0 bottom-0 h-40 overflow-hidden pointer-events-none">
-            <div className="absolute -bottom-4 left-0 w-full h-28 bg-gradient-to-t from-accent-500/15 to-transparent" />
-            <div className="absolute -bottom-6 left-1/5 w-64 h-64 bg-accent-600/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-10 right-1/6 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl" />
-          </div>
         </div>
-        <div ref={page2Ref} className="mx-auto bg-white rounded-xl overflow-hidden border border-primary-700 mt-6 relative" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
           <div className="text-center mb-6">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -362,11 +357,6 @@ export default function AdminReport() {
             </table>
           </div>
           <div className="mt-4 text-center text-[11px] text-primary-500">No SPSR, SPSR RR&HV, or Gdh.Atoll Police included.</div>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 h-40 overflow-hidden pointer-events-none">
-            <div className="absolute -bottom-4 left-0 w-full h-28 bg-gradient-to-t from-accent-500/15 to-transparent" />
-            <div className="absolute -bottom-6 left-1/5 w-64 h-64 bg-accent-600/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-10 right-1/6 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl" />
           </div>
         </div>
         </div>

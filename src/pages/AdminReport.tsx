@@ -168,15 +168,21 @@ export default function AdminReport() {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' })
       const w = pdf.internal.pageSize.getWidth()
       const h = pdf.internal.pageSize.getHeight()
+      const prev1 = page1Ref.current?.style.transform
+      const prev2 = page2Ref.current?.style.transform
+      if (page1Ref.current) page1Ref.current.style.transform = 'scale(1)'
+      if (page2Ref.current) page2Ref.current.style.transform = 'scale(1)'
       if (page1Ref.current) {
-        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: null })
+        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: '#ffffff' })
         pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       pdf.addPage()
       if (page2Ref.current) {
-        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: null })
+        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: '#ffffff' })
         pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
+      if (page1Ref.current && prev1 !== undefined) page1Ref.current.style.transform = prev1
+      if (page2Ref.current && prev2 !== undefined) page2Ref.current.style.transform = prev2
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {
       setGenerating(false)
@@ -245,7 +251,7 @@ export default function AdminReport() {
           <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
-              <table className="w-full text-xs">
+              <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="text-primary-500">
                     <th className="text-left px-2 py-1">Pos</th>
@@ -300,7 +306,7 @@ export default function AdminReport() {
           {leaderboard.length > PAGE1_ROWS && (
             <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
-              <table className="w-full text-xs">
+              <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="text-primary-500">
                     <th className="text-left px-2 py-1">Pos</th>
@@ -332,7 +338,7 @@ export default function AdminReport() {
           )}
           <div className="rounded-xl border border-primary-700 bg-primary-800/40">
             <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed" style={{ tableLayout: 'fixed' }}>
               <thead>
                 <tr className="text-primary-500">
                   <th className="text-left px-3 py-2">Station</th>

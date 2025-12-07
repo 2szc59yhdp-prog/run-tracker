@@ -176,8 +176,25 @@ export default function AdminReport() {
       const h = pdf.internal.pageSize.getHeight()
       const prev1 = page1Ref.current?.style.transform
       const prev2 = page2Ref.current?.style.transform
+      const prevDisp1 = page1Ref.current?.style.display
+      const prevDisp2 = page2Ref.current?.style.display
+      const prevPos1 = page1Ref.current?.style.position
+      const prevPos2 = page2Ref.current?.style.position
+      const prevLeft1 = page1Ref.current?.style.left
+      const prevLeft2 = page2Ref.current?.style.left
       if (page1Ref.current) page1Ref.current.style.transform = 'scale(1)'
       if (page2Ref.current) page2Ref.current.style.transform = 'scale(1)'
+      // Ensure capture works even if elements are hidden on mobile
+      if (page1Ref.current) {
+        page1Ref.current.style.display = 'block'
+        page1Ref.current.style.position = 'absolute'
+        page1Ref.current.style.left = '-10000px'
+      }
+      if (page2Ref.current) {
+        page2Ref.current.style.display = 'block'
+        page2Ref.current.style.position = 'absolute'
+        page2Ref.current.style.left = '-10000px'
+      }
       if (page1Ref.current) {
         const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: null })
         pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
@@ -189,6 +206,12 @@ export default function AdminReport() {
       }
       if (page1Ref.current && prev1 !== undefined) page1Ref.current.style.transform = prev1
       if (page2Ref.current && prev2 !== undefined) page2Ref.current.style.transform = prev2
+      if (page1Ref.current && prevDisp1 !== undefined) page1Ref.current.style.display = prevDisp1
+      if (page2Ref.current && prevDisp2 !== undefined) page2Ref.current.style.display = prevDisp2
+      if (page1Ref.current && prevPos1 !== undefined) page1Ref.current.style.position = prevPos1
+      if (page2Ref.current && prevPos2 !== undefined) page2Ref.current.style.position = prevPos2
+      if (page1Ref.current && prevLeft1 !== undefined) page1Ref.current.style.left = prevLeft1
+      if (page2Ref.current && prevLeft2 !== undefined) page2Ref.current.style.left = prevLeft2
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {
       setGenerating(false)
@@ -226,13 +249,101 @@ export default function AdminReport() {
 
       <Card className="mb-4 sm:mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredApproved.length + filteredRejected.length} runs in range</Button></div>
-          </div>
+          <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredApproved.length + filteredRejected.length} runs in range</Button></div>
+        </div>
       </Card>
 
-      <div ref={containerRef} className="mx-auto w-full sm:w-auto px-2 sm:px-0 flex flex-col items-center">
+      {/* Mobile responsive view */}
+      <div className="sm:hidden space-y-4">
+        <div className="grid grid-cols-1 gap-3">
+          <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+            <div className="flex items-center gap-2 text-primary-300"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-sm">Total Distance</span></div>
+            <p className="font-display text-xl font-bold text-white">{totalDistance.toFixed(1)} km</p>
+          </div>
+          <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+            <div className="flex items-center gap-2 text-primary-300"><Users className="w-4 h-4 text-success-400" /><span className="text-sm">Approved Runs</span></div>
+            <p className="font-display text-xl font-bold text-white">{totalApprovedRuns}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
+            <div className="flex items-center gap-2 text-primary-300"><Calendar className="w-4 h-4 text-warning-400" /><span className="text-sm">Rejected Runs</span></div>
+            <p className="font-display text-xl font-bold text-white">{totalRejectedRuns}</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-primary-700 bg-primary-800/40">
+          <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '44%' }} />
+                <col style={{ width: '24%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
+              <thead>
+                <tr className="text-primary-500">
+                  <th className="text-left px-2 py-1">Pos</th>
+                  <th className="text-left px-2 py-1">Name</th>
+                  <th className="text-left px-2 py-1">Station</th>
+                  <th className="text-center px-2 py-1">Approved</th>
+                  <th className="text-center px-2 py-1">Dist</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((r) => {
+                  const zero = r.approvedRuns === 0
+                  const posStyle = r.position === 1 ? { color: '#FFD700' } : r.position === 2 ? { color: '#C0C0C0' } : r.position === 3 ? { color: '#CD7F32' } : undefined
+                  const rowBg = r.position === 1 ? 'bg-[#FFD700]/15' : r.position === 2 ? 'bg-[#C0C0C0]/15' : r.position === 3 ? 'bg-[#CD7F32]/15' : (zero ? 'bg-danger-500/10' : '')
+                  return (
+                    <tr key={r.serviceNumber} className={`border-t border-primary-700 ${rowBg}`}>
+                      <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                      <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
+                      <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
+                      <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                      <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-primary-700 bg-primary-800/40">
+          <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-primary-500">
+                  <th className="text-left px-3 py-2">Station</th>
+                  <th className="text-center px-3 py-2">Runners</th>
+                  <th className="text-center px-3 py-2">Runs</th>
+                  <th className="text-center px-3 py-2">Distance</th>
+                  <th className="text-center px-3 py-2">Performance %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stationBoard.map((s) => (
+                  <tr key={s.station} className="border-t border-primary-700">
+                    <td className="px-3 py-1 text-white">{s.station}</td>
+                    <td className="px-3 py-1 text-center text-primary-300">{s.runners}</td>
+                    <td className="px-3 py-1 text-center text-primary-300">{s.runCount}</td>
+                    <td className="px-3 py-1 text-center text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
+                    <td className="px-3 py-1 text-center text-accent-400 font-medium">{s.performancePercent.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-2 text-center text-[11px] text-primary-500">This document is electronically generated and does not require a signature.</div>
+      </div>
+
+      <div ref={containerRef} className="hidden sm:flex mx-auto w-full sm:w-auto px-2 sm:px-0 flex-col items-center">
         <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">

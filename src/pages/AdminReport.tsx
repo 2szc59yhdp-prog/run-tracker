@@ -370,14 +370,14 @@ export default function AdminReport() {
           <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
-              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
-                  <col style={{ width: '6%' }} />
-                  <col style={{ width: '38%' }} />
-                  <col style={{ width: '24%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '290px' }} />
+                  <col style={{ width: '170px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '70px' }} />
+                  <col style={{ width: '76px' }} />
                 </colgroup>
                 <thead>
                   <tr className="text-primary-500">
@@ -399,9 +399,9 @@ export default function AdminReport() {
                         <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                   </tr>
                     )
                   })}
@@ -429,14 +429,14 @@ export default function AdminReport() {
           {leaderboard.length > PAGE1_ROWS && (
             <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
-              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
-                  <col style={{ width: '6%' }} />
-                  <col style={{ width: '36%' }} />
-                  <col style={{ width: '26%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '290px' }} />
+                  <col style={{ width: '170px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '70px' }} />
+                  <col style={{ width: '76px' }} />
                 </colgroup>
                 <thead>
                   <tr className="text-primary-500">
@@ -458,9 +458,9 @@ export default function AdminReport() {
                         <td style={posStyle} className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
-                        <td className={`px-2 py-1 text-center align-middle ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
+                        <td className={`px-2 py-1 text-center align-middle whitespace-nowrap ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                   </tr>
                     )
                   })}

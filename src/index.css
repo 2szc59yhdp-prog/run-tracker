@@ -187,3 +187,12 @@ button {
   line-height: 1.2rem;
   font-variant-numeric: tabular-nums;
 }
+
+.pdf-capture .pdf-fix {
+  display: flex !important;
+  align-items: center !important;
+  height: 22px;
+  line-height: 22px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}

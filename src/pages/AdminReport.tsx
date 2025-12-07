@@ -380,7 +380,7 @@ export default function AdminReport() {
               </tbody>
             </table>
           </div>
-          <div className="mt-4 text-center text-[11px] text-primary-500">No SPSR, SPSR RR&HV, or Gdh.Atoll Police included.</div>
+          <div className="mt-4 text-center text-[11px] text-primary-500">This document is electronically generated and does not require a signature.</div>
           </div>
         </div>
         </div>

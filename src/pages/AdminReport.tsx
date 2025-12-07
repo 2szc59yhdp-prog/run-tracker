@@ -60,7 +60,7 @@ export default function AdminReport() {
     })()
   }, [isAdmin, navigate])
 
-  const filteredRuns = useMemo(() => {
+  const filteredApproved = useMemo(() => {
     const s = startDate
     const e = endDate
     return runs.filter(
@@ -68,28 +68,34 @@ export default function AdminReport() {
     )
   }, [runs, startDate, endDate])
 
+  const filteredRejected = useMemo(() => {
+    const s = startDate
+    const e = endDate
+    return runs.filter(
+      (r) => r.status === 'rejected' && r.date >= s && r.date <= e && r.station !== 'General Admin'
+    )
+  }, [runs, startDate, endDate])
+
   const leaderboard = useMemo(() => {
-    const map = new Map<string, { serviceNumber: string; name: string; station: string; totalDistance: number; runCount: number; activeDays: number }>()
-    const datesByUser = new Map<string, Set<string>>()
-    filteredRuns.forEach((r) => {
+    const map = new Map<string, { serviceNumber: string; name: string; station: string; totalDistance: number; approvedRuns: number; rejectedRuns: number }>()
+    filteredApproved.forEach((r) => {
       const key = r.serviceNumber
-      const prev = map.get(key) || { serviceNumber: r.serviceNumber, name: r.name, station: r.station, totalDistance: 0, runCount: 0, activeDays: 0 }
+      const prev = map.get(key) || { serviceNumber: r.serviceNumber, name: r.name, station: r.station, totalDistance: 0, approvedRuns: 0, rejectedRuns: 0 }
       prev.totalDistance += Number(r.distanceKm || 0)
-      prev.runCount += 1
+      prev.approvedRuns += 1
       map.set(key, prev)
-      const set = datesByUser.get(key) || new Set<string>()
-      set.add(r.date)
-      datesByUser.set(key, set)
+    })
+    filteredRejected.forEach((r) => {
+      const key = r.serviceNumber
+      const prev = map.get(key) || { serviceNumber: r.serviceNumber, name: r.name, station: r.station, totalDistance: 0, approvedRuns: 0, rejectedRuns: 0 }
+      prev.rejectedRuns += 1
+      map.set(key, prev)
     })
     users.forEach((u) => {
       if (u.station !== 'General Admin' && !map.has(u.serviceNumber)) {
-        map.set(u.serviceNumber, { serviceNumber: u.serviceNumber, name: u.name, station: u.station, totalDistance: 0, runCount: 0, activeDays: 0 })
+        map.set(u.serviceNumber, { serviceNumber: u.serviceNumber, name: u.name, station: u.station, totalDistance: 0, approvedRuns: 0, rejectedRuns: 0 })
       }
     })
-    for (const [sn, set] of datesByUser.entries()) {
-      const entry = map.get(sn)
-      if (entry) entry.activeDays = set.size
-    }
     const arr = Array.from(map.values()).sort((a, b) => b.totalDistance - a.totalDistance || a.name.localeCompare(b.name))
     const positions = new Map<string, number>()
     let lastDistance = -1
@@ -102,7 +108,7 @@ export default function AdminReport() {
       positions.set(entry.serviceNumber, lastRank)
     })
     return arr.map((e) => ({ ...e, position: positions.get(e.serviceNumber)! }))
-  }, [filteredRuns, users])
+  }, [filteredApproved, filteredRejected, users])
 
   const stationBoard = useMemo(() => {
     const endDate = new Date() <= CHALLENGE_END ? new Date() : CHALLENGE_END
@@ -202,9 +208,9 @@ export default function AdminReport() {
     return () => window.removeEventListener('resize', updateScale)
   }, [])
 
-  const totalDistance = useMemo(() => filteredRuns.reduce((s, r) => s + Number(r.distanceKm || 0), 0), [filteredRuns])
-  const totalApprovedRuns = filteredRuns.length
-  const uniqueRunners = new Set(filteredRuns.map((r) => r.serviceNumber)).size
+  const totalDistance = useMemo(() => filteredApproved.reduce((s, r) => s + Number(r.distanceKm || 0), 0), [filteredApproved])
+  const totalApprovedRuns = filteredApproved.length
+  const totalRejectedRuns = filteredRejected.length
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -217,11 +223,11 @@ export default function AdminReport() {
       </div>
 
       <Card className="mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredRuns.length} runs in range</Button></div>
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input label="End Date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <div className="flex items-end"><Button onClick={() => null} variant="secondary" className="w-full" disabled>{filteredApproved.length + filteredRejected.length} runs in range</Button></div>
+          </div>
       </Card>
 
       <div ref={containerRef} className="mx-auto w-full sm:w-auto">
@@ -239,12 +245,12 @@ export default function AdminReport() {
               <p className="font-display text-xl font-bold text-white">{totalDistance.toFixed(1)} km</p>
             </div>
             <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
-              <div className="flex items-center gap-2 text-primary-300"><Users className="w-4 h-4 text-success-400" /><span className="text-sm">Unique Runners</span></div>
-              <p className="font-display text-xl font-bold text-white">{uniqueRunners}</p>
+              <div className="flex items-center gap-2 text-primary-300"><Users className="w-4 h-4 text-success-400" /><span className="text-sm">Approved Runs</span></div>
+              <p className="font-display text-xl font-bold text-white">{totalApprovedRuns}</p>
             </div>
             <div className="p-3 rounded-xl bg-primary-800/50 border border-primary-700">
-              <div className="flex items-center gap-2 text-primary-300"><Calendar className="w-4 h-4 text-warning-400" /><span className="text-sm">Approved Runs</span></div>
-              <p className="font-display text-xl font-bold text-white">{totalApprovedRuns}</p>
+              <div className="flex items-center gap-2 text-primary-300"><Calendar className="w-4 h-4 text-warning-400" /><span className="text-sm">Rejected Runs</span></div>
+              <p className="font-display text-xl font-bold text-white">{totalRejectedRuns}</p>
             </div>
           </div>
 
@@ -254,8 +260,8 @@ export default function AdminReport() {
               <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
                   <col style={{ width: '6%' }} />
-                  <col style={{ width: '40%' }} />
-                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '38%' }} />
+                  <col style={{ width: '24%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '10%' }} />
                   <col style={{ width: '10%' }} />
@@ -265,22 +271,23 @@ export default function AdminReport() {
                     <th className="text-left px-2 py-1">Pos</th>
                     <th className="text-left px-2 py-1">Name</th>
                     <th className="text-left px-2 py-1">Station</th>
-                    <th className="text-center px-2 py-1">Active Days</th>
-                    <th className="text-center px-2 py-1">Runs</th>
+                    <th className="text-center px-2 py-1">Approved Runs</th>
+                    <th className="text-center px-2 py-1">Rejected Runs</th>
                     <th className="text-center px-2 py-1">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaderboard.slice(0, PAGE1_ROWS).map((r) => {
-                    const zero = r.runCount === 0
+                    const zero = r.approvedRuns === 0
                     const posStyle = r.position === 1 ? { color: '#FFD700' } : r.position === 2 ? { color: '#C0C0C0' } : r.position === 3 ? { color: '#CD7F32' } : undefined
+                    const rowBg = r.position === 1 ? 'bg-[#FFD700]/15' : r.position === 2 ? 'bg-[#C0C0C0]/15' : r.position === 3 ? 'bg-[#CD7F32]/15' : (zero ? 'bg-danger-500/10' : '')
                     return (
-                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
+                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${rowBg}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                       </tr>
                     )
@@ -312,8 +319,8 @@ export default function AdminReport() {
               <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
                   <col style={{ width: '6%' }} />
-                  <col style={{ width: '38%' }} />
-                  <col style={{ width: '24%' }} />
+                  <col style={{ width: '36%' }} />
+                  <col style={{ width: '26%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '10%' }} />
                   <col style={{ width: '10%' }} />
@@ -323,22 +330,23 @@ export default function AdminReport() {
                     <th className="text-left px-2 py-1">Pos</th>
                     <th className="text-left px-2 py-1">Name</th>
                     <th className="text-left px-2 py-1">Station</th>
-                    <th className="text-center px-2 py-1">Active Days</th>
-                    <th className="text-center px-2 py-1">Runs</th>
+                    <th className="text-center px-2 py-1">Approved Runs</th>
+                    <th className="text-center px-2 py-1">Rejected Runs</th>
                     <th className="text-center px-2 py-1">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaderboard.slice(PAGE1_ROWS).map((r) => {
-                    const zero = r.runCount === 0
+                    const zero = r.approvedRuns === 0
                     const posStyle = r.position === 1 ? { color: '#FFD700' } : r.position === 2 ? { color: '#C0C0C0' } : r.position === 3 ? { color: '#CD7F32' } : undefined
+                    const rowBg = r.position === 1 ? 'bg-[#FFD700]/15' : r.position === 2 ? 'bg-[#C0C0C0]/15' : r.position === 3 ? 'bg-[#CD7F32]/15' : (zero ? 'bg-danger-500/10' : '')
                     return (
-                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
+                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${rowBg}`}>
                         <td style={posStyle} className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'} whitespace-normal break-words`}>{r.name}</td>
                         <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
-                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.approvedRuns}</td>
+                        <td className={`px-2 py-1 text-center ${r.rejectedRuns > 0 ? 'text-warning-400' : 'text-primary-300'}`}>{r.rejectedRuns}</td>
                         <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
                       </tr>
                     )

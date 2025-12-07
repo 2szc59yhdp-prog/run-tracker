@@ -10,6 +10,28 @@ import type { RegisteredUser } from '../types'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
+const STATION_ORDER = [
+  'Thinadhoo City',
+  'Madaveli',
+  'Rathafandhoo',
+  'Nadella',
+  'Fiyoari',
+  'Gadhdhoo',
+  'Vaadhoo',
+  'Faresmaathoda',
+] as const
+
+const STATION_MAP: Record<string, (typeof STATION_ORDER)[number]> = {
+  'Thinadhoo City Police': 'Thinadhoo City',
+  'Gdh.Madaveli Police Station': 'Madaveli',
+  'Gdh.Rathafandhoo Police Station': 'Rathafandhoo',
+  'Gdh.Nadella Police Station': 'Nadella',
+  'Gdh.Fiyoari Police Station': 'Fiyoari',
+  'Gdh.Gadhdhoo Police Station': 'Gadhdhoo',
+  'Gdh.Vaadhoo Police Station': 'Vaadhoo',
+  'Gdh.Faresmaathoda Police Station': 'Faresmaathoda',
+}
+
 export default function AdminReport() {
   const { runs, isAdmin } = useApp()
   const navigate = useNavigate()
@@ -17,7 +39,8 @@ export default function AdminReport() {
   const [startDate, setStartDate] = useState<string>('2025-12-01')
   const [endDate, setEndDate] = useState<string>('2026-01-31')
   const [generating, setGenerating] = useState(false)
-  const reportRef = useRef<HTMLDivElement>(null)
+  const page1Ref = useRef<HTMLDivElement>(null)
+  const page2Ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -75,41 +98,46 @@ export default function AdminReport() {
   }, [filteredRuns, users])
 
   const stationBoard = useMemo(() => {
-    const stationMap = new Map<string, { totalDistance: number; runners: number; runCount: number }>()
-    const seenRunnerStation = new Map<string, string>()
+    const agg = new Map<(typeof STATION_ORDER)[number], { totalDistance: number; runners: number; runCount: number }>()
+    STATION_ORDER.forEach((s) => agg.set(s, { totalDistance: 0, runners: 0, runCount: 0 }))
+    const seen = new Map<string, (typeof STATION_ORDER)[number]>()
     filteredRuns.forEach((r) => {
-      const st = r.station || 'Unknown'
-      const cur = stationMap.get(st) || { totalDistance: 0, runners: 0, runCount: 0 }
+      const mapped = STATION_MAP[r.station] as (typeof STATION_ORDER)[number] | undefined
+      if (!mapped) return
+      const cur = agg.get(mapped)!
       cur.totalDistance += Number(r.distanceKm || 0)
       cur.runCount += 1
-      stationMap.set(st, cur)
-      if (!seenRunnerStation.has(r.serviceNumber)) {
-        seenRunnerStation.set(r.serviceNumber, st)
+      agg.set(mapped, cur)
+      if (!seen.has(r.serviceNumber)) {
+        seen.set(r.serviceNumber, mapped)
         cur.runners += 1
-        stationMap.set(st, cur)
+        agg.set(mapped, cur)
       }
     })
     users.forEach((u) => {
-      if (u.station !== 'General Admin' && !stationMap.has(u.station)) {
-        stationMap.set(u.station, { totalDistance: 0, runners: 0, runCount: 0 })
-      }
+      const mapped = STATION_MAP[u.station]
+      if (!mapped || u.station === 'General Admin') return
+      if (!agg.has(mapped)) agg.set(mapped, { totalDistance: 0, runners: 0, runCount: 0 })
     })
-    return Array.from(stationMap.entries())
-      .map(([station, data]) => ({ station, ...data }))
-      .sort((a, b) => b.totalDistance - a.totalDistance)
+    return STATION_ORDER.map((station) => ({ station, ...(agg.get(station) || { totalDistance: 0, runners: 0, runCount: 0 }) }))
   }, [filteredRuns, users])
 
   const generatePdf = async () => {
-    if (!reportRef.current) return
     setGenerating(true)
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: null })
-      const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
-      pdf.save(`Run_Club_Report_${startDate}_to_${endDate}.pdf`)
+      const w = pdf.internal.pageSize.getWidth()
+      const h = pdf.internal.pageSize.getHeight()
+      if (page1Ref.current) {
+        const c1 = await html2canvas(page1Ref.current, { scale: 2, backgroundColor: null })
+        pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
+      }
+      pdf.addPage()
+      if (page2Ref.current) {
+        const c2 = await html2canvas(page2Ref.current, { scale: 2, backgroundColor: null })
+        pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
+      }
+      pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {
       setGenerating(false)
     }
@@ -124,7 +152,7 @@ export default function AdminReport() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-accent-500/20 text-accent-400"><FileText className="w-5 h-5" /></div>
-          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">Statistics Report</h1>
+          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">Madaveli Police 100K Run Challenge Weekly Statistic Report</h1>
         </div>
         <Button onClick={generatePdf} disabled={generating} icon={<FileText className="w-4 h-4" />}>Download PDF</Button>
       </div>
@@ -137,11 +165,11 @@ export default function AdminReport() {
         </div>
       </Card>
 
-      <div ref={reportRef} id="reportCanvas" className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px]">
+      <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w-[794px] h-[1123px]">
         <div className="p-5">
           <div className="text-center mb-4">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
-            <h2 className="font-display text-2xl font-bold text-white">Club Portal • Statistics Report</h2>
+            <h2 className="font-display text-2xl font-bold text-white">Madaveli Police 100K Run Challenge Weekly Statistic Report</h2>
             <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
           </div>
 
@@ -160,7 +188,7 @@ export default function AdminReport() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
               <table className="w-full text-sm">
@@ -175,11 +203,11 @@ export default function AdminReport() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.slice(0, 30).map((r) => (
+                  {leaderboard.slice(0, 28).map((r) => (
                     <tr key={r.serviceNumber} className="border-t border-primary-700">
                       <td className="px-3 py-1 text-primary-300">{r.position}</td>
                       <td className="px-3 py-1 text-white">{r.name}</td>
-                      <td className="px-3 py-1 text-primary-300">{r.station}</td>
+                      <td className="px-3 py-1 text-primary-300">{STATION_MAP[r.station] || r.station}</td>
                       <td className="px-3 py-1 text-right text-primary-300">{r.activeDays}</td>
                       <td className="px-3 py-1 text-right text-primary-300">{r.runCount}</td>
                       <td className="px-3 py-1 text-right text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
@@ -187,42 +215,48 @@ export default function AdminReport() {
                   ))}
                 </tbody>
               </table>
-              {leaderboard.length > 30 && (
-                <div className="px-3 py-2 text-xs text-primary-500">Showing top 30 due to one-page limit</div>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-primary-700 bg-primary-800/40">
-              <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Station Performance</span></div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-primary-500">
-                    <th className="text-left px-3 py-2">Station</th>
-                    <th className="text-right px-3 py-2">Runners</th>
-                    <th className="text-right px-3 py-2">Runs</th>
-                    <th className="text-right px-3 py-2">Distance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stationBoard.slice(0, 15).map((s) => (
-                    <tr key={s.station} className="border-t border-primary-700">
-                      <td className="px-3 py-1 text-white">{s.station}</td>
-                      <td className="px-3 py-1 text-right text-primary-300">{s.runners}</td>
-                      <td className="px-3 py-1 text-right text-primary-300">{s.runCount}</td>
-                      <td className="px-3 py-1 text-right text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {stationBoard.length > 15 && (
-                <div className="px-3 py-2 text-xs text-primary-500">Showing top 15 due to one-page limit</div>
+              {leaderboard.length > 28 && (
+                <div className="px-3 py-2 text-xs text-primary-500">Showing top 28 due to one-page limit</div>
               )}
             </div>
           </div>
 
           <div className="mt-4 text-center text-[11px] text-primary-500">
-            Generated by Club Portal • This document is electronically generated and does not require a signature.
+            This document is electronically generated and does not require a signature.
           </div>
+        </div>
+      </div>
+      <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 w:[794px] h-[1123px] mt-6">
+        <div className="p-5">
+          <div className="text-center mb-4">
+            <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
+            <h2 className="font-display text-2xl font-bold text-white">Station Performance</h2>
+            <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
+          </div>
+          <div className="rounded-xl border border-primary-700 bg-primary-800/40">
+            <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-primary-500">
+                  <th className="text-left px-3 py-2">Station</th>
+                  <th className="text-right px-3 py-2">Runners</th>
+                  <th className="text-right px-3 py-2">Runs</th>
+                  <th className="text-right px-3 py-2">Distance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stationBoard.map((s) => (
+                  <tr key={s.station} className="border-t border-primary-700">
+                    <td className="px-3 py-1 text-white">{s.station}</td>
+                    <td className="px-3 py-1 text-right text-primary-300">{s.runners}</td>
+                    <td className="px-3 py-1 text-right text-primary-300">{s.runCount}</td>
+                    <td className="px-3 py-1 text-right text-success-400 font-medium">{s.totalDistance.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 text-center text-[11px] text-primary-500">No SPSR, SPSR RR&HV, or Gdh.Atoll Police included.</div>
         </div>
       </div>
     </div>

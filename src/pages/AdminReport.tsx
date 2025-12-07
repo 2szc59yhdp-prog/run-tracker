@@ -370,7 +370,7 @@ export default function AdminReport() {
           <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
-              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+              <table className="text-xs table-fixed border-collapse" style={{ width: 754, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
                   <col style={{ width: '48px' }} />
                   <col style={{ width: '290px' }} />
@@ -429,7 +429,7 @@ export default function AdminReport() {
           {leaderboard.length > PAGE1_ROWS && (
             <div className="rounded-xl border border-primary-700 bg-primary-800/40 mb-4">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard (continued)</span></div>
-              <table className="w-full text-xs table-fixed border-collapse" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+              <table className="text-xs table-fixed border-collapse" style={{ width: 754, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
                   <col style={{ width: '48px' }} />
                   <col style={{ width: '290px' }} />

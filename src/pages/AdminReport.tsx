@@ -269,12 +269,15 @@ export default function AdminReport() {
   const pdfPageStyle: React.CSSProperties = {
     width: "794px",
     height: "1123px",
-    background: "#0a0a0a",
-    color: "white",
+    background: "#102a43",
+    color: "#ffffff",
     padding: "32px",
     position: "absolute",
-    left: "-9999px",
     top: "0",
+    left: "0",
+    opacity: 0,
+    visibility: "hidden",
+    pointerEvents: "none",
   };
 
   // -----------------------------
@@ -283,7 +286,8 @@ export default function AdminReport() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* ------------------ PDF PAGE 1 ------------------ */}
+      {/* ------------------ PDF PAGES (CAPTURE-ONLY) ------------------ */}
+      <div className="pdf-capture">
       <div ref={pdfPage1Ref} style={pdfPageStyle}>
         <h2 className="text-xl font-bold text-accent-400 mb-1">
           Madaveli Police
@@ -317,15 +321,15 @@ export default function AdminReport() {
         <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
         <table
           className="text-sm"
-          style={{ width: "100%", tableLayout: "fixed" }}
+          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
         >
           <colgroup>
-            <col style={{ width: "40px" }} />
-            <col style={{ width: "220px" }} />
-            <col style={{ width: "160px" }} />
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "80px" }} />
+            <col style={{ width: "48px" }} />
+            <col style={{ width: "290px" }} />
+            <col style={{ width: "170px" }} />
+            <col style={{ width: "100px" }} />
+            <col style={{ width: "70px" }} />
+            <col style={{ width: "76px" }} />
           </colgroup>
 
           <thead>
@@ -342,12 +346,12 @@ export default function AdminReport() {
           <tbody>
             {leaderboard.map((p) => (
               <tr key={p.serviceNumber} className="border-b border-primary-700">
-                <td className="py-1">{p.position}</td>
-                <td className="truncate">{p.name}</td>
-                <td>{STATION_MAP[p.station] || p.station}</td>
-                <td className="text-center">{p.approvedRuns}</td>
-                <td className="text-center">{p.rejectedRuns}</td>
-                <td className="text-center">{p.totalDistance.toFixed(1)}</td>
+                <td className="pdf-fix justify-start px-2 text-primary-300" style={{ lineHeight: "22px" }}>{p.position}</td>
+                <td className="pdf-nowrap pdf-fix justify-start px-2 text-white" style={{ lineHeight: "22px" }}>{p.name}</td>
+                <td className="pdf-nowrap pdf-fix justify-start px-2 text-primary-300" style={{ lineHeight: "22px" }}>{STATION_MAP[p.station] || p.station}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.approvedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.rejectedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{p.totalDistance.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>
@@ -359,7 +363,6 @@ export default function AdminReport() {
         </p>
       </div>
 
-      {/* ------------------ PDF PAGE 2 ------------------ */}
       <div ref={pdfPage2Ref} style={pdfPageStyle}>
         <h2 className="text-xl font-bold text-accent-400 mb-1">
           Madaveli Police
@@ -371,14 +374,14 @@ export default function AdminReport() {
 
         <table
           className="text-sm"
-          style={{ width: "100%", tableLayout: "fixed" }}
+          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
         >
           <colgroup>
-            <col style={{ width: "240px" }} />
+            <col style={{ width: "270px" }} />
             <col style={{ width: "100px" }} />
             <col style={{ width: "100px" }} />
             <col style={{ width: "120px" }} />
-            <col style={{ width: "100px" }} />
+            <col style={{ width: "164px" }} />
           </colgroup>
 
           <thead>
@@ -394,15 +397,11 @@ export default function AdminReport() {
           <tbody>
             {stationBoard.map((s) => (
               <tr key={s.station} className="border-b border-primary-700">
-                <td className="py-1">{s.station}</td>
-                <td className="text-center">{s.runners}</td>
-                <td className="text-center">{s.runCount}</td>
-                <td className="text-center">
-                  {s.totalDistance.toFixed(1)}
-                </td>
-                <td className="text-center">
-                  {((s.totalDistance / 500) * 100).toFixed(1)}%
-                </td>
+                <td className="pdf-nowrap pdf-fix justify-start px-2 text-white" style={{ lineHeight: "22px" }}>{s.station}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{((s.totalDistance / 500) * 100).toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
@@ -412,6 +411,7 @@ export default function AdminReport() {
           This document is electronically generated and does not require a
           signature.
         </p>
+      </div>
       </div>
 
       {/* ------------------ ORIGINAL SCREEN UI (UNCHANGED) ------------------ */}

@@ -177,6 +177,9 @@ export default function AdminReport() {
       if ((document as any).fonts && (document as any).fonts.ready) {
         await (document as any).fonts.ready
       }
+      const prevContDisp = containerRef.current?.style.display
+      const prevContPos = containerRef.current?.style.position
+      const prevContLeft = containerRef.current?.style.left
       const prev1 = page1Ref.current?.style.transform
       const prev2 = page2Ref.current?.style.transform
       const prevDisp1 = page1Ref.current?.style.display
@@ -185,6 +188,12 @@ export default function AdminReport() {
       const prevPos2 = page2Ref.current?.style.position
       const prevLeft1 = page1Ref.current?.style.left
       const prevLeft2 = page2Ref.current?.style.left
+      // Unhide the desktop pages container even on mobile
+      if (containerRef.current) {
+        containerRef.current.style.display = 'block'
+        containerRef.current.style.position = 'absolute'
+        containerRef.current.style.left = '-10000px'
+      }
       if (page1Ref.current) page1Ref.current.style.transform = 'scale(1)'
       if (page2Ref.current) page2Ref.current.style.transform = 'scale(1)'
       // Ensure capture works even if elements are hidden on mobile
@@ -216,6 +225,9 @@ export default function AdminReport() {
       if (page2Ref.current && prevPos2 !== undefined) page2Ref.current.style.position = prevPos2
       if (page1Ref.current && prevLeft1 !== undefined) page1Ref.current.style.left = prevLeft1
       if (page2Ref.current && prevLeft2 !== undefined) page2Ref.current.style.left = prevLeft2
+      if (containerRef.current && prevContDisp !== undefined) containerRef.current.style.display = prevContDisp
+      if (containerRef.current && prevContPos !== undefined) containerRef.current.style.position = prevContPos
+      if (containerRef.current && prevContLeft !== undefined) containerRef.current.style.left = prevContLeft
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {
       setGenerating(false)

@@ -828,173 +828,175 @@ export default function Dashboard() {
             </div>
 
             {consistentRunners.length === 0 ? (
-              <p className="text-primary-400 text-center py-8">
-                No consistent runners yet.
-              </p>
+              <p className="text-primary-400 text-center py-8">No consistent runners yet.</p>
             ) : (
               <div className="max-h-[70vh] overflow-y-auto pr-2">
-                <div className="space-y-1">
-                {consistentRunners.map((r) => (
-                  <div
-                    key={r.serviceNumber}
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-primary-800/20"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-white text-sm truncate">
-                          {r.name}
-                        </p>
-                        <span className="text-xs text-primary-500">#{r.serviceNumber}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-primary-400">
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate max-w-[180px] sm:max-w-[220px]">{r.station}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {(() => {
-                        const daily = r.isDaily;
-                        const consistent = r.isConsistent && !daily;
-                        const pingClass = daily
-                          ? 'bg-success-400'
-                          : consistent
-                            ? 'bg-warning-400'
-                            : 'bg-danger-400';
-                        const dotClass = daily
-                          ? 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.85)]'
-                          : consistent
-                            ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.85)]'
-                            : 'bg-danger-500 shadow-[0_0_8px_rgba(239,68,68,0.85)]';
-                        const textClass = daily
-                          ? 'text-success-400'
-                          : consistent
-                            ? 'text-yellow-400'
-                            : 'text-danger-400';
-                        return (
-                          <>
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className={`absolute inline-flex h-full w-full rounded-full ${pingClass} opacity-60 blur-[1px] animate-pulse`}></span>
-                              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${dotClass} animate-pulse`}></span>
-                            </span>
-                            <span className={`${textClass} text-xs font-medium`}>
-                              {daily ? 'Daily' : consistent ? 'Consistent' : `In-active ${r.inactiveDays} day${r.inactiveDays !== 1 ? 's' : ''}`}
-                            </span>
-                          </>
-                        );
-                      })()}
-                    </div>
+                <div className="hidden sm:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-primary-700">
+                          <th className="text-left py-3 px-3 text-primary-400 font-medium text-sm">Name</th>
+                          <th className="text-left py-3 px-3 text-primary-400 font-medium text-sm">Service #</th>
+                          <th className="text-left py-3 px-3 text-primary-400 font-medium text-sm">Station</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Streak</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {consistentRunners.map((r) => (
+                          <tr key={r.serviceNumber} className="border-b border-primary-700/50">
+                            <td className="py-3 px-3 text-white text-sm">{r.name}</td>
+                            <td className="py-3 px-3 text-primary-400 text-sm">#{r.serviceNumber}</td>
+                            <td className="py-3 px-3 text-primary-300 text-sm">{r.station}</td>
+                            <td className="py-3 px-3 text-center text-white font-display font-semibold">{r.streak}</td>
+                            <td className="py-3 px-3 text-center">
+                              {(() => {
+                                const daily = r.isDaily;
+                                const consistent = r.isConsistent && !daily;
+                                const textClass = daily
+                                  ? 'text-success-400'
+                                  : consistent
+                                    ? 'text-yellow-400'
+                                    : 'text-danger-400';
+                                return (
+                                  <span className={`${textClass} text-sm font-medium`}>
+                                    {daily ? 'Daily' : consistent ? 'Consistent' : `In-active ${r.inactiveDays}`}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
+                </div>
+                <div className="sm:hidden space-y-1">
+                  {consistentRunners.map((r) => (
+                    <div key={r.serviceNumber} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-primary-800/20">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-white text-sm truncate">{r.name}</p>
+                          <span className="text-xs text-primary-500">#{r.serviceNumber}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-primary-400">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[180px] sm:max-w-[220px]">{r.station}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {(() => {
+                          const daily = r.isDaily;
+                          const consistent = r.isConsistent && !daily;
+                          const pingClass = daily ? 'bg-success-400' : consistent ? 'bg-warning-400' : 'bg-danger-400';
+                          const dotClass = daily ? 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.85)]' : consistent ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.85)]' : 'bg-danger-500 shadow-[0_0_8px_rgba(239,68,68,0.85)]';
+                          const textClass = daily ? 'text-success-400' : consistent ? 'text-yellow-400' : 'text-danger-400';
+                          return (
+                            <>
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className={`absolute inline-flex h-full w-full rounded-full ${pingClass} opacity-60 blur-[1px] animate-pulse`}></span>
+                                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${dotClass} animate-pulse`}></span>
+                              </span>
+                              <span className={`${textClass} text-xs font-medium`}>
+                                {daily ? 'Daily' : consistent ? 'Consistent' : `In-active ${r.inactiveDays} day${r.inactiveDays !== 1 ? 's' : ''}`}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Station Performance Board */}
         <div className="animate-fade-in stagger-5">
           <Card>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-accent-500/20 to-purple-500/20 text-accent-400">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-semibold text-white">
-                Station Performance Board
-              </h2>
-              <p className="text-xs text-primary-500">Compare progress across all stations</p>
-            </div>
-          </div>
-
-          {stationPerformance.length === 0 ? (
-            <p className="text-primary-400 text-center py-8">
-              No station data available yet.
-            </p>
-          ) : (
-            <>
-              {/* Legend */}
-              <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
-                <p className="font-medium text-primary-300 mb-1">Performance % Criteria:</p>
-                <p>• Calculated using the top 5 runners from each station</p>
-                <p>• Missing slots count as zero</p>
-                <p>• Based only on approved runs</p>
-                <p>
-                  • Runner progress is measured by completing
-                  <span className="text-accent-400 font-medium"> {MIN_DISTANCE_KM} KM</span>
-                  and achieving
-                  <span className="text-accent-400 font-medium"> {MIN_ACTIVE_DAYS} active days</span>
-                </p>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-accent-500/20 to-purple-500/20 text-accent-400">
+                <Building2 className="w-5 h-5" />
               </div>
-              
-              <div className="space-y-1">
-                {stationPerformance.map((station, index) => {
-                  const isLeader = index === 0 && station.performancePercent > 0;
-                  
-                  return (
-                    <div
-                      key={station.station}
-                      className={`
-                        flex items-center gap-3 py-2 px-3 rounded-lg transition-all
-                        ${isLeader 
-                          ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10' 
-                          : index === 1 ? 'bg-primary-700/20' :
-                            index === 2 ? 'bg-primary-700/10' :
-                            'hover:bg-primary-800/20'}
-                      `}
-                    >
-                      {/* Rank */}
-                      <div className={`
-                        w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
-                        ${isLeader 
-                          ? 'bg-gradient-to-br from-accent-400 to-purple-500 text-white' 
-                          : index === 1 ? 'bg-primary-400 text-primary-900' :
-                            index === 2 ? 'bg-orange-600 text-white' :
-                            'bg-primary-700 text-primary-300'}
-                      `}>
-                        {isLeader ? <Trophy className="w-4 h-4" /> : index + 1}
-                      </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-white">
+                  Station Performance Board
+                </h2>
+                <p className="text-xs text-primary-500">Compare progress across all stations</p>
+              </div>
+            </div>
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-sm truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>
-                          {station.station}
-                        </p>
-                      <div className="flex items-center gap-2 text-xs text-primary-400">
-                        <span>{station.participants} participants</span>
-                        <span className="text-warning-400">{station.activeRunnersToday} active today</span>
-                        {station.finishers > 0 && (
-                          <span className="text-success-400">{station.finishers} finished</span>
-                        )}
-                        <span className="text-accent-400">{station.totalDistance.toFixed(1)} km</span>
-                      </div>
-                      </div>
-
-                      {/* Performance */}
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-display font-bold text-white">
-                          {station.performancePercent.toFixed(1)}%
-                        </p>
-                        <div className="w-16 h-1 bg-primary-700 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${
-                              station.performancePercent >= 100 ? 'bg-success-500' : isLeader ? 'bg-accent-500' : 'bg-accent-500'
-                            }`}
-                            style={{ width: `${Math.min(station.performancePercent, 100)}%` }}
-                          />
+            {stationPerformance.length === 0 ? (
+              <p className="text-primary-400 text-center py-8">No station data available yet.</p>
+            ) : (
+              <>
+                <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">
+                  <p className="font-medium text-primary-300 mb-1">Performance % Criteria:</p>
+                  <p>• Calculated using the top 5 runners from each station</p>
+                  <p>• Missing slots count as zero</p>
+                  <p>• Based only on approved runs</p>
+                  <p>• Runner progress is measured by completing <span className="text-accent-400 font-medium">{MIN_DISTANCE_KM} KM</span> and achieving <span className="text-accent-400 font-medium">{MIN_ACTIVE_DAYS} active days</span></p>
+                </div>
+                <div className="hidden sm:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-primary-700">
+                          <th className="text-left py-3 px-3 text-primary-400 font-medium text-sm">Rank</th>
+                          <th className="text-left py-3 px-3 text-primary-400 font-medium text-sm">Station</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Participants</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Active Today</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Finishers</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Total Distance</th>
+                          <th className="text-center py-3 px-3 text-primary-400 font-medium text-sm">Performance %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stationPerformance.map((station, index) => (
+                          <tr key={station.station} className="border-b border-primary-700/50">
+                            <td className="py-3 px-3 text-white text-sm">{index + 1}</td>
+                            <td className="py-3 px-3 text-white text-sm">{station.station}</td>
+                            <td className="py-3 px-3 text-center text-primary-300 text-sm">{station.participants}</td>
+                            <td className="py-3 px-3 text-center text-warning-400 text-sm">{station.activeRunnersToday}</td>
+                            <td className="py-3 px-3 text-center text-success-400 text-sm">{station.finishers}</td>
+                            <td className="py-3 px-3 text-center text-accent-400 text-sm">{station.totalDistance.toFixed(1)} km</td>
+                            <td className="py-3 px-3 text-center text-white font-display font-semibold">{station.performancePercent.toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="sm:hidden space-y-1">
+                  {stationPerformance.map((station, index) => {
+                    const isLeader = index === 0 && station.performancePercent > 0;
+                    return (
+                      <div key={station.station} className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-all ${isLeader ? 'bg-gradient-to-r from-accent-500/20 to-purple-500/10' : index === 1 ? 'bg-primary-700/20' : index === 2 ? 'bg-primary-700/10' : 'hover:bg-primary-800/20'}`}>
+                        <div className={`${isLeader ? 'bg-gradient-to-br from-accent-400 to-purple-500 text-white' : index === 1 ? 'bg-primary-400 text-primary-900' : index === 2 ? 'bg-orange-600 text-white' : 'bg-primary-700 text-primary-300'} w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0`}>{isLeader ? <Trophy className="w-4 h-4" /> : index + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium text-sm truncate ${isLeader ? 'text-accent-400' : 'text-white'}`}>{station.station}</p>
+                          <div className="flex items-center gap-2 text-xs text-primary-400">
+                            <span>{station.participants} participants</span>
+                            <span className="text-warning-400">{station.activeRunnersToday} active today</span>
+                            {station.finishers > 0 && <span className="text-success-400">{station.finishers} finished</span>}
+                            <span className="text-accent-400">{station.totalDistance.toFixed(1)} km</span>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-display font-bold text-white">{station.performancePercent.toFixed(1)}%</p>
+                          <div className="w-16 h-1 bg-primary-700 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${station.performancePercent >= 100 ? 'bg-success-500' : isLeader ? 'bg-accent-500' : 'bg-accent-500'}`} style={{ width: `${Math.min(station.performancePercent, 100)}%` }} />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Total Distance Note */}
-              <div className="mt-4 pt-4 border-t border-primary-700/50 text-xs text-primary-500 text-center">
-                Total team distance: <span className="text-white font-medium">{stationPerformance.reduce((sum, s) => sum + s.totalDistance, 0).toFixed(1)} km</span>
-              </div>
-            </>
-          )}
-        </Card>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 pt-4 border-t border-primary-700/50 text-xs text-primary-500 text-center">Total team distance: <span className="text-white font-medium">{stationPerformance.reduce((sum, s) => sum + s.totalDistance, 0).toFixed(1)} km</span></div>
+              </>
+            )}
+          </Card>
         </div>
 
         {/* Recent Runs - Shows ALL runs with status */}

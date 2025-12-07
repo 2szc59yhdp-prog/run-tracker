@@ -275,13 +275,13 @@ export default function AdminReport() {
         <div className="rounded-xl border border-primary-700 bg-primary-800/40">
           <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs table-fixed" style={{ tableLayout: 'fixed' }}>
+            <table className="w-full text-xs table-fixed min-w-[720px]" style={{ tableLayout: 'fixed', minWidth: 720 }}>
               <colgroup>
-                <col style={{ width: '12%' }} />
-                <col style={{ width: '44%' }} />
-                <col style={{ width: '24%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '48px' }} />
+                <col style={{ width: '290px' }} />
+                <col style={{ width: '170px' }} />
+                <col style={{ width: '100px' }} />
+                <col style={{ width: '76px' }} />
               </colgroup>
               <thead>
                 <tr className="text-primary-500">
@@ -315,7 +315,7 @@ export default function AdminReport() {
         <div className="rounded-xl border border-primary-700 bg-primary-800/40">
           <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Building2 className="w-4 h-4 text-success-400" /><span className="text-primary-300 text-sm font-medium">Stations</span></div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[720px]" style={{ minWidth: 720 }}>
               <thead>
                 <tr className="text-primary-500">
                   <th className="text-left px-3 py-2">Station</th>

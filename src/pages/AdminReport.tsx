@@ -46,6 +46,8 @@ export default function AdminReport() {
   const PAGE1_ROWS = 40
   const MIN_DISTANCE_KM = 100
   const MIN_ACTIVE_DAYS = 40
+  const CHALLENGE_START = new Date('2025-12-01T00:00:00')
+  const CHALLENGE_END = new Date('2026-01-31T23:59:59')
 
   useEffect(() => {
     if (!isAdmin) {
@@ -103,40 +105,62 @@ export default function AdminReport() {
   }, [filteredRuns, users])
 
   const stationBoard = useMemo(() => {
-    const agg = new Map<(typeof STATION_ORDER)[number], { totalDistance: number; runners: number; runCount: number; performancePercent: number; progressSum: number }>()
-    STATION_ORDER.forEach((s) => agg.set(s, { totalDistance: 0, runners: 0, runCount: 0, performancePercent: 0, progressSum: 0 }))
-    const byUser = new Map<string, { totalDistance: number; dates: Set<string>; station: (typeof STATION_ORDER)[number] | null }>()
-    filteredRuns.forEach((r) => {
-      const mapped = STATION_MAP[r.station] as (typeof STATION_ORDER)[number] | undefined
-      if (!mapped) return
-      const u = byUser.get(r.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), station: mapped ?? null }
-      u.totalDistance += Number(r.distanceKm || 0)
-      u.dates.add(r.date)
-      u.station = mapped ?? u.station
-      byUser.set(r.serviceNumber, u)
-      const cur = agg.get(mapped)!
-      cur.totalDistance += Number(r.distanceKm || 0)
-      cur.runCount += 1
-      agg.set(mapped, cur)
+    const endDate = new Date() <= CHALLENGE_END ? new Date() : CHALLENGE_END
+    const challengeDayCount = Math.floor((endDate.getTime() - CHALLENGE_START.getTime()) / 86400000) + 1
+    const startStr = CHALLENGE_START.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' })
+    const endStr = endDate.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' })
+
+    const agg = new Map<(typeof STATION_ORDER)[number], { totalDistance: number; runners: number; runCount: number; runnerProgresses: number[] }>()
+    STATION_ORDER.forEach((s) => agg.set(s, { totalDistance: 0, runners: 0, runCount: 0, runnerProgresses: [] }))
+
+    const runsByUser = new Map<string, { totalDistance: number; dates: Set<string>; station: (typeof STATION_ORDER)[number] | null }>()
+    runs.forEach((run) => {
+      if (run.status !== 'approved' || !run.serviceNumber) return
+      const mappedStation = STATION_MAP[run.station] as (typeof STATION_ORDER)[number] | undefined
+      if (!mappedStation) return
+      const entry = runsByUser.get(run.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), station: mappedStation ?? null }
+      entry.totalDistance += Number(run.distanceKm || 0)
+      entry.dates.add(run.date)
+      entry.station = mappedStation ?? entry.station
+      runsByUser.set(run.serviceNumber, entry)
     })
-    // compute runner progress and aggregate performance
-    byUser.forEach(({ totalDistance, dates, station }) => {
+
+    users.forEach((u) => {
+      const mappedStation = STATION_MAP[u.station]
+      if (!mappedStation || u.station === 'General Admin') return
+      const entry = runsByUser.get(u.serviceNumber) || { totalDistance: 0, dates: new Set<string>(), station: mappedStation }
+      runsByUser.set(u.serviceNumber, entry)
+    })
+
+    runsByUser.forEach((u) => {
+      const station = u.station
       if (!station) return
-      const activeDays = dates.size
-      const distanceProgress = Math.min((totalDistance / MIN_DISTANCE_KM) * 100, 100)
-      const daysProgress = Math.min((activeDays / MIN_ACTIVE_DAYS) * 100, 100)
-      const progress = Math.min(distanceProgress, daysProgress)
+      const coveredDays = Array.from(u.dates).filter((d) => d >= startStr && d <= endStr).length
+      const distanceProgress = Math.min((u.totalDistance / MIN_DISTANCE_KM) * 100, 100)
+      const daysProgress = Math.min((coveredDays / MIN_ACTIVE_DAYS) * 100, 100)
+      let runnerProgress = Math.min(distanceProgress, daysProgress)
+      const dailyActive = challengeDayCount > 0 && coveredDays === challengeDayCount
+      if (dailyActive) runnerProgress = Math.min(runnerProgress * 1.15, 100)
       const cur = agg.get(station)!
-      cur.runners += 1
-      cur.progressSum += progress
+      cur.totalDistance += u.totalDistance
+      cur.runCount += u.dates.size
+      cur.runners += u.totalDistance > 0 ? 1 : 0
+      cur.runnerProgresses.push(runnerProgress)
       agg.set(station, cur)
     })
-    return STATION_ORDER.map((station) => {
-      const cur = agg.get(station) || { totalDistance: 0, runners: 0, runCount: 0, performancePercent: 0, progressSum: 0 }
-      const performancePercent = cur.runners > 0 ? cur.progressSum / cur.runners : 0
-      return { station, totalDistance: cur.totalDistance, runners: cur.runners, runCount: cur.runCount, performancePercent }
+
+    const result = STATION_ORDER.map((station) => {
+      const data = agg.get(station) || { totalDistance: 0, runners: 0, runCount: 0, runnerProgresses: [] }
+      const sorted = [...data.runnerProgresses].sort((a, b) => b - a)
+      const slots = 5
+      let sumTop = 0
+      for (let i = 0; i < slots; i++) sumTop += sorted[i] ?? 0
+      const performancePercent = sumTop / slots
+      return { station, totalDistance: data.totalDistance, runners: data.runners, runCount: data.runCount, performancePercent }
     })
-  }, [filteredRuns])
+
+    return result.sort((a, b) => b.performancePercent - a.performancePercent)
+  }, [runs, users])
 
   const generatePdf = async () => {
     setGenerating(true)
@@ -197,7 +221,7 @@ export default function AdminReport() {
       <div ref={containerRef} className="mx-auto w-full sm:w-auto">
         <div ref={page1Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
-            <div className="text-center mb-4">
+            <div className="text-center mb-6">
               <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
               <h2 className="font-display text-2xl font-bold text-white">100K Run Challenge Weekly Statistic Report</h2>
               <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
@@ -261,9 +285,9 @@ export default function AdminReport() {
         </div>
         <div ref={page2Ref} className="mx-auto bg-primary-900 rounded-xl overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
-          <div className="text-center mb-4">
+          <div className="text-center mb-6">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
-            <h2 className="font-display text-2xl font-bold text-white">Leaderboard (continued) & Station Performance</h2>
+            <h2 className="font-display text-2xl font-bold text-white">Station Performance Statistics</h2>
             <p className="text-primary-400 text-xs">Range: {startDate} → {endDate}</p>
           </div>
           {/* Leaderboard continued on page 2 (compact) */}

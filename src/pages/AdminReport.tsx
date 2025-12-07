@@ -177,57 +177,40 @@ export default function AdminReport() {
       if ((document as any).fonts && (document as any).fonts.ready) {
         await (document as any).fonts.ready
       }
-      const prevContDisp = containerRef.current?.style.display
-      const prevContPos = containerRef.current?.style.position
-      const prevContLeft = containerRef.current?.style.left
-      const prev1 = page1Ref.current?.style.transform
-      const prev2 = page2Ref.current?.style.transform
-      const prevDisp1 = page1Ref.current?.style.display
-      const prevDisp2 = page2Ref.current?.style.display
-      const prevPos1 = page1Ref.current?.style.position
-      const prevPos2 = page2Ref.current?.style.position
-      const prevLeft1 = page1Ref.current?.style.left
-      const prevLeft2 = page2Ref.current?.style.left
-      // Unhide the desktop pages container even on mobile
-      if (containerRef.current) {
-        containerRef.current.style.display = 'block'
-        containerRef.current.style.position = 'absolute'
-        containerRef.current.style.left = '-10000px'
-      }
-      if (page1Ref.current) page1Ref.current.style.transform = 'scale(1)'
-      if (page2Ref.current) page2Ref.current.style.transform = 'scale(1)'
-      // Ensure capture works even if elements are hidden on mobile
+      const dpr = Math.max(2, Math.ceil(window.devicePixelRatio || 2))
+
+      const commonOptions = {
+        scale: dpr,
+        backgroundColor: null,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (doc: Document) => {
+          const container = doc.querySelector('[data-report-container="true"]') as HTMLElement | null
+          const p1 = doc.querySelector('[data-report-page="1"]') as HTMLElement | null
+          const p2 = doc.querySelector('[data-report-page="2"]') as HTMLElement | null
+          if (container) container.style.display = 'block'
+          ;[p1, p2].forEach((p) => {
+            if (p) {
+              p.style.transform = 'scale(1)'
+              p.style.display = 'block'
+            }
+          })
+        },
+      } as const
+
       if (page1Ref.current) {
-        page1Ref.current.style.display = 'block'
-        page1Ref.current.style.position = 'absolute'
-        page1Ref.current.style.left = '-10000px'
-      }
-      if (page2Ref.current) {
-        page2Ref.current.style.display = 'block'
-        page2Ref.current.style.position = 'absolute'
-        page2Ref.current.style.left = '-10000px'
-      }
-      const dpr = Math.ceil(window.devicePixelRatio || 2)
-      if (page1Ref.current) {
-        const c1 = await html2canvas(page1Ref.current, { scale: dpr, backgroundColor: null, foreignObjectRendering: true })
+        await new Promise((r) => requestAnimationFrame(r))
+        const c1 = await html2canvas(page1Ref.current, commonOptions as any)
         pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
       pdf.addPage()
       if (page2Ref.current) {
-        const c2 = await html2canvas(page2Ref.current, { scale: dpr, backgroundColor: null, foreignObjectRendering: true })
+        const c2 = await html2canvas(page2Ref.current, commonOptions as any)
         pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
       }
-      if (page1Ref.current && prev1 !== undefined) page1Ref.current.style.transform = prev1
-      if (page2Ref.current && prev2 !== undefined) page2Ref.current.style.transform = prev2
-      if (page1Ref.current && prevDisp1 !== undefined) page1Ref.current.style.display = prevDisp1
-      if (page2Ref.current && prevDisp2 !== undefined) page2Ref.current.style.display = prevDisp2
-      if (page1Ref.current && prevPos1 !== undefined) page1Ref.current.style.position = prevPos1
-      if (page2Ref.current && prevPos2 !== undefined) page2Ref.current.style.position = prevPos2
-      if (page1Ref.current && prevLeft1 !== undefined) page1Ref.current.style.left = prevLeft1
-      if (page2Ref.current && prevLeft2 !== undefined) page2Ref.current.style.left = prevLeft2
-      if (containerRef.current && prevContDisp !== undefined) containerRef.current.style.display = prevContDisp
-      if (containerRef.current && prevContPos !== undefined) containerRef.current.style.position = prevContPos
-      if (containerRef.current && prevContLeft !== undefined) containerRef.current.style.left = prevContLeft
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {
       setGenerating(false)
@@ -359,8 +342,8 @@ export default function AdminReport() {
         <div className="mt-2 text-center text-[11px] text-primary-500">This document is electronically generated and does not require a signature.</div>
       </div>
 
-      <div ref={containerRef} className="hidden sm:flex mx-auto w-full sm:w-auto px-2 sm:px-0 flex-col items-center">
-        <div ref={page1Ref} className="mx-auto bg-primary-900 overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+      <div ref={containerRef} data-report-container="true" className="hidden sm:flex mx-auto w-full sm:w-auto px-2 sm:px-0 flex-col items-center">
+        <div ref={page1Ref} data-report-page="1" className="mx-auto bg-primary-900 overflow-hidden border border-primary-700" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
           <div className="p-5">
             <div className="text-center mb-6">
               <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>
@@ -434,7 +417,7 @@ export default function AdminReport() {
             </div>
           </div>
         </div>
-        <div ref={page2Ref} className="mx-auto bg-primary-900 overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div ref={page2Ref} data-report-page="2" className="mx-auto bg-primary-900 overflow-hidden border border-primary-700 mt-6" style={{ width: 794, height: 1123, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="p-5">
           <div className="text-center mb-6">
             <p className="text-sm font-medium text-accent-400 tracking-widest uppercase">Madaveli Police</p>

@@ -171,16 +171,16 @@ export default function AdminReport() {
   const generatePdf = async () => {
     setGenerating(true)
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' })
-      const w = pdf.internal.pageSize.getWidth()
-      const h = pdf.internal.pageSize.getHeight()
+      const PAGE_WIDTH = 794
+      const PAGE_HEIGHT = 1123
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [PAGE_WIDTH, PAGE_HEIGHT] })
       if ((document as any).fonts && (document as any).fonts.ready) {
         await (document as any).fonts.ready
       }
-      const dpr = Math.max(2, Math.ceil(window.devicePixelRatio || 2))
+      const scale = 2
 
-      const commonOptions = {
-        scale: dpr,
+      const options = {
+        scale,
         backgroundColor: null,
         useCORS: true,
         allowTaint: true,
@@ -203,13 +203,19 @@ export default function AdminReport() {
 
       if (page1Ref.current) {
         await new Promise((r) => requestAnimationFrame(r))
-        const c1 = await html2canvas(page1Ref.current, commonOptions as any)
-        pdf.addImage(c1.toDataURL('image/png'), 'PNG', 0, 0, w, h)
+        const canvas1 = await html2canvas(page1Ref.current, options as any)
+        const imgData1 = canvas1.toDataURL('image/png')
+        const imgWidth1 = PAGE_WIDTH
+        const imgHeight1 = (canvas1.height * imgWidth1) / canvas1.width
+        pdf.addImage(imgData1, 'PNG', 0, 0, imgWidth1, imgHeight1)
       }
       pdf.addPage()
       if (page2Ref.current) {
-        const c2 = await html2canvas(page2Ref.current, commonOptions as any)
-        pdf.addImage(c2.toDataURL('image/png'), 'PNG', 0, 0, w, h)
+        const canvas2 = await html2canvas(page2Ref.current, options as any)
+        const imgData2 = canvas2.toDataURL('image/png')
+        const imgWidth2 = PAGE_WIDTH
+        const imgHeight2 = (canvas2.height * imgWidth2) / canvas2.width
+        pdf.addImage(imgData2, 'PNG', 0, 0, imgWidth2, imgHeight2)
       }
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`)
     } finally {

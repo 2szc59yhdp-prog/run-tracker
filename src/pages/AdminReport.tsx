@@ -43,7 +43,7 @@ export default function AdminReport() {
   const containerRef = useRef<HTMLDivElement>(null)
   const page1Ref = useRef<HTMLDivElement>(null)
   const page2Ref = useRef<HTMLDivElement>(null)
-  const PAGE1_ROWS = 28
+  const PAGE1_ROWS = 40
   const MIN_DISTANCE_KM = 100
   const MIN_ACTIVE_DAYS = 40
 
@@ -221,28 +221,31 @@ export default function AdminReport() {
           <div className="grid grid-cols-1 gap-4">
             <div className="rounded-xl border border-primary-700 bg-primary-800/40">
               <div className="px-3 py-2 border-b border-primary-700 flex items-center gap-2"><Trophy className="w-4 h-4 text-accent-400" /><span className="text-primary-300 text-sm font-medium">Leaderboard</span></div>
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="text-primary-500">
-                    <th className="text-left px-3 py-2">Pos</th>
-                    <th className="text-left px-3 py-2">Name</th>
-                    <th className="text-left px-3 py-2">Station</th>
-                    <th className="text-center px-3 py-2">Active Days</th>
-                    <th className="text-center px-3 py-2">Runs</th>
-                    <th className="text-center px-3 py-2">Distance</th>
+                    <th className="text-left px-2 py-1">Pos</th>
+                    <th className="text-left px-2 py-1">Name</th>
+                    <th className="text-left px-2 py-1">Station</th>
+                    <th className="text-center px-2 py-1">Active Days</th>
+                    <th className="text-center px-2 py-1">Runs</th>
+                    <th className="text-center px-2 py-1">Distance</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.slice(0, PAGE1_ROWS).map((r) => (
-                    <tr key={r.serviceNumber} className="border-t border-primary-700">
-                      <td className="px-3 py-1 text-primary-300">{r.position}</td>
-                      <td className="px-3 py-1 text-white">{r.name}</td>
-                      <td className="px-3 py-1 text-primary-300">{STATION_MAP[r.station] || r.station}</td>
-                      <td className="px-3 py-1 text-center text-primary-300">{r.activeDays}</td>
-                      <td className="px-3 py-1 text-center text-primary-300">{r.runCount}</td>
-                      <td className="px-3 py-1 text-center text-accent-400 font-medium">{r.totalDistance.toFixed(1)}</td>
-                    </tr>
-                  ))}
+                  {leaderboard.slice(0, PAGE1_ROWS).map((r) => {
+                    const zero = r.runCount === 0
+                    return (
+                      <tr key={r.serviceNumber} className={`border-t border-primary-700 ${zero ? 'bg-danger-500/10' : ''}`}>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.position}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-white'}`}>{r.name}</td>
+                        <td className={`px-2 py-1 ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{STATION_MAP[r.station] || r.station}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.activeDays}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-primary-300'}`}>{r.runCount}</td>
+                        <td className={`px-2 py-1 text-center ${zero ? 'text-danger-400' : 'text-accent-400'} font-medium`}>{r.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               {leaderboard.length > PAGE1_ROWS && (

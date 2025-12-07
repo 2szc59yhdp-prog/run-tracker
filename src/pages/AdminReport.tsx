@@ -184,7 +184,7 @@ export default function AdminReport() {
         backgroundColor: null,
         useCORS: true,
         allowTaint: true,
-        foreignObjectRendering: true,
+        foreignObjectRendering: false,
         scrollX: 0,
         scrollY: 0,
         onclone: (doc: Document) => {

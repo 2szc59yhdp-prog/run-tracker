@@ -79,6 +79,7 @@ export default function PinList() {
       name: u.name,
       serviceNumber: u.serviceNumber,
       station: u.station,
+      phone: (u.phone || '').trim(),
       email: (u.email || '').trim(),
       pin: (u.pin && u.pin.trim()) || generatePin(u),
     })).sort((a, b) => a.name.localeCompare(b.name));
@@ -121,6 +122,25 @@ export default function PinList() {
     URL.revokeObjectURL(url);
   };
 
+  const exportWhatsappCsv = () => {
+    const header = 'Name,Phone,Message,Link';
+    const lines = rows.map(r => {
+      const phone = r.phone || '';
+      const msg = `Hi ${r.name}, your PIN is ${r.pin}. Station: ${r.station}. Login: https://run.huvadhoofulusclub.events/participant-login`;
+      const enc = encodeURIComponent(msg);
+      const link = phone ? `https://wa.me/${phone}?text=${enc}` : `https://wa.me/?text=${enc}`;
+      return `${JSON.stringify(r.name)},${JSON.stringify(phone)},${JSON.stringify(msg)},${JSON.stringify(link)}`;
+    });
+    const csv = [header, ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'whatsapp_messages.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -133,6 +153,7 @@ export default function PinList() {
         {isPinsAdmin && (
           <div className="flex items-center gap-2">
             <Button onClick={exportCsv} className="hidden sm:inline-flex">Export CSV</Button>
+            <Button onClick={exportWhatsappCsv} className="hidden sm:inline-flex">Export WhatsApp CSV</Button>
           </div>
         )}
       </div>

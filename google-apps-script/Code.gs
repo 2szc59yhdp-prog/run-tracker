@@ -990,7 +990,7 @@ function getUsersWithPins(data) {
   if (!validateAdminToken(data.adminToken)) {
     return { success: false, error: 'Unauthorized: Invalid admin token' };
   }
-  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString()) === -1) {
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString().trim()) === -1) {
     return { success: false, error: 'Forbidden: Only PIN admins can access PINs' };
   }
   const sheet = getUsersSheet();
@@ -1955,7 +1955,7 @@ function getPinEmailQueueStatus(data) {
   if (!validateAdminToken(data.adminToken)) {
     return { success: false, error: 'Unauthorized: Invalid admin token' };
   }
-  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString()) === -1) {
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString().trim()) === -1) {
     return { success: false, error: 'Forbidden: Only PIN admins can view PIN email queue' };
   }
   const sheet = getPinEmailQueueSheet();

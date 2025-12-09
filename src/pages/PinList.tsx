@@ -117,6 +117,10 @@ export default function PinList() {
         if (typeof res.data.missingEmail === 'number') parts.push(`Missing emails: ${res.data.missingEmail}`);
         if (typeof res.data.excludedAdmin === 'number') parts.push(`Excluded admin: ${res.data.excludedAdmin}`);
         setSendInfo(parts.join(', '));
+        if (res.data.failed && res.data.failed.length > 0) {
+          const top = res.data.failed.slice(0, 5).map(f => `${f.email} (${f.serviceNumber})`).join(', ');
+          setSendInfo(prev => `${prev}. Failures: ${res.data.failed.length}${top ? ` — e.g., ${top}` : ''}`);
+        }
       } else {
         setError(res?.error || 'Failed to send PIN emails');
       }

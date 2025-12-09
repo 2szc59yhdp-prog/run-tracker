@@ -1663,6 +1663,8 @@ function sendPinEmails(data) {
   let missingEmail = 0;
   let excludedAdmin = 0;
   let autoAssigned = 0;
+  const failed = [];
+  const succeeded = [];
   for (let i = 1; i < dataRange.length; i++) {
     const row = dataRange[i];
     const station = row[stationColIndex] ? row[stationColIndex].toString() : '';
@@ -1732,12 +1734,15 @@ Login: https://run.huvadhoofulusclub.events/participant-login
     try {
       MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
       sent++;
+      succeeded.push({ email: email, serviceNumber: serviceNumber, name: name });
     } catch (e) {
       Logger.log('Failed to send PIN to ' + email + ': ' + e.message);
       skipped++;
+      failed.push({ email: email, serviceNumber: serviceNumber, name: name, error: e && e.message ? e.message : 'unknown error' });
     }
+    Utilities.sleep(200);
   }
-  return { success: true, data: { sent: sent, skipped: skipped, missingEmail: missingEmail, excludedAdmin: excludedAdmin, autoAssigned: autoAssigned } };
+  return { success: true, data: { sent: sent, skipped: skipped, missingEmail: missingEmail, excludedAdmin: excludedAdmin, autoAssigned: autoAssigned, failed: failed, succeeded: succeeded } };
 }
 
 /**

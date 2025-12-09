@@ -289,7 +289,7 @@ export default function AdminReport() {
     });
   }, [filteredApproved, users, startDate, endDate]);
 
-  const targetBodyHeightPx = 700;
+  const targetBodyHeightPx = 620;
   const rowsCount = leaderboard.length || 1;
   const rowHeightPx = pdfMode ? Math.max(20, Math.floor(targetBodyHeightPx / rowsCount)) : undefined;
   const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 10, 16) : undefined;
@@ -413,15 +413,15 @@ export default function AdminReport() {
         <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
         <table
           className="text-sm"
-          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums", fontSize: leaderboardFontSizePx ? `${leaderboardFontSizePx}px` : undefined }}
+          style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums", fontSize: leaderboardFontSizePx ? `${leaderboardFontSizePx}px` : undefined }}
         >
           <colgroup>
-            <col style={{ width: "48px" }} />
-            <col style={{ width: "290px" }} />
-            <col style={{ width: "170px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "70px" }} />
-            <col style={{ width: "76px" }} />
+            <col style={{ width: "40px" }} />
+            <col style={{ width: "280px" }} />
+            <col style={{ width: "160px" }} />
+            <col style={{ width: "96px" }} />
+            <col style={{ width: "72px" }} />
+            <col style={{ width: "82px" }} />
           </colgroup>
 
           <thead>
@@ -478,19 +478,19 @@ export default function AdminReport() {
 
         <table
           className="text-sm"
-          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
+          style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
         >
           <colgroup>
-            <col style={{ width: "270px" }} />
+            <col style={{ width: "260px" }} />
             <col style={{ width: "100px" }} />
             <col style={{ width: "100px" }} />
             <col style={{ width: "120px" }} />
-            <col style={{ width: "164px" }} />
+            <col style={{ width: "150px" }} />
           </colgroup>
 
           <thead>
             <tr className="text-primary-400 border-b border-primary-700">
-              <th className="text-center py-2">Station</th>
+              <th className="text-left py-2">Station</th>
               <th className="text-center">Runners</th>
               <th className="text-center">Runs</th>
               <th className="text-center">KM</th>
@@ -501,7 +501,7 @@ export default function AdminReport() {
           <tbody>
             {stationBoard.map((s) => (
               <tr key={s.station} className="border-b border-primary-700">
-                <td className="pdf-nowrap pdf-fix px-2 text-white text-center" style={{ lineHeight: "22px" }}>{s.station}</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-white text-left" style={{ lineHeight: "22px" }}>{s.station}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
@@ -592,12 +592,12 @@ export default function AdminReport() {
               <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
               <table className="w-full text-sm" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
-                  <col style={{ width: 48 }} />
-                  <col style={{ width: 290 }} />
-                  <col style={{ width: 170 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 70 }} />
-                  <col style={{ width: 76 }} />
+                  <col style={{ width: 40 }} />
+                  <col style={{ width: 280 }} />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 96 }} />
+                  <col style={{ width: 72 }} />
+                  <col style={{ width: 82 }} />
                 </colgroup>
                 <thead>
                   <tr className="text-primary-400 border-b border-primary-700">

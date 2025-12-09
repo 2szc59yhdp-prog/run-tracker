@@ -17,7 +17,7 @@ function App() {
     <AppProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/participant-login" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="add-run" element={<AddRun />} />
           <Route path="participant-login" element={<ParticipantLogin />} />

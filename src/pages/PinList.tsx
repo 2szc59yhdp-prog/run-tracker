@@ -76,7 +76,8 @@ export default function PinList() {
         const failedCount = (d.failed?.length ?? 0);
         if (failedCount > 0) {
           const top = (d.failed ?? []).slice(0, 5).map(f => `${f.email} (${f.serviceNumber})`).join(', ');
-          setSendInfo(prev => `${prev}. Failures: ${failedCount}${top ? ` — e.g., ${top}` : ''}`);
+          const reason = (d.failed ?? [])[0]?.error ? ` — reason: ${(d.failed ?? [])[0]?.error}` : '';
+          setSendInfo(prev => `${prev}. Failures: ${failedCount}${top ? ` — e.g., ${top}` : ''}${reason}`);
         }
       } else {
         setError(res?.error || 'Failed to send PIN emails');

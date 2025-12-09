@@ -1679,14 +1679,14 @@ function sendPinEmails(data) {
       missingEmail++;
       continue;
     }
-    if (!pin) {
+    if (!pin || pin.length !== 4 || pin.charAt(0) === '0') {
       const base = serviceNumber + '|' + (email || '') + '|pins-v1';
       let h = 0;
       for (let j = 0; j < base.length; j++) {
         h = (h * 31 + base.charCodeAt(j)) >>> 0;
       }
-      const n = h % 10000;
-      pin = ('0000' + n.toString()).slice(-4);
+      const n = (h % 9000) + 1000;
+      pin = n.toString();
       sheet.getRange(i + 1, pinColIndex + 1).setValue(pin);
       autoAssigned++;
     }

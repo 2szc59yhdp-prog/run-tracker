@@ -11,8 +11,8 @@ function generatePin(user: RegisteredUser): string {
   for (let i = 0; i < base.length; i++) {
     h = (h * 31 + base.charCodeAt(i)) >>> 0;
   }
-  const n = h % 10000;
-  return n.toString().padStart(4, '0');
+  const n = (h % 9000) + 1000;
+  return n.toString();
 }
 
 export default function PinList() {
@@ -71,13 +71,17 @@ export default function PinList() {
     setAssignTotal(participants.length);
     try {
       for (const u of participants) {
-        const pin = (u.pin && u.pin.trim()) || generatePin(u);
-        try {
-          await Promise.race([
-            updateUserPin(u.id, pin, adminToken!, adminUser!.serviceNumber),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-          ]);
-        } catch {
+        const existing = (u.pin || '').trim();
+        const pin = generatePin(u);
+        const needsAssign = !existing || existing.length !== 4 || existing.startsWith('0');
+        if (needsAssign || existing !== pin) {
+          try {
+            await Promise.race([
+              updateUserPin(u.id, pin, adminToken!, adminUser!.serviceNumber),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+            ]);
+          } catch {
+          }
         }
         setAssignedCount((c) => c + 1);
       }

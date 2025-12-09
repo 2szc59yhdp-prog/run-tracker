@@ -47,6 +47,7 @@ export default function AdminReport() {
   const [startDate, setStartDate] = useState("2025-12-01");
   const [endDate, setEndDate] = useState("2026-01-31");
   const [generating, setGenerating] = useState(false);
+  const [pdfMode, setPdfMode] = useState(false);
 
   // PDF page refs
   const pdfPage1Ref = useRef<HTMLDivElement>(null);
@@ -229,6 +230,11 @@ export default function AdminReport() {
     setGenerating(true);
 
     try {
+      if ((document as any).fonts && (document as any).fonts.ready) {
+        await (document as any).fonts.ready;
+      }
+      setPdfMode(true);
+      await new Promise((r) => requestAnimationFrame(r));
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -239,7 +245,8 @@ export default function AdminReport() {
       if (pdfPage1Ref.current) {
         const canvas = await html2canvas(pdfPage1Ref.current, {
           scale: 2,
-          backgroundColor: "#0a0a0a", // dark mode base
+          backgroundColor: "#102a43",
+          useCORS: true,
         });
         const img = canvas.toDataURL("image/png");
         pdf.addImage(img, "PNG", 0, 0, 794, 1123);
@@ -251,7 +258,8 @@ export default function AdminReport() {
       if (pdfPage2Ref.current) {
         const canvas = await html2canvas(pdfPage2Ref.current, {
           scale: 2,
-          backgroundColor: "#0a0a0a",
+          backgroundColor: "#102a43",
+          useCORS: true,
         });
         const img = canvas.toDataURL("image/png");
         pdf.addImage(img, "PNG", 0, 0, 794, 1123);
@@ -259,6 +267,7 @@ export default function AdminReport() {
 
       pdf.save(`Madaveli_Weekly_Report_${startDate}_to_${endDate}.pdf`);
     } finally {
+      setPdfMode(false);
       setGenerating(false);
     }
   };
@@ -275,9 +284,10 @@ export default function AdminReport() {
     position: "absolute",
     top: "0",
     left: "0",
-    opacity: 0,
-    visibility: "hidden",
+    opacity: pdfMode ? 1 : 0,
+    visibility: pdfMode ? "visible" : "hidden",
     pointerEvents: "none",
+    zIndex: pdfMode ? 9999 : -1,
   };
 
   // -----------------------------

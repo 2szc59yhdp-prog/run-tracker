@@ -74,7 +74,7 @@ export default function ParticipantLogin() {
         </form>
       </Card>
       <p className="text-primary-400 text-xs mt-4">
-        Tip: For testing, PIN defaults to last 4 digits of your phone (or 1234 if not set).
+        Tip: Use the assigned PIN to log in.
       </p>
     </div>
   );

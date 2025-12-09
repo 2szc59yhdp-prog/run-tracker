@@ -21,6 +21,8 @@ export default function PinList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [assignedCount, setAssignedCount] = useState(0);
+  const [assignTotal, setAssignTotal] = useState(0);
 
   const isSuperAdmin = !!(isAdmin && adminToken && (adminUser?.serviceNumber?.toString().trim() === '5568'));
 
@@ -63,12 +65,29 @@ export default function PinList() {
       return;
     }
     setAssigning(true);
+    setAssignedCount(0);
+    setAssignTotal(participants.length);
     try {
       for (const u of participants) {
         const pin = (u.pin && u.pin.trim()) || generatePin(u);
-        await updateUserPin(u.id, pin, adminToken!, adminUser!.serviceNumber);
+        try {
+          await Promise.race([
+            updateUserPin(u.id, pin, adminToken!, adminUser!.serviceNumber),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+          ]);
+        } catch {
+        }
+        setAssignedCount((c) => c + 1);
       }
-      const refreshed = await fetchAllUsersWithPins(adminToken!, adminUser!.serviceNumber);
+      let refreshed;
+      try {
+        refreshed = await Promise.race([
+          fetchAllUsersWithPins(adminToken!, adminUser!.serviceNumber),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
+        ]);
+      } catch {
+        refreshed = null as any;
+      }
       if (refreshed.success && refreshed.data) {
         setUsers(refreshed.data);
       }
@@ -96,7 +115,7 @@ export default function PinList() {
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-white">Participant PINs</h1>
         {isSuperAdmin && (
           <div className="flex items-center gap-2">
-            <Button onClick={assignPins} disabled={assigning}>{assigning ? 'Assigning…' : 'Assign Pins'}</Button>
+            <Button onClick={assignPins} disabled={assigning}>{assigning ? `Assigning… (${assignedCount}/${assignTotal})` : 'Assign Pins'}</Button>
             <Button onClick={exportCsv} className="hidden sm:inline-flex">Export CSV</Button>
           </div>
         )}

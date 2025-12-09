@@ -427,7 +427,7 @@ export default function AdminReport() {
           </colgroup>
 
           <thead>
-            <tr className="text-primary-401 border-b border-primary-700">
+            <tr className="text-primary-400 border-b border-primary-700">
               <th className="text-center py-2">#</th>
               <th className="text-left">Name</th>
               <th className="text-left">Station</th>
@@ -592,7 +592,7 @@ export default function AdminReport() {
               </div>
 
               <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+              <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
                   <col style={{ width: 40 }} />
                   <col style={{ width: 280 }} />
@@ -645,7 +645,7 @@ export default function AdminReport() {
               <h1 className="text-2xl font-bold">Station Performance</h1>
               <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
 
-              <table className="w-full text-sm" style={{ tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+              <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
                   <col style={{ width: 270 }} />
                   <col style={{ width: 100 }} />

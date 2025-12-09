@@ -277,6 +277,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshData();
   }, [refreshData]);
 
+  useEffect(() => {
+    function hash(s: string) {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return h.toString();
+    }
+    let prev = localStorage.getItem('site_version_hash') || '';
+    let timer: number | undefined;
+    const check = async () => {
+      try {
+        const res = await fetch('/index.html', { cache: 'no-store' });
+        const text = await res.text();
+        const h = hash(text);
+        if (!prev) {
+          localStorage.setItem('site_version_hash', h);
+          prev = h;
+        } else if (h !== prev) {
+          localStorage.setItem('site_version_hash', h);
+          window.location.reload();
+        }
+      } catch {}
+    };
+    check();
+    timer = window.setInterval(check, 60000);
+    return () => {
+      if (timer) window.clearInterval(timer);
+    };
+  }, []);
+
   return (
     <AppContext.Provider
       value={{

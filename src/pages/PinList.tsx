@@ -22,13 +22,15 @@ export default function PinList() {
   const [error, setError] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
 
+  const isSuperAdmin = !!(isAdmin && adminToken && (adminUser?.serviceNumber?.toString().trim() === '5568'));
+
   useEffect(() => {
-    if (!isAdmin || !adminToken || adminUser?.serviceNumber !== '5568') {
+    if (!isSuperAdmin) {
       setError('Unauthorized');
       setLoading(false);
       return;
     }
-    fetchAllUsersWithPins(adminToken, adminUser.serviceNumber).then((res) => {
+    fetchAllUsersWithPins(adminToken!, adminUser!.serviceNumber).then((res) => {
       if (res.success && res.data) {
         setUsers(res.data);
         setError(null);
@@ -40,7 +42,7 @@ export default function PinList() {
       setError('Failed to fetch users');
       setLoading(false);
     });
-  }, [isAdmin, adminToken, adminUser]);
+  }, [isSuperAdmin, adminToken, adminUser]);
 
   const participants = useMemo(() => {
     return users.filter(u => u.station && u.station !== 'General Admin');
@@ -56,7 +58,7 @@ export default function PinList() {
   }, [participants]);
 
   const assignPins = async () => {
-    if (!isAdmin || !adminToken || adminUser?.serviceNumber !== '5568') {
+    if (!isSuperAdmin) {
       setError('Unauthorized');
       return;
     }
@@ -64,9 +66,9 @@ export default function PinList() {
     try {
       for (const u of participants) {
         const pin = (u.pin && u.pin.trim()) || generatePin(u);
-        await updateUserPin(u.id, pin, adminToken, adminUser.serviceNumber);
+        await updateUserPin(u.id, pin, adminToken!, adminUser!.serviceNumber);
       }
-      const refreshed = await fetchAllUsersWithPins(adminToken, adminUser.serviceNumber);
+      const refreshed = await fetchAllUsersWithPins(adminToken!, adminUser!.serviceNumber);
       if (refreshed.success && refreshed.data) {
         setUsers(refreshed.data);
       }
@@ -92,7 +94,7 @@ export default function PinList() {
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-white">Participant PINs</h1>
-        {isAdmin && adminUser?.serviceNumber === '5568' && (
+        {isSuperAdmin && (
           <div className="flex items-center gap-2">
             <Button onClick={assignPins} disabled={assigning}>{assigning ? 'Assigning…' : 'Assign Pins'}</Button>
             <Button onClick={exportCsv} className="hidden sm:inline-flex">Export CSV</Button>

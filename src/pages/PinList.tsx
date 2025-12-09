@@ -106,19 +106,11 @@ export default function PinList() {
     setSending(true);
     setSendInfo(null);
     try {
-      let res;
-      try {
-        res = await Promise.race([
-          sendPinEmails(adminToken!, adminUser!.serviceNumber),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000)),
-        ]);
-      } catch {
-        res = null as any;
-      }
-      if (res && res.success && res.data) {
+      const res = await sendPinEmails(adminToken!, adminUser!.serviceNumber);
+      if (res.success && res.data) {
         setSendInfo(`Sent: ${res.data.sent}, Skipped: ${res.data.skipped}`);
       } else {
-        setError(res?.error || 'Failed to send PIN emails');
+        setError(res.error || 'Failed to send PIN emails');
       }
     } finally {
       setSending(false);

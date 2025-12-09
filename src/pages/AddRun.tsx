@@ -31,7 +31,7 @@ interface UserData {
 
 export default function AddRun() {
   const navigate = useNavigate();
-  const { refreshData, isParticipant, participantUser } = useApp();
+  const { refreshData, isParticipant, participantUser, logoutParticipant } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get today's date in Maldives timezone (UTC+5) to match backend validation
@@ -364,10 +364,10 @@ export default function AddRun() {
         setIsSuccess(true);
         // Refresh dashboard data in background (don't wait)
         refreshData(true);
-        // Navigate to dashboard after short delay
         setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+          logoutParticipant();
+          window.location.reload();
+        }, 1200);
       } else {
         setErrors({
           general: response.error || 'Failed to add run. Please try again.',

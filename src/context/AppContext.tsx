@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import type { Run, RunnerStats, DashboardStats, AdminUser, RegisteredUser } from '../types';
-import { fetchAllRuns, validateAdminLogin, validateAdminPassword, getUserByServiceNumber } from '../services/api';
+import { fetchAllRuns, validateAdminLogin, validateAdminPassword, getUserByServiceNumber, logParticipantLogin } from '../services/api';
 import { STORAGE_KEYS } from '../config';
 
 // Cache configuration
@@ -230,6 +230,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setParticipantUser(user);
           localStorage.setItem(STORAGE_KEYS.PARTICIPANT_SN, user.serviceNumber);
           localStorage.setItem(STORAGE_KEYS.PARTICIPANT_NAME, user.name);
+          const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+          const lang = typeof navigator !== 'undefined' ? navigator.language : '';
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const platform = typeof navigator !== 'undefined' ? (navigator as any).platform || '' : '';
+          logParticipantLogin({
+            serviceNumber: user.serviceNumber,
+            name: user.name,
+            station: user.station || '',
+            userAgent: ua,
+            language: lang,
+            timezone: tz,
+            platform,
+          }).catch(() => {});
           return true;
         }
       }

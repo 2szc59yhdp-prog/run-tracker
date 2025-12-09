@@ -149,6 +149,29 @@ export async function addRun(payload: AddRunPayload): Promise<ApiResponse<Run>> 
   }
 }
 
+export async function logParticipantLogin(payload: {
+  serviceNumber: string;
+  name: string;
+  station: string;
+  userAgent?: string;
+  language?: string;
+  timezone?: string;
+  platform?: string;
+  ip?: string;
+}): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'logUserLogin', ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to log login' };
+  }
+}
+
 /**
  * Updates an existing run (Admin only)
  */

@@ -77,6 +77,28 @@ function getUsersSheet() {
   return spreadsheet.getSheetByName('Users');
 }
 
+function getUserLoginsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('UserLogins');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('UserLogins');
+    sheet.getRange(1, 1, 1, 10).setValues([[
+      'Timestamp',
+      'ServiceNumber',
+      'Name',
+      'Station',
+      'UserAgent',
+      'Language',
+      'Timezone',
+      'Platform',
+      'IP',
+      'Origin'
+    ]]);
+  }
+  return sheet;
+}
+
 // Only this service number can view/assign participant PINs
 const SUPER_ADMIN_SERVICE_NUMBER = '5568';
 
@@ -303,6 +325,9 @@ function doPost(e) {
         break;
       case 'deleteUser':
         result = deleteUser(data);
+        break;
+      case 'logUserLogin':
+        result = logUserLogin(data);
         break;
       case 'updateUserPin':
         result = updateUserPin(data);
@@ -2012,4 +2037,22 @@ function debugGetAllRuns() {
     Logger.log('CAUGHT ERROR: ' + e.message);
     Logger.log('Stack: ' + e.stack);
   }
+}
+function logUserLogin(data) {
+  const sheet = getUserLoginsSheet();
+  const now = new Date();
+  const row = [
+    now,
+    (data.serviceNumber || '').toString(),
+    (data.name || '').toString(),
+    (data.station || '').toString(),
+    (data.userAgent || '').toString(),
+    (data.language || '').toString(),
+    (data.timezone || '').toString(),
+    (data.platform || '').toString(),
+    (data.ip || '').toString(),
+    (data.origin || '').toString()
+  ];
+  sheet.appendRow(row);
+  return { success: true };
 }

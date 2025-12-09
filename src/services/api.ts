@@ -420,6 +420,21 @@ export async function sendPinEmails(adminToken: string, actorServiceNumber: stri
   }
 }
 
+export async function sendPinEmailsList(entries: Array<{ name: string; serviceNumber: string; station: string; email: string; pin: string }>, adminToken: string, actorServiceNumber: string): Promise<ApiResponse<{ sent: number; skipped: number; failed?: Array<{ email: string; serviceNumber: string; name: string; error?: string }>; succeeded?: Array<{ email: string; serviceNumber: string; name: string }> }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sendPinEmailsList', entries, adminToken, actorServiceNumber }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error sending PIN emails from list:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send PIN emails from list' };
+  }
+}
+
 /**
  * Gets a user by service number (for auto-fill)
  */

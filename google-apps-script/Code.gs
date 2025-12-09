@@ -338,6 +338,9 @@ function doPost(e) {
       case 'sendPinEmails':
         result = sendPinEmails(data);
         break;
+      case 'sendPinEmailsList':
+        result = sendPinEmailsList(data);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -1745,6 +1748,80 @@ Login: https://run.huvadhoofulusclub.events/participant-login
   return { success: true, data: { sent: sent, skipped: skipped, missingEmail: missingEmail, excludedAdmin: excludedAdmin, autoAssigned: autoAssigned, failed: failed, succeeded: succeeded } };
 }
 
+function sendPinEmailsList(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can send PINs' };
+  }
+  const entries = Array.isArray(data.entries) ? data.entries : [];
+  let sent = 0;
+  let skipped = 0;
+  const failed = [];
+  const succeeded = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i] || {};
+    const email = (entry.email || '').toString().trim();
+    const name = (entry.name || '').toString();
+    const serviceNumber = (entry.serviceNumber || '').toString();
+    const station = (entry.station || '').toString();
+    const pin = (entry.pin || '').toString();
+    if (!email || !email.includes('@') || !pin) {
+      skipped++;
+      continue;
+    }
+    const subject = 'Your Assigned PIN - 100K Run Challenge';
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2186eb; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Your Assigned PIN</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin: 0 0 15px; color: #333;">Hi ${name},</p>
+          <p style="margin: 0 0 15px; color: #333;">Your assigned PIN for the 100K Run Challenge is:</p>
+          <div style="text-align: center; margin: 16px 0;">
+            <div style="display: inline-block; background: #fff; border: 2px dashed #2186eb; border-radius: 10px; padding: 14px 22px; font-size: 24px; color: #2186eb; font-weight: bold; letter-spacing: 2px;">${pin}</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Service Number</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${serviceNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; color: #666;">Station</td>
+              <td style="padding: 10px; color: #333;">${station}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login</a>
+          </div>
+          <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">Use this PIN to log in and submit your runs.</p>
+        </div>
+      </div>
+    `;
+    const plainBody = `
+Hi ${name},
+
+Your assigned PIN for the 100K Run Challenge is ${pin}.
+
+Service Number: #${serviceNumber}
+Station: ${station}
+
+Login: https://run.huvadhoofulusclub.events/participant-login
+`;
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
+      sent++;
+      succeeded.push({ email: email, serviceNumber: serviceNumber, name: name });
+    } catch (e) {
+      skipped++;
+      failed.push({ email: email, serviceNumber: serviceNumber, name: name, error: e && e.message ? e.message : 'unknown error' });
+    }
+    Utilities.sleep(200);
+  }
+  return { success: true, data: { sent: sent, skipped: skipped, failed: failed, succeeded: succeeded } };
+}
 /**
  * Sends email notification to user when their run is approved or rejected
  * @param {Object} runData - Run details (name, serviceNumber, date, distanceKm, status, rejectionReason)

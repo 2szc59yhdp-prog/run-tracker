@@ -228,8 +228,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (pin === expectedPin) {
           setIsParticipant(true);
           setParticipantUser(user);
-          localStorage.setItem(STORAGE_KEYS.PARTICIPANT_SN, user.serviceNumber);
-          localStorage.setItem(STORAGE_KEYS.PARTICIPANT_NAME, user.name);
           const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
           const lang = typeof navigator !== 'undefined' ? navigator.language : '';
           const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -255,8 +253,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logoutParticipant = useCallback(() => {
     setIsParticipant(false);
     setParticipantUser(null);
-    localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_SN);
-    localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_NAME);
   }, []);
 
   // Initialize - check for existing admin session and load data
@@ -276,20 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    const participantSN = localStorage.getItem(STORAGE_KEYS.PARTICIPANT_SN);
-    if (participantSN) {
-      // Best-effort fetch of participant details
-      getUserByServiceNumber(participantSN).then((res) => {
-        if (res.success && res.data) {
-          setIsParticipant(true);
-          setParticipantUser(res.data);
-        } else {
-          // stale session
-          localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_SN);
-          localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_NAME);
-        }
-      });
-    }
+    // Do not auto-rehydrate participant sessions; force login each visit
     
     refreshData();
   }, [refreshData]);

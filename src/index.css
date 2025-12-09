@@ -189,11 +189,11 @@ button {
 }
 
 .pdf-capture .pdf-fix {
-  height: 36px;
-  line-height: 26px;
+  height: 24px;
+  line-height: 22px;
   vertical-align: middle !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
 }
 
 /* Prevent wrapping during PDF capture; keep visual UI unchanged */

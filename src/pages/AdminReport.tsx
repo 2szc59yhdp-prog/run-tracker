@@ -291,9 +291,11 @@ export default function AdminReport() {
 
   const targetBodyHeightPx = 620;
   const rowsCount = leaderboard.length || 1;
-  const rowHeightPx = pdfMode ? Math.max(20, Math.floor(targetBodyHeightPx / rowsCount)) : undefined;
-  const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 10, 16) : undefined;
-  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 22 ? 11 : 12) : undefined;
+  const maxRowHeightPx = 26;
+  const minRowHeightPx = 18;
+  const rowHeightPx = pdfMode ? Math.min(maxRowHeightPx, Math.max(minRowHeightPx, Math.floor(targetBodyHeightPx / rowsCount))) : undefined;
+  const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 4, 16) : undefined;
+  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 20 ? 11 : 12) : undefined;
 
   // -----------------------------
   //  TOTALS

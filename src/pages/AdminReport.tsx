@@ -297,7 +297,7 @@ export default function AdminReport() {
     <div className="max-w-7xl mx-auto px-4 py-8">
 
       {/* ------------------ PDF PAGES (CAPTURE-ONLY) ------------------ */}
-      <div className="pdf-capture">
+      <div className="pdf-capture" id="pdf-container">
       <div ref={pdfPage1Ref} style={pdfPageStyle}>
         <h2 className="text-xl font-bold text-accent-400 mb-1">
           Madaveli Police

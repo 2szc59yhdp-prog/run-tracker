@@ -113,14 +113,16 @@ export default function PinList() {
     try {
       const res = await sendPinEmails(adminToken!, adminUser!.serviceNumber);
       if (res && res.success && res.data) {
-        const parts = [`Sent: ${res.data.sent}`, `Skipped: ${res.data.skipped}`];
-        if (typeof res.data.autoAssigned === 'number') parts.push(`Auto-assigned PINs: ${res.data.autoAssigned}`);
-        if (typeof res.data.missingEmail === 'number') parts.push(`Missing emails: ${res.data.missingEmail}`);
-        if (typeof res.data.excludedAdmin === 'number') parts.push(`Excluded admin: ${res.data.excludedAdmin}`);
+        const d = res.data;
+        const parts = [`Sent: ${d.sent}`, `Skipped: ${d.skipped}`];
+        if (typeof d.autoAssigned === 'number') parts.push(`Auto-assigned PINs: ${d.autoAssigned}`);
+        if (typeof d.missingEmail === 'number') parts.push(`Missing emails: ${d.missingEmail}`);
+        if (typeof d.excludedAdmin === 'number') parts.push(`Excluded admin: ${d.excludedAdmin}`);
         setSendInfo(parts.join(', '));
-        if (res.data.failed && res.data.failed.length > 0) {
-          const top = res.data.failed.slice(0, 5).map(f => `${f.email} (${f.serviceNumber})`).join(', ');
-          setSendInfo(prev => `${prev}. Failures: ${res.data.failed.length}${top ? ` — e.g., ${top}` : ''}`);
+        const failedCount = (d.failed?.length ?? 0);
+        if (failedCount > 0) {
+          const top = (d.failed ?? []).slice(0, 5).map(f => `${f.email} (${f.serviceNumber})`).join(', ');
+          setSendInfo(prev => `${prev}. Failures: ${failedCount}${top ? ` — e.g., ${top}` : ''}`);
         }
       } else {
         setError(res?.error || 'Failed to send PIN emails');

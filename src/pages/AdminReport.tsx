@@ -51,6 +51,8 @@ export default function AdminReport() {
   const MIN_DISTANCE_KM = 100;
   const MIN_ACTIVE_DAYS = 40;
 
+  
+
   // PDF page refs
   const pdfPage1Ref = useRef<HTMLDivElement>(null);
   const pdfPage2Ref = useRef<HTMLDivElement>(null);
@@ -287,6 +289,12 @@ export default function AdminReport() {
     });
   }, [filteredApproved, users, startDate, endDate]);
 
+  const targetBodyHeightPx = 700;
+  const rowsCount = leaderboard.length || 1;
+  const rowHeightPx = pdfMode ? Math.max(20, Math.floor(targetBodyHeightPx / rowsCount)) : undefined;
+  const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 10, 16) : undefined;
+  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 22 ? 11 : 12) : undefined;
+
   // -----------------------------
   //  TOTALS
   // -----------------------------
@@ -405,7 +413,7 @@ export default function AdminReport() {
         <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
         <table
           className="text-sm"
-          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
+          style={{ width: "754px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums", fontSize: leaderboardFontSizePx ? `${leaderboardFontSizePx}px` : undefined }}
         >
           <colgroup>
             <col style={{ width: "48px" }} />
@@ -417,10 +425,10 @@ export default function AdminReport() {
           </colgroup>
 
           <thead>
-            <tr className="text-primary-400 border-b border-primary-700">
+            <tr className="text-primary-401 border-b border-primary-700">
               <th className="text-center py-2">#</th>
-              <th className="text-center">Name</th>
-              <th className="text-center">Station</th>
+              <th className="text-left">Name</th>
+              <th className="text-left">Station</th>
               <th className="text-center">Approved</th>
               <th className="text-center">Rejected</th>
               <th className="text-center">KM</th>
@@ -441,12 +449,12 @@ export default function AdminReport() {
                   : '';
               return (
               <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
-                <td className="pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.position}</td>
-                <td className="pdf-nowrap pdf-fix px-2 text-white text-center" style={{ lineHeight: "22px" }}>{p.name}</td>
-                <td className="pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{STATION_MAP[p.station] || p.station}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.approvedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.rejectedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{p.totalDistance.toFixed(1)}</td>
+                <td className="pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.position}</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-white text-left" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.name}</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-primary-300 text-left" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{STATION_MAP[p.station] || p.station}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.approvedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.rejectedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.totalDistance.toFixed(1)}</td>
               </tr>
               );
             })}
@@ -594,8 +602,8 @@ export default function AdminReport() {
                 <thead>
                   <tr className="text-primary-400 border-b border-primary-700">
                     <th className="text-center py-2">#</th>
-                    <th className="text-center">Name</th>
-                    <th className="text-center">Station</th>
+                    <th className="text-left">Name</th>
+                    <th className="text-left">Station</th>
                     <th className="text-center">Approved</th>
                     <th className="text-center">Rejected</th>
                     <th className="text-center">KM</th>
@@ -616,8 +624,8 @@ export default function AdminReport() {
                     return (
                       <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
                         <td className="px-2 text-primary-300 text-center">{p.position}</td>
-                        <td className="px-2 text-white text-center">{p.name}</td>
-                        <td className="px-2 text-primary-300 text-center">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
                         <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
                         <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
                         <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>

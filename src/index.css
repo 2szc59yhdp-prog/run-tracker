@@ -213,6 +213,5 @@ button {
 .pdf-capture table td,
 .pdf-capture table th {
   box-sizing: border-box;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
+  padding: 6px 8px !important;
 }

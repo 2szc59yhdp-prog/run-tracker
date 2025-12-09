@@ -344,9 +344,9 @@ export default function AdminReport() {
 
           <thead>
             <tr className="text-primary-400 border-b border-primary-700">
-              <th className="text-left py-2">#</th>
-              <th className="text-left">Name</th>
-              <th className="text-left">Station</th>
+              <th className="text-center py-2">#</th>
+              <th className="text-center">Name</th>
+              <th className="text-center">Station</th>
               <th className="text-center">Approved</th>
               <th className="text-center">Rejected</th>
               <th className="text-center">KM</th>
@@ -356,12 +356,12 @@ export default function AdminReport() {
           <tbody>
             {leaderboard.map((p) => (
               <tr key={p.serviceNumber} className="border-b border-primary-700">
-                <td className="pdf-fix justify-start px-2 text-primary-300" style={{ lineHeight: "22px" }}>{p.position}</td>
-                <td className="pdf-nowrap pdf-fix justify-start px-2 text-white" style={{ lineHeight: "22px" }}>{p.name}</td>
-                <td className="pdf-nowrap pdf-fix justify-start px-2 text-primary-300" style={{ lineHeight: "22px" }}>{STATION_MAP[p.station] || p.station}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.approvedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.rejectedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{p.totalDistance.toFixed(1)}</td>
+                <td className="pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.position}</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-white text-center" style={{ lineHeight: "22px" }}>{p.name}</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{STATION_MAP[p.station] || p.station}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.approvedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.rejectedRuns}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{p.totalDistance.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>
@@ -396,7 +396,7 @@ export default function AdminReport() {
 
           <thead>
             <tr className="text-primary-400 border-b border-primary-700">
-              <th className="text-left py-2">Station</th>
+              <th className="text-center py-2">Station</th>
               <th className="text-center">Runners</th>
               <th className="text-center">Runs</th>
               <th className="text-center">KM</th>
@@ -407,11 +407,11 @@ export default function AdminReport() {
           <tbody>
             {stationBoard.map((s) => (
               <tr key={s.station} className="border-b border-primary-700">
-                <td className="pdf-nowrap pdf-fix justify-start px-2 text-white" style={{ lineHeight: "22px" }}>{s.station}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix justify-center px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{((s.totalDistance / 500) * 100).toFixed(1)}%</td>
+                <td className="pdf-nowrap pdf-fix px-2 text-white text-center" style={{ lineHeight: "22px" }}>{s.station}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{((s.totalDistance / 500) * 100).toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>

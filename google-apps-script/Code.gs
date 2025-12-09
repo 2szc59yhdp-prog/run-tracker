@@ -1718,10 +1718,6 @@ function sendPinEmails(data) {
           </div>
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Service Number</td>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${serviceNumber}</td>
-            </tr>
-            <tr>
               <td style="padding: 10px; color: #666;">Station</td>
               <td style="padding: 10px; color: #333;">${station}</td>
             </tr>
@@ -1738,7 +1734,6 @@ Hi ${name},
 
 Your assigned PIN for the 100K Run Challenge is ${pin}.
 
-Service Number: #${serviceNumber}
 Station: ${station}
 
 Login: https://run.huvadhoofulusclub.events/participant-login
@@ -1746,11 +1741,11 @@ Login: https://run.huvadhoofulusclub.events/participant-login
     try {
       MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
       sent++;
-      succeeded.push({ email: email, serviceNumber: serviceNumber, name: name });
+      succeeded.push({ email: email, name: name });
     } catch (e) {
       Logger.log('Failed to send PIN to ' + email + ': ' + e.message);
       skipped++;
-      failed.push({ email: email, serviceNumber: serviceNumber, name: name, error: e && e.message ? e.message : 'unknown error' });
+      failed.push({ email: email, name: name, error: e && e.message ? e.message : 'unknown error' });
     }
     Utilities.sleep(200);
   }
@@ -1794,10 +1789,6 @@ function sendPinEmailsList(data) {
           </div>
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Service Number</td>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${serviceNumber}</td>
-            </tr>
-            <tr>
               <td style="padding: 10px; color: #666;">Station</td>
               <td style="padding: 10px; color: #333;">${station}</td>
             </tr>
@@ -1814,7 +1805,6 @@ Hi ${name},
 
 Your assigned PIN for the 100K Run Challenge is ${pin}.
 
-Service Number: #${serviceNumber}
 Station: ${station}
 
 Login: https://run.huvadhoofulusclub.events/participant-login
@@ -1822,10 +1812,10 @@ Login: https://run.huvadhoofulusclub.events/participant-login
     try {
       MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
       sent++;
-      succeeded.push({ email: email, serviceNumber: serviceNumber, name: name });
+      succeeded.push({ email: email, name: name });
     } catch (e) {
       skipped++;
-      failed.push({ email: email, serviceNumber: serviceNumber, name: name, error: e && e.message ? e.message : 'unknown error' });
+      failed.push({ email: email, name: name, error: e && e.message ? e.message : 'unknown error' });
     }
     Utilities.sleep(200);
   }
@@ -1920,10 +1910,6 @@ function processPinEmailQueue() {
           </div>
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Service Number</td>
-              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${serviceNumber}</td>
-            </tr>
-            <tr>
               <td style="padding: 10px; color: #666;">Station</td>
               <td style="padding: 10px; color: #333;">${station}</td>
             </tr>
@@ -1940,7 +1926,6 @@ Hi ${name},
 
 Your assigned PIN for the 100K Run Challenge is ${pin}.
 
-Service Number: #${serviceNumber}
 Station: ${station}
 
 Login: https://run.huvadhoofulusclub.events/participant-login

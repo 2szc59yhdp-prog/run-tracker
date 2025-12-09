@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import type { Run, RunnerStats, DashboardStats, AdminUser } from '../types';
-import { fetchAllRuns, validateAdminLogin, validateAdminPassword } from '../services/api';
+import type { Run, RunnerStats, DashboardStats, AdminUser, RegisteredUser } from '../types';
+import { fetchAllRuns, validateAdminLogin, validateAdminPassword, getUserByServiceNumber } from '../services/api';
 import { STORAGE_KEYS } from '../config';
 
 // Cache configuration
@@ -49,12 +49,17 @@ interface AppContextType {
   isAdmin: boolean;
   adminToken: string | null;
   adminUser: AdminUser | null;
+  // Participant state
+  isParticipant: boolean;
+  participantUser: RegisteredUser | null;
   
   // Actions
   refreshData: (silent?: boolean) => Promise<void>;
   loginAdmin: (serviceNumber: string, password: string) => Promise<boolean>;
   loginAdminLegacy: (password: string) => Promise<boolean>;
   logoutAdmin: () => void;
+  loginParticipant: (serviceNumber: string, pin: string) => Promise<boolean>;
+  logoutParticipant: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -68,6 +73,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isParticipant, setIsParticipant] = useState(false);
+  const [participantUser, setParticipantUser] = useState<RegisteredUser | null>(null);
   
   // Track if initial fetch is done
   const initialFetchDone = useRef(false);
@@ -208,6 +215,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('adminUser');
   }, []);
 
+  // Participant login with service number + PIN (placeholder: last 4 digits of phone)
+  const loginParticipant = useCallback(async (serviceNumber: string, pin: string): Promise<boolean> => {
+    try {
+      const res = await getUserByServiceNumber(serviceNumber.trim());
+      if (res.success && res.data) {
+        const user = res.data;
+        const expectedPin = (user.pin || '').trim() || (() => {
+          const phone = (user.phone || '').replace(/\D/g, '');
+          return phone ? phone.slice(-4) : '1234';
+        })();
+        if (pin === expectedPin) {
+          setIsParticipant(true);
+          setParticipantUser(user);
+          localStorage.setItem(STORAGE_KEYS.PARTICIPANT_SN, user.serviceNumber);
+          localStorage.setItem(STORAGE_KEYS.PARTICIPANT_NAME, user.name);
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const logoutParticipant = useCallback(() => {
+    setIsParticipant(false);
+    setParticipantUser(null);
+    localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_SN);
+    localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_NAME);
+  }, []);
+
   // Initialize - check for existing admin session and load data
   useEffect(() => {
     const storedToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
@@ -224,6 +262,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Invalid JSON, ignore
         }
       }
+    }
+    const participantSN = localStorage.getItem(STORAGE_KEYS.PARTICIPANT_SN);
+    if (participantSN) {
+      // Best-effort fetch of participant details
+      getUserByServiceNumber(participantSN).then((res) => {
+        if (res.success && res.data) {
+          setIsParticipant(true);
+          setParticipantUser(res.data);
+        } else {
+          // stale session
+          localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_SN);
+          localStorage.removeItem(STORAGE_KEYS.PARTICIPANT_NAME);
+        }
+      });
     }
     
     refreshData();
@@ -242,10 +294,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isAdmin,
         adminToken,
         adminUser,
+        isParticipant,
+        participantUser,
         refreshData,
         loginAdmin,
         loginAdminLegacy,
         logoutAdmin,
+        loginParticipant,
+        logoutParticipant,
       }}
     >
       {children}

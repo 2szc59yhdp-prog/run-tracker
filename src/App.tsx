@@ -4,11 +4,13 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import AddRun from './pages/AddRun';
 import AdminLogin from './pages/AdminLogin';
+import ParticipantLogin from './pages/ParticipantLogin';
 import Admin from './pages/Admin';
 import AdminReport from './pages/AdminReport';
 import { RegisteredUsers } from './pages/RegisteredUsers';
 import Sponsors from './pages/Sponsors';
 import Outstanding from './pages/Outstanding';
+import PinList from './pages/PinList';
 
 function App() {
   return (
@@ -18,9 +20,11 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="add-run" element={<AddRun />} />
+          <Route path="participant-login" element={<ParticipantLogin />} />
           <Route path="admin-login" element={<AdminLogin />} />
           <Route path="admin" element={<Admin />} />
           <Route path="admin/report" element={<AdminReport />} />
+          <Route path="admin/pins" element={<PinList />} />
           <Route path="admin/users" element={<RegisteredUsers />} />
           <Route path="admin/sponsors" element={<Sponsors />} />
           <Route path="admin/outstanding" element={<Outstanding />} />

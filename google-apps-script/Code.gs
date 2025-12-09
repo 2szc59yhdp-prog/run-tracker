@@ -77,6 +77,9 @@ function getUsersSheet() {
   return spreadsheet.getSheetByName('Users');
 }
 
+// Only this service number can view/assign participant PINs
+const SUPER_ADMIN_SERVICE_NUMBER = '5568';
+
 /**
  * Gets or creates the Run Photos folder in Google Drive
  * @returns {Folder} The photos folder
@@ -300,6 +303,12 @@ function doPost(e) {
         break;
       case 'deleteUser':
         result = deleteUser(data);
+        break;
+      case 'updateUserPin':
+        result = updateUserPin(data);
+        break;
+      case 'getUsersWithPins':
+        result = getUsersWithPins(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -868,6 +877,7 @@ function getAllUsers() {
   
   // Find admin column indices
   const isAdminColIndex = headers.indexOf('IsAdmin');
+  const pinColIndex = headers.indexOf('Pin');
   
   const users = [];
   for (let i = 1; i < data.length; i++) {
@@ -906,6 +916,8 @@ function getUserByServiceNumber(serviceNumber) {
   }
   
   const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const pinColIndex = headers.indexOf('Pin');
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -920,13 +932,89 @@ function getUserByServiceNumber(serviceNumber) {
           email: row[4].toString(),
           phone: row[5].toString(),
           station: row[6].toString(),
-          createdAt: formatDate(row[7])
+          createdAt: formatDate(row[7]),
+          pin: pinColIndex >= 0 ? (row[pinColIndex] || '').toString() : ''
         }
       };
     }
   }
   
   return { success: true, data: null };
+}
+
+/**
+ * Admin-only: Get all users including PINs
+ */
+function getUsersWithPins(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can access PINs' };
+  }
+  const sheet = getUsersSheet();
+  if (!sheet) return { success: false, error: 'Users sheet not found. Run setupUsersSheet() first.' };
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  const isAdminColIndex = headers.indexOf('IsAdmin');
+  const pinColIndex = headers.indexOf('Pin');
+  const users = [];
+  for (let i = 1; i < dataRange.length; i++) {
+    const row = dataRange[i];
+    if (row[0]) {
+      users.push({
+        id: row[0].toString(),
+        serviceNumber: row[1].toString(),
+        name: row[2].toString(),
+        rank: row[3].toString(),
+        email: row[4].toString(),
+        phone: row[5].toString(),
+        station: row[6].toString(),
+        createdAt: formatDate(row[7]),
+        isAdmin: isAdminColIndex >= 0 ? (row[isAdminColIndex] === true || row[isAdminColIndex] === 'TRUE' || row[isAdminColIndex] === 'true') : false,
+        pin: pinColIndex >= 0 ? (row[pinColIndex] || '').toString() : ''
+      });
+    }
+  }
+  return { success: true, data: users };
+}
+
+/**
+ * Admin-only: Update a user's PIN (writes to Users sheet 'Pin' column)
+ */
+function updateUserPin(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can assign PINs' };
+  }
+  if (!data.id || !data.pin) {
+    return { success: false, error: 'User ID and PIN are required' };
+  }
+  const sheet = getUsersSheet();
+  if (!sheet) return { success: false, error: 'Users sheet not found' };
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  const pinColIndex = headers.indexOf('Pin');
+  // Create Pin column if missing
+  if (pinColIndex === -1) {
+    sheet.insertColumnAfter(headers.length);
+    sheet.getRange(1, headers.length + 1).setValue('Pin');
+  }
+  const latestData = sheet.getDataRange().getValues();
+  const latestHeaders = latestData[0];
+  const latestPinColIndex = latestHeaders.indexOf('Pin');
+  let rowIndex = -1;
+  for (let i = 1; i < latestData.length; i++) {
+    if (latestData[i][0].toString() === data.id.toString()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  if (rowIndex === -1) return { success: false, error: 'User not found' };
+  sheet.getRange(rowIndex, latestPinColIndex + 1).setValue(data.pin.toString());
+  return { success: true, data: { id: data.id, pin: data.pin } };
 }
 
 /**

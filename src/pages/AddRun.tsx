@@ -31,7 +31,7 @@ interface UserData {
 
 export default function AddRun() {
   const navigate = useNavigate();
-  const { refreshData } = useApp();
+  const { refreshData, isParticipant, participantUser } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Get today's date in Maldives timezone (UTC+5) to match backend validation
@@ -62,6 +62,29 @@ export default function AddRun() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  // Gate page: require participant login
+  useEffect(() => {
+    if (!isParticipant) {
+      navigate('/participant-login', { replace: true });
+    }
+  }, [isParticipant, navigate]);
+
+  // Prefill participant details when logged in
+  useEffect(() => {
+    if (isParticipant && participantUser) {
+      setFormData(prev => ({
+        ...prev,
+        serviceNumber: participantUser.serviceNumber,
+        name: participantUser.name,
+        station: participantUser.station || '',
+      }));
+      setUserFound({
+        name: participantUser.name,
+        station: participantUser.station || '',
+        rank: (participantUser as any).rank,
+      });
+    }
+  }, [isParticipant, participantUser]);
   
   // Update date when page gains focus or every minute (in case user leaves page open)
   useEffect(() => {
@@ -324,10 +347,13 @@ export default function AddRun() {
       }
 
       // If no duplicate, submit the run
+      const finalServiceNumber = isParticipant && participantUser ? participantUser.serviceNumber : formData.serviceNumber.trim();
+      const finalName = isParticipant && participantUser ? participantUser.name : formData.name.trim();
+      const finalStation = isParticipant && participantUser ? (participantUser.station || '') : formData.station.trim();
       const response = await addRun({
-        serviceNumber: formData.serviceNumber.trim(),
-        name: formData.name.trim(),
-        station: formData.station.trim(),
+        serviceNumber: finalServiceNumber,
+        name: finalName,
+        station: finalStation,
         date: formData.date,
         distanceKm: parseFloat(formData.distanceKm),
         distanceDisplay: formData.distanceKm,
@@ -356,6 +382,9 @@ export default function AddRun() {
       setIsSubmitting(false);
     }
   };
+
+  const showSearchButton = !userFound && !isParticipant;
+  const showResetButton = !!userFound && !isParticipant;
 
   if (isSuccess) {
     return (
@@ -420,7 +449,7 @@ export default function AddRun() {
           Log Your Run
         </h2>
         <p className="text-primary-400">
-          Search your service number to get started
+          {isParticipant ? 'You are logged in. Your profile is prefilled below.' : 'Search your service number to get started'}
         </p>
       </div>
 
@@ -456,6 +485,7 @@ export default function AddRun() {
                   maxLength={5}
                   value={formData.serviceNumber}
                   onChange={(e) => {
+                    if (isParticipant) return;
                     // Allow C + 4 digits (civil staff) or just 4 digits (police)
                     let value = e.target.value.toUpperCase();
                     if (value.startsWith('C')) {
@@ -476,7 +506,7 @@ export default function AddRun() {
                     }
                   }}
                   placeholder="e.g. 5568"
-                  disabled={!!userFound}
+                  disabled={isParticipant || !!userFound}
                   className={`
                     w-full px-4 py-3 bg-primary-800/50 border rounded-xl text-white placeholder-primary-500
                     outline-none ring-0 focus:ring-2 focus:ring-inset transition-all duration-200 pl-12
@@ -486,7 +516,7 @@ export default function AddRun() {
                   `}
                 />
               </div>
-              {!userFound ? (
+              {showSearchButton && (
                 <Button
                   type="button"
                   onClick={handleSearch}
@@ -499,7 +529,8 @@ export default function AddRun() {
                     <Search className="w-5 h-5" />
                   )}
                 </Button>
-              ) : (
+              )}
+              {showResetButton && (
                 <Button
                   type="button"
                   variant="secondary"

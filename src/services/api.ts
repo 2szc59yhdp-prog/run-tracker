@@ -343,6 +343,46 @@ export async function fetchAllUsers(): Promise<ApiResponse<RegisteredUser[]>> {
 }
 
 /**
+ * Secure: Fetches all registered users WITH pins (Admin only, 5568)
+ */
+export async function fetchAllUsersWithPins(adminToken: string, actorServiceNumber: string): Promise<ApiResponse<RegisteredUser[]>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getUsersWithPins',
+        adminToken,
+        actorServiceNumber,
+      }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching users with pins:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch users with pins' };
+  }
+}
+
+/**
+ * Secure: Updates a user's PIN (Admin only, 5568)
+ */
+export async function updateUserPin(userId: string, pin: string, adminToken: string, actorServiceNumber: string): Promise<ApiResponse<RegisteredUser>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateUserPin', id: userId, pin, adminToken, actorServiceNumber }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating user pin:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update user pin' };
+  }
+}
+
+/**
  * Gets a user by service number (for auto-fill)
  */
 export async function getUserByServiceNumber(

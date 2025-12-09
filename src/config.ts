@@ -20,6 +20,8 @@ export const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'RunTracker
 // Local storage keys
 export const STORAGE_KEYS = {
   ADMIN_TOKEN: 'run_tracker_admin_token',
+  PARTICIPANT_SN: 'run_tracker_participant_sn',
+  PARTICIPANT_NAME: 'run_tracker_participant_name',
 } as const;
 
 // App constants

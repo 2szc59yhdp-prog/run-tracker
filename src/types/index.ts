@@ -39,6 +39,7 @@ export interface RegisteredUser {
   createdAt?: string;
   isAdmin?: boolean;        // Whether user has admin privileges
   adminPassword?: string;   // Admin password (only for admins)
+  pin?: string;             // Permanent participant PIN (admin-managed)
 }
 
 export interface AddUserPayload {

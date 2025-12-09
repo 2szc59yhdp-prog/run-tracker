@@ -57,6 +57,7 @@ export default function PinList() {
       name: u.name,
       serviceNumber: u.serviceNumber,
       station: u.station,
+      email: (u.email || '').trim(),
       pin: (u.pin && u.pin.trim()) || generatePin(u),
     })).sort((a, b) => a.name.localeCompare(b.name));
   }, [participants]);
@@ -130,8 +131,8 @@ export default function PinList() {
   };
 
   const exportCsv = () => {
-    const header = 'Name,Service Number,Station,PIN';
-    const lines = rows.map(r => `${JSON.stringify(r.name)},${JSON.stringify(r.serviceNumber)},${JSON.stringify(r.station)},${JSON.stringify(r.pin)}`);
+    const header = 'Name,Service Number,Station,Email,PIN';
+    const lines = rows.map(r => `${JSON.stringify(r.name)},${JSON.stringify(r.serviceNumber)},${JSON.stringify(r.station)},${JSON.stringify(r.email)},${JSON.stringify(r.pin)}`);
     const csv = [header, ...lines].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -162,16 +163,18 @@ export default function PinList() {
           <div className="overflow-x-auto">
             <table className="min-w-full table-fixed">
               <colgroup>
-                <col className="w-[36%]" />
-                <col className="w-[18%]" />
-                <col className="w-[28%]" />
-                <col className="w-[18%]" />
+                <col className="w-[30%]" />
+                <col className="w-[14%]" />
+                <col className="w-[22%]" />
+                <col className="w-[20%]" />
+                <col className="w-[14%]" />
               </colgroup>
               <thead>
                 <tr className="text-primary-200">
                   <th className="text-left px-3 py-2">Name</th>
                   <th className="text-center px-3 py-2">Service #</th>
                   <th className="text-left px-3 py-2">Station</th>
+                  <th className="text-left px-3 py-2">Email</th>
                   <th className="text-center px-3 py-2">PIN</th>
                 </tr>
               </thead>
@@ -181,6 +184,7 @@ export default function PinList() {
                     <td className="px-3 py-2 text-white">{r.name}</td>
                     <td className="px-3 py-2 text-primary-100 text-center">{r.serviceNumber}</td>
                     <td className="px-3 py-2 text-primary-100">{r.station}</td>
+                    <td className="px-3 py-2 text-primary-100 truncate">{r.email || '-'}</td>
                     <td className="px-3 py-2 text-accent-300 text-center font-mono">{r.pin}</td>
                   </tr>
                 ))}

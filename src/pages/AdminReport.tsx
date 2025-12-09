@@ -291,11 +291,11 @@ export default function AdminReport() {
 
   const targetBodyHeightPx = 620;
   const rowsCount = leaderboard.length || 1;
-  const maxRowHeightPx = 26;
-  const minRowHeightPx = 18;
+  const maxRowHeightPx = 22;
+  const minRowHeightPx = 16;
   const rowHeightPx = pdfMode ? Math.min(maxRowHeightPx, Math.max(minRowHeightPx, Math.floor(targetBodyHeightPx / rowsCount))) : undefined;
   const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 4, 16) : undefined;
-  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 20 ? 11 : 12) : undefined;
+  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 18 ? 10 : 11) : undefined;
 
   // -----------------------------
   //  TOTALS
@@ -365,10 +365,11 @@ export default function AdminReport() {
     background: "#102a43",
     color: "#ffffff",
     padding: "32px",
-    fontSize: "12px",
+    fontSize: "11px",
+    fontFamily: "Helvetica, Arial, sans-serif",
     position: "absolute",
     top: "0",
-    left: "0",
+    left: "" + "0",
     opacity: pdfMode ? 1 : 0,
     visibility: pdfMode ? "visible" : "hidden",
     pointerEvents: "none",

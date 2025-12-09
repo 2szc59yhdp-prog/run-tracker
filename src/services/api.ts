@@ -424,7 +424,7 @@ export async function sendPinEmailsList(entries: Array<{ name: string; serviceNu
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'sendPinEmailsList', entries, adminToken, actorServiceNumber }),
+      body: JSON.stringify({ action: 'enqueuePinEmailsList', entries, adminToken, actorServiceNumber }),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
@@ -432,6 +432,34 @@ export async function sendPinEmailsList(entries: Array<{ name: string; serviceNu
   } catch (error) {
     console.error('Error sending PIN emails from list:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send PIN emails from list' };
+  }
+}
+
+export async function getEmailQuota(adminToken: string): Promise<ApiResponse<{ remaining: number }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getEmailQuota', adminToken }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get email quota' };
+  }
+}
+
+export async function getPinEmailQueueStatus(adminToken: string, actorServiceNumber: string): Promise<ApiResponse<{ sent: Array<{ email: string; name: string; sentAt?: string }>; failed: Array<{ email: string; name: string; error?: string }>; pending: Array<{ email: string; name: string }>; counts: { sent: number; failed: number; pending: number }; remaining: number }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getPinEmailQueueStatus', adminToken, actorServiceNumber }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get PIN email queue status' };
   }
 }
 

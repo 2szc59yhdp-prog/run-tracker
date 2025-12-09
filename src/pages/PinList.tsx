@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { fetchAllUsersWithPins, sendPinEmailsList } from '../services/api';
+import { fetchAllUsersWithPins, sendPinEmailsList, getEmailQuota, getPinEmailQueueStatus } from '../services/api';
 import { useApp } from '../context/AppContext';
 import type { RegisteredUser } from '../types';
 
@@ -22,6 +22,13 @@ export default function PinList() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendInfo, setSendInfo] = useState<string | null>(null);
+  const [queueStatus, setQueueStatus] = useState<{
+    sent: Array<{ email: string; name: string; sentAt?: string }>;
+    failed: Array<{ email: string; name: string; error?: string }>;
+    pending: Array<{ email: string; name: string }>;
+    counts?: { sent: number; failed: number; pending: number };
+    remaining?: number;
+  } | null>(null);
 
   const isSuperAdmin = !!(isAdmin && adminToken && (adminUser?.serviceNumber?.toString().trim() === '5568'));
 
@@ -43,6 +50,22 @@ export default function PinList() {
       setError('Failed to fetch users');
       setLoading(false);
     });
+  }, [isSuperAdmin, adminToken, adminUser]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let timer: number | undefined;
+    const fetchQueue = async () => {
+      const res = await getPinEmailQueueStatus(adminToken!, adminUser!.serviceNumber);
+      if (res.success && res.data) {
+        setQueueStatus(res.data);
+      }
+    };
+    fetchQueue();
+    timer = window.setInterval(fetchQueue, 15000);
+    return () => {
+      if (timer) window.clearInterval(timer);
+    };
   }, [isSuperAdmin, adminToken, adminUser]);
 
   const participants = useMemo(() => {
@@ -70,15 +93,11 @@ export default function PinList() {
       const entries = rows.map(r => ({ name: r.name, serviceNumber: r.serviceNumber, station: r.station, email: r.email || '', pin: r.pin }));
       const res = await sendPinEmailsList(entries, adminToken!, adminUser!.serviceNumber);
       if (res && res.success && res.data) {
-        const d = res.data;
-        const parts = [`Sent: ${d.sent}`, `Skipped: ${d.skipped}`];
+        const quota = await getEmailQuota(adminToken!);
+        const remaining = quota.success && quota.data ? quota.data.remaining : undefined;
+        const parts = [`Queued: ${entries.length}`];
+        if (typeof remaining === 'number') parts.push(`Remaining daily quota: ${remaining}`);
         setSendInfo(parts.join(', '));
-        const failedCount = (d.failed?.length ?? 0);
-        if (failedCount > 0) {
-          const top = (d.failed ?? []).slice(0, 5).map(f => `${f.email} (${f.serviceNumber})`).join(', ');
-          const reason = (d.failed ?? [])[0]?.error ? ` — reason: ${(d.failed ?? [])[0]?.error}` : '';
-          setSendInfo(prev => `${prev}. Failures: ${failedCount}${top ? ` — e.g., ${top}` : ''}${reason}`);
-        }
       } else {
         setError(res?.error || 'Failed to send PIN emails');
       }
@@ -115,6 +134,37 @@ export default function PinList() {
         {loading && <p className="text-primary-300">Loading...</p>}
         {error && !loading && <p className="text-danger-500">{error}</p>}
         {!error && sendInfo && <p className="text-success-500">{sendInfo}</p>}
+        {!error && queueStatus && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <h2 className="text-primary-200 font-semibold mb-2">Sent</h2>
+              <div className="space-y-1 max-h-56 overflow-auto pr-2">
+                {queueStatus.sent.length === 0 && <p className="text-primary-400">None</p>}
+                {queueStatus.sent.map((e, idx) => (
+                  <div key={`sent-${idx}`} className="text-success-500 text-sm">{e.email}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-primary-200 font-semibold mb-2">Failed</h2>
+              <div className="space-y-1 max-h-56 overflow-auto pr-2">
+                {queueStatus.failed.length === 0 && <p className="text-primary-400">None</p>}
+                {queueStatus.failed.map((e, idx) => (
+                  <div key={`failed-${idx}`} className="text-danger-500 text-sm">{e.email}</div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-primary-200 font-semibold mb-2">Pending</h2>
+              <div className="space-y-1 max-h-56 overflow-auto pr-2">
+                {queueStatus.pending.length === 0 && <p className="text-primary-400">None</p>}
+                {queueStatus.pending.map((e, idx) => (
+                  <div key={`pending-${idx}`} className="text-primary-300 text-sm">{e.email}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {!loading && !error && (
           <div className="overflow-x-auto">
             <table className="min-w-full table-fixed">

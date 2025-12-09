@@ -341,6 +341,15 @@ function doPost(e) {
       case 'sendPinEmailsList':
         result = sendPinEmailsList(data);
         break;
+      case 'enqueuePinEmailsList':
+        result = enqueuePinEmailsList(data);
+        break;
+      case 'getPinEmailQueueStatus':
+        result = getPinEmailQueueStatus(data);
+        break;
+      case 'getEmailQuota':
+        result = { success: true, data: { remaining: MailApp.getRemainingDailyQuota() } };
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -1821,6 +1830,182 @@ Login: https://run.huvadhoofulusclub.events/participant-login
     Utilities.sleep(200);
   }
   return { success: true, data: { sent: sent, skipped: skipped, failed: failed, succeeded: succeeded } };
+}
+
+function getPinEmailQueueSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('PinEmailQueue');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('PinEmailQueue');
+    const headers = ['Email', 'Name', 'ServiceNumber', 'Station', 'Pin', 'Status', 'LastError', 'EnqueuedAt', 'SentAt'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function enqueuePinEmailsList(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can enqueue PINs' };
+  }
+  const entries = Array.isArray(data.entries) ? data.entries : [];
+  const sheet = getPinEmailQueueSheet();
+  const now = new Date();
+  const rows = [];
+  entries.forEach(e => {
+    const email = (e.email || '').toString().trim();
+    const pin = (e.pin || '').toString().trim();
+    if (!email || !email.includes('@') || !pin) return;
+    rows.push([
+      email,
+      (e.name || '').toString(),
+      (e.serviceNumber || '').toString(),
+      (e.station || '').toString(),
+      pin,
+      'pending',
+      '',
+      now,
+      ''
+    ]);
+  });
+  if (rows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  }
+  const remaining = MailApp.getRemainingDailyQuota();
+  return { success: true, data: { queued: rows.length, remaining: remaining } };
+}
+
+function processPinEmailQueue() {
+  const sheet = getPinEmailQueueSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const statusCol = headers.indexOf('Status');
+  const lastErrorCol = headers.indexOf('LastError');
+  const emailCol = headers.indexOf('Email');
+  const nameCol = headers.indexOf('Name');
+  const snCol = headers.indexOf('ServiceNumber');
+  const stationCol = headers.indexOf('Station');
+  const pinCol = headers.indexOf('Pin');
+  const sentAtCol = headers.indexOf('SentAt');
+  let remaining = MailApp.getRemainingDailyQuota();
+  for (let i = 1; i < data.length; i++) {
+    if (remaining <= 0) break;
+    const row = data[i];
+    if ((row[statusCol] || '').toString() !== 'pending') continue;
+    const email = (row[emailCol] || '').toString().trim();
+    const name = (row[nameCol] || '').toString();
+    const serviceNumber = (row[snCol] || '').toString();
+    const station = (row[stationCol] || '').toString();
+    const pin = (row[pinCol] || '').toString();
+    if (!email || !email.includes('@') || !pin) {
+      sheet.getRange(i + 1, statusCol + 1).setValue('error');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue('Invalid email or pin');
+      continue;
+    }
+    const subject = 'Your Assigned PIN - 100K Run Challenge';
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2186eb; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Your Assigned PIN</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin: 0 0 15px; color: #333;">Hi ${name},</p>
+          <p style="margin: 0 0 15px; color: #333;">Your assigned PIN for the 100K Run Challenge is:</p>
+          <div style="text-align: center; margin: 16px 0;">
+            <div style="display: inline-block; background: #fff; border: 2px dashed #2186eb; border-radius: 10px; padding: 14px 22px; font-size: 24px; color: #2186eb; font-weight: bold; letter-spacing: 2px;">${pin}</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Service Number</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">#${serviceNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; color: #666;">Station</td>
+              <td style="padding: 10px; color: #333;">${station}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login</a>
+          </div>
+          <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">Use this PIN to log in and submit your runs.</p>
+        </div>
+      </div>
+    `;
+    const plainBody = `
+Hi ${name},
+
+Your assigned PIN for the 100K Run Challenge is ${pin}.
+
+Service Number: #${serviceNumber}
+Station: ${station}
+
+Login: https://run.huvadhoofulusclub.events/participant-login
+`;
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
+      sheet.getRange(i + 1, statusCol + 1).setValue('sent');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue('');
+      sheet.getRange(i + 1, sentAtCol + 1).setValue(new Date());
+      remaining--;
+    } catch (e) {
+      sheet.getRange(i + 1, statusCol + 1).setValue('error');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue(e && e.message ? e.message : 'unknown error');
+    }
+    Utilities.sleep(300);
+  }
+  return { success: true, data: { remaining: remaining } };
+}
+
+function setupPinEmailQueueTrigger() {
+  ScriptApp.newTrigger('processPinEmailQueue').timeBased().everyHours(1).create();
+  return { success: true };
+}
+
+function getPinEmailQueueStatus(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can view PIN email queue' };
+  }
+  const sheet = getPinEmailQueueSheet();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const statusCol = headers.indexOf('Status');
+  const emailCol = headers.indexOf('Email');
+  const nameCol = headers.indexOf('Name');
+  const lastErrorCol = headers.indexOf('LastError');
+  const sentAtCol = headers.indexOf('SentAt');
+  const sent = [];
+  const failed = [];
+  const pending = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const status = (row[statusCol] || '').toString();
+    const email = (row[emailCol] || '').toString();
+    const name = (row[nameCol] || '').toString();
+    if (status === 'sent') {
+      sent.push({ email: email, name: name, sentAt: row[sentAtCol] ? formatDateTime(row[sentAtCol]) : '' });
+    } else if (status === 'error') {
+      failed.push({ email: email, name: name, error: (row[lastErrorCol] || '').toString() });
+    } else if (status === 'pending') {
+      pending.push({ email: email, name: name });
+    }
+  }
+  return {
+    success: true,
+    data: {
+      sent: sent,
+      failed: failed,
+      pending: pending,
+      counts: { sent: sent.length, failed: failed.length, pending: pending.length },
+      remaining: MailApp.getRemainingDailyQuota()
+    }
+  };
 }
 /**
  * Sends email notification to user when their run is approved or rejected

@@ -48,6 +48,8 @@ export default function AdminReport() {
   const [endDate, setEndDate] = useState("2026-01-31");
   const [generating, setGenerating] = useState(false);
   const [pdfMode, setPdfMode] = useState(false);
+  const MIN_DISTANCE_KM = 100;
+  const MIN_ACTIVE_DAYS = 40;
 
   // PDF page refs
   const pdfPage1Ref = useRef<HTMLDivElement>(null);
@@ -189,29 +191,96 @@ export default function AdminReport() {
         totalDistance: number;
         runners: number;
         runCount: number;
+        participants: number;
+        runnerProgresses: number[];
+        performancePercent: number;
+        finishers: number;
       }
     >();
 
     STATION_ORDER.forEach((s) =>
-      map.set(s, { totalDistance: 0, runners: 0, runCount: 0 })
+      map.set(s, { totalDistance: 0, runners: 0, runCount: 0, participants: 0, runnerProgresses: [], performancePercent: 0, finishers: 0 })
     );
 
-    // Aggregate by station
-    leaderboard.forEach((lb) => {
-      const mapped = STATION_MAP[lb.station];
-      if (!mapped) return;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const allDays: string[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      allDays.push(cursor.toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' }));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    const challengeDayCount = allDays.length;
 
-      const entry = map.get(mapped)!;
-      entry.totalDistance += lb.totalDistance;
-      entry.runners += lb.totalDistance > 0 ? 1 : 0;
-      entry.runCount += lb.approvedRuns + lb.rejectedRuns;
+    const datesByUser = new Map<string, Set<string>>();
+    filteredApproved.forEach((r) => {
+      const set = datesByUser.get(r.serviceNumber) || new Set<string>();
+      set.add(r.date);
+      datesByUser.set(r.serviceNumber, set);
     });
 
-    return Array.from(map.entries()).map(([station, stats]) => ({
-      station,
-      ...stats,
-    }));
-  }, [leaderboard]);
+    const distanceByUser = new Map<string, number>();
+    filteredApproved.forEach((r) => {
+      distanceByUser.set(r.serviceNumber, (distanceByUser.get(r.serviceNumber) || 0) + Number(r.distanceKm || 0));
+    });
+
+    const participants = users.filter((u) => u.station !== 'General Admin');
+    const participantsCountByStation = new Map<string, number>();
+    participants.forEach((u) => {
+      const mapped = STATION_MAP[u.station];
+      if (!mapped) return;
+      participantsCountByStation.set(mapped, (participantsCountByStation.get(mapped) || 0) + 1);
+    });
+
+    participants.forEach((u) => {
+      const mapped = STATION_MAP[u.station];
+      if (!mapped) return;
+      const set = datesByUser.get(u.serviceNumber) || new Set<string>();
+      let coveredDays = 0;
+      for (const d of allDays) {
+        if (set.has(d)) coveredDays += 1;
+      }
+      const totalDistanceForUser = distanceByUser.get(u.serviceNumber) || 0;
+      const distanceProgress = Math.min((totalDistanceForUser / MIN_DISTANCE_KM) * 100, 100);
+      const daysProgress = Math.min((coveredDays / MIN_ACTIVE_DAYS) * 100, 100);
+      let runnerProgress = Math.min(distanceProgress, daysProgress);
+      const dailyActive = challengeDayCount > 0 && coveredDays === challengeDayCount;
+      if (dailyActive) {
+        runnerProgress = Math.min(runnerProgress * 1.15, 100);
+      }
+      const finisher = totalDistanceForUser >= MIN_DISTANCE_KM && coveredDays >= MIN_ACTIVE_DAYS;
+
+      const entry = map.get(mapped)!;
+      entry.totalDistance += totalDistanceForUser;
+      entry.runners += totalDistanceForUser > 0 ? 1 : 0;
+      entry.runCount += (set.size || 0); // approximate run days
+      entry.participants = participantsCountByStation.get(mapped) || 0;
+      entry.runnerProgresses.push(runnerProgress);
+      entry.finishers += finisher ? 1 : 0;
+    });
+
+    const result = Array.from(map.entries()).map(([station, stats]) => {
+      const sorted = [...stats.runnerProgresses].sort((a, b) => b - a);
+      const slots = 5;
+      let sumTop = 0;
+      for (let i = 0; i < slots; i++) {
+        sumTop += sorted[i] ?? 0;
+      }
+      const performancePercent = sumTop / slots;
+      return {
+        station,
+        totalDistance: stats.totalDistance,
+        runners: stats.runners,
+        runCount: stats.runCount,
+        participants: stats.participants,
+        runnerProgresses: stats.runnerProgresses,
+        performancePercent,
+        finishers: stats.finishers,
+      };
+    });
+
+    return result;
+  }, [filteredApproved, users, startDate, endDate]);
 
   // -----------------------------
   //  TOTALS
@@ -411,7 +480,7 @@ export default function AdminReport() {
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{((s.totalDistance / 500) * 100).toFixed(1)}%</td>
+                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.performancePercent.toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
@@ -561,7 +630,7 @@ export default function AdminReport() {
                       <td className="px-2 text-primary-300 text-center">{s.runners}</td>
                       <td className="px-2 text-primary-300 text-center">{s.runCount}</td>
                       <td className="px-2 text-success-400 text-center font-bold">{s.totalDistance.toFixed(1)}</td>
-                      <td className="px-2 text-accent-400 text-center font-bold">{((s.totalDistance / 500) * 100).toFixed(1)}%</td>
+                      <td className="px-2 text-accent-400 text-center font-bold">{s.performancePercent.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>

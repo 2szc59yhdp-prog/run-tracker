@@ -107,10 +107,14 @@ export default function PinList() {
     setSendInfo(null);
     try {
       const res = await sendPinEmails(adminToken!, adminUser!.serviceNumber);
-      if (res.success && res.data) {
-        setSendInfo(`Sent: ${res.data.sent}, Skipped: ${res.data.skipped}`);
+      if (res && res.success && res.data) {
+        const parts = [`Sent: ${res.data.sent}`, `Skipped: ${res.data.skipped}`];
+        if (typeof res.data.autoAssigned === 'number') parts.push(`Auto-assigned PINs: ${res.data.autoAssigned}`);
+        if (typeof res.data.missingEmail === 'number') parts.push(`Missing emails: ${res.data.missingEmail}`);
+        if (typeof res.data.excludedAdmin === 'number') parts.push(`Excluded admin: ${res.data.excludedAdmin}`);
+        setSendInfo(parts.join(', '));
       } else {
-        setError(res.error || 'Failed to send PIN emails');
+        setError(res?.error || 'Failed to send PIN emails');
       }
     } finally {
       setSending(false);

@@ -405,7 +405,7 @@ export async function updateUserPin(userId: string, pin: string, adminToken: str
   }
 }
 
-export async function sendPinEmails(adminToken: string, actorServiceNumber: string): Promise<ApiResponse<{ sent: number; skipped: number }>> {
+export async function sendPinEmails(adminToken: string, actorServiceNumber: string): Promise<ApiResponse<{ sent: number; skipped: number; missingEmail?: number; excludedAdmin?: number; autoAssigned?: number }>> {
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',

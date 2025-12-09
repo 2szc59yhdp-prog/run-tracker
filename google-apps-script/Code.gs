@@ -1644,28 +1644,51 @@ function sendPinEmails(data) {
   const dataRange = sheet.getDataRange().getValues();
   const headers = dataRange[0];
   const emailColIndex = headers.indexOf('Email');
-  const pinColIndex = headers.indexOf('Pin');
+  let pinColIndex = headers.indexOf('Pin');
   const nameColIndex = headers.indexOf('Name');
   const serviceNumberColIndex = headers.indexOf('ServiceNumber');
   const stationColIndex = headers.indexOf('Station');
   if (emailColIndex === -1 || nameColIndex === -1 || serviceNumberColIndex === -1 || stationColIndex === -1) {
     return { success: false, error: 'Required columns missing in Users sheet' };
   }
+  if (pinColIndex === -1) {
+    sheet.insertColumnAfter(headers.length);
+    sheet.getRange(1, headers.length + 1).setValue('Pin');
+    const latestData = sheet.getDataRange().getValues();
+    const latestHeaders = latestData[0];
+    pinColIndex = latestHeaders.indexOf('Pin');
+  }
   let sent = 0;
   let skipped = 0;
+  let missingEmail = 0;
+  let excludedAdmin = 0;
+  let autoAssigned = 0;
   for (let i = 1; i < dataRange.length; i++) {
     const row = dataRange[i];
     const station = row[stationColIndex] ? row[stationColIndex].toString() : '';
     if (!station || station === 'General Admin') {
+      excludedAdmin++;
       continue;
     }
     const email = row[emailColIndex] ? row[emailColIndex].toString().trim() : '';
-    const pin = pinColIndex >= 0 ? (row[pinColIndex] || '').toString().trim() : '';
+    let pin = pinColIndex >= 0 ? (row[pinColIndex] || '').toString().trim() : '';
     const name = row[nameColIndex] ? row[nameColIndex].toString() : '';
     const serviceNumber = row[serviceNumberColIndex] ? row[serviceNumberColIndex].toString() : '';
-    if (!email || !email.includes('@') || !pin) {
+    if (!email || !email.includes('@')) {
       skipped++;
+      missingEmail++;
       continue;
+    }
+    if (!pin) {
+      const base = serviceNumber + '|' + (email || '') + '|pins-v1';
+      let h = 0;
+      for (let j = 0; j < base.length; j++) {
+        h = (h * 31 + base.charCodeAt(j)) >>> 0;
+      }
+      const n = h % 10000;
+      pin = ('0000' + n.toString()).slice(-4);
+      sheet.getRange(i + 1, pinColIndex + 1).setValue(pin);
+      autoAssigned++;
     }
     const subject = 'Your Assigned PIN - 100K Run Challenge';
     const htmlBody = `
@@ -1714,7 +1737,7 @@ Login: https://run.huvadhoofulusclub.events/participant-login
       skipped++;
     }
   }
-  return { success: true, data: { sent: sent, skipped: skipped } };
+  return { success: true, data: { sent: sent, skipped: skipped, missingEmail: missingEmail, excludedAdmin: excludedAdmin, autoAssigned: autoAssigned } };
 }
 
 /**

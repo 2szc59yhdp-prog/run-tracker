@@ -30,10 +30,12 @@ export default function PinList() {
     remaining?: number;
   } | null>(null);
 
-  const isSuperAdmin = !!(isAdmin && adminToken && (adminUser?.serviceNumber?.toString().trim() === '5568'));
+  const sn = (adminUser?.serviceNumber?.toString().trim() || '');
+  const isPinsAdmin = !!(isAdmin && adminToken && (['5568', '4059', '6149'].includes(sn)));
+  const isSenderAdmin = sn === '5568';
 
   useEffect(() => {
-    if (!isSuperAdmin) {
+    if (!isPinsAdmin) {
       setError('Unauthorized');
       setLoading(false);
       return;
@@ -50,10 +52,10 @@ export default function PinList() {
       setError('Failed to fetch users');
       setLoading(false);
     });
-  }, [isSuperAdmin, adminToken, adminUser]);
+  }, [isPinsAdmin, adminToken, adminUser]);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!isPinsAdmin) return;
     let timer: number | undefined;
     const fetchQueue = async () => {
       const res = await getPinEmailQueueStatus(adminToken!, adminUser!.serviceNumber);
@@ -66,7 +68,7 @@ export default function PinList() {
     return () => {
       if (timer) window.clearInterval(timer);
     };
-  }, [isSuperAdmin, adminToken, adminUser]);
+  }, [isPinsAdmin, adminToken, adminUser]);
 
   const participants = useMemo(() => {
     return users.filter(u => u.station && u.station !== 'General Admin');
@@ -83,7 +85,7 @@ export default function PinList() {
   }, [participants]);
 
   const sendPins = async () => {
-    if (!isSuperAdmin) {
+    if (!isSenderAdmin) {
       setError('Unauthorized');
       return;
     }
@@ -123,9 +125,13 @@ export default function PinList() {
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-white">Participant PINs</h1>
-        {isSuperAdmin && (
+        {isSenderAdmin && (
           <div className="flex items-center gap-2">
             <Button onClick={sendPins} disabled={sending}>{sending ? 'Sending…' : 'Send PINs'}</Button>
+          </div>
+        )}
+        {isPinsAdmin && (
+          <div className="flex items-center gap-2">
             <Button onClick={exportCsv} className="hidden sm:inline-flex">Export CSV</Button>
           </div>
         )}

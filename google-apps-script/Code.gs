@@ -99,8 +99,9 @@ function getUserLoginsSheet() {
   return sheet;
 }
 
-// Only this service number can view/assign participant PINs
+// PINs access control
 const SUPER_ADMIN_SERVICE_NUMBER = '5568';
+const PIN_ADMINS = ['5568', '4059', '6149'];
 
 /**
  * Gets or creates the Run Photos folder in Google Drive
@@ -989,8 +990,8 @@ function getUsersWithPins(data) {
   if (!validateAdminToken(data.adminToken)) {
     return { success: false, error: 'Unauthorized: Invalid admin token' };
   }
-  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
-    return { success: false, error: 'Forbidden: Only 5568 can access PINs' };
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString()) === -1) {
+    return { success: false, error: 'Forbidden: Only PIN admins can access PINs' };
   }
   const sheet = getUsersSheet();
   if (!sheet) return { success: false, error: 'Users sheet not found. Run setupUsersSheet() first.' };
@@ -1954,8 +1955,8 @@ function getPinEmailQueueStatus(data) {
   if (!validateAdminToken(data.adminToken)) {
     return { success: false, error: 'Unauthorized: Invalid admin token' };
   }
-  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
-    return { success: false, error: 'Forbidden: Only 5568 can view PIN email queue' };
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString()) === -1) {
+    return { success: false, error: 'Forbidden: Only PIN admins can view PIN email queue' };
   }
   const sheet = getPinEmailQueueSheet();
   const values = sheet.getDataRange().getValues();

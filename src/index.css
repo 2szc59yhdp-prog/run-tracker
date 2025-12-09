@@ -189,11 +189,11 @@ button {
 }
 
 .pdf-capture .pdf-fix {
-  height: 32px;
-  line-height: 24px;
+  height: 36px;
+  line-height: 26px;
   vertical-align: middle !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }
 
 /* Prevent wrapping during PDF capture; keep visual UI unchanged */
@@ -213,6 +213,6 @@ button {
 .pdf-capture table td,
 .pdf-capture table th {
   box-sizing: border-box;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
 }

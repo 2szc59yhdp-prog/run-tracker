@@ -279,7 +279,12 @@ export default function AdminReport() {
       };
     });
 
-    return result;
+    return result.sort((a, b) => {
+      if (b.performancePercent !== a.performancePercent) {
+        return b.performancePercent - a.performancePercent;
+      }
+      return b.totalDistance - a.totalDistance;
+    });
   }, [filteredApproved, users, startDate, endDate]);
 
   // -----------------------------
@@ -423,8 +428,19 @@ export default function AdminReport() {
           </thead>
 
           <tbody>
-            {leaderboard.map((p) => (
-              <tr key={p.serviceNumber} className="border-b border-primary-700">
+            {leaderboard.map((p) => {
+              const rowClass =
+                p.totalDistance <= 0
+                  ? 'bg-danger-500/10'
+                  : p.position === 1
+                  ? 'bg-yellow-500/10'
+                  : p.position === 2
+                  ? 'bg-gray-300/10'
+                  : p.position === 3
+                  ? 'bg-orange-600/10'
+                  : '';
+              return (
+              <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
                 <td className="pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.position}</td>
                 <td className="pdf-nowrap pdf-fix px-2 text-white text-center" style={{ lineHeight: "22px" }}>{p.name}</td>
                 <td className="pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{STATION_MAP[p.station] || p.station}</td>
@@ -432,7 +448,8 @@ export default function AdminReport() {
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{p.rejectedRuns}</td>
                 <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{p.totalDistance.toFixed(1)}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 
@@ -585,16 +602,28 @@ export default function AdminReport() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((p) => (
-                    <tr key={p.serviceNumber} className="border-b border-primary-700">
-                      <td className="px-2 text-primary-300 text-center">{p.position}</td>
-                      <td className="px-2 text-white text-center">{p.name}</td>
-                      <td className="px-2 text-primary-300 text-center">{STATION_MAP[p.station] || p.station}</td>
-                      <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                      <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
-                      <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
-                    </tr>
-                  ))}
+                  {leaderboard.map((p) => {
+                    const rowClass =
+                      p.totalDistance <= 0
+                        ? 'bg-danger-500/10'
+                        : p.position === 1
+                        ? 'bg-yellow-500/10'
+                        : p.position === 2
+                        ? 'bg-gray-300/10'
+                        : p.position === 3
+                        ? 'bg-orange-600/10'
+                        : '';
+                    return (
+                      <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
+                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-white text-center">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-center">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -405,6 +405,21 @@ export async function updateUserPin(userId: string, pin: string, adminToken: str
   }
 }
 
+export async function sendPinEmails(adminToken: string, actorServiceNumber: string): Promise<ApiResponse<{ sent: number; skipped: number }>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sendPinEmails', adminToken, actorServiceNumber }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error sending PIN emails:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to send PIN emails' };
+  }
+}
+
 /**
  * Gets a user by service number (for auto-fill)
  */

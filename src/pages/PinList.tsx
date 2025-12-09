@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { fetchAllUsersWithPins, updateUserPin } from '../services/api';
+import { fetchAllUsersWithPins, updateUserPin, sendPinEmails } from '../services/api';
 import { useApp } from '../context/AppContext';
 import type { RegisteredUser } from '../types';
 
@@ -23,6 +23,8 @@ export default function PinList() {
   const [assigning, setAssigning] = useState(false);
   const [assignedCount, setAssignedCount] = useState(0);
   const [assignTotal, setAssignTotal] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [sendInfo, setSendInfo] = useState<string | null>(null);
 
   const isSuperAdmin = !!(isAdmin && adminToken && (adminUser?.serviceNumber?.toString().trim() === '5568'));
 
@@ -96,6 +98,33 @@ export default function PinList() {
     }
   };
 
+  const sendPins = async () => {
+    if (!isSuperAdmin) {
+      setError('Unauthorized');
+      return;
+    }
+    setSending(true);
+    setSendInfo(null);
+    try {
+      let res;
+      try {
+        res = await Promise.race([
+          sendPinEmails(adminToken!, adminUser!.serviceNumber),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000)),
+        ]);
+      } catch {
+        res = null as any;
+      }
+      if (res && res.success && res.data) {
+        setSendInfo(`Sent: ${res.data.sent}, Skipped: ${res.data.skipped}`);
+      } else {
+        setError(res?.error || 'Failed to send PIN emails');
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
   const exportCsv = () => {
     const header = 'Name,Service Number,Station,PIN';
     const lines = rows.map(r => `${JSON.stringify(r.name)},${JSON.stringify(r.serviceNumber)},${JSON.stringify(r.station)},${JSON.stringify(r.pin)}`);
@@ -115,7 +144,8 @@ export default function PinList() {
         <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-white">Participant PINs</h1>
         {isSuperAdmin && (
           <div className="flex items-center gap-2">
-            <Button onClick={assignPins} disabled={assigning}>{assigning ? `Assigning… (${assignedCount}/${assignTotal})` : 'Assign Pins'}</Button>
+            <Button onClick={assignPins} disabled={assigning || sending}>{assigning ? `Assigning… (${assignedCount}/${assignTotal})` : 'Assign Pins'}</Button>
+            <Button onClick={sendPins} disabled={assigning || sending}>{sending ? 'Sending…' : 'Send PINs'}</Button>
             <Button onClick={exportCsv} className="hidden sm:inline-flex">Export CSV</Button>
           </div>
         )}
@@ -123,6 +153,7 @@ export default function PinList() {
       <Card>
         {loading && <p className="text-primary-300">Loading...</p>}
         {error && !loading && <p className="text-danger-500">{error}</p>}
+        {!error && sendInfo && <p className="text-success-500">{sendInfo}</p>}
         {!loading && !error && (
           <div className="overflow-x-auto">
             <table className="min-w-full table-fixed">

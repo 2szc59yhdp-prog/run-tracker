@@ -365,6 +365,7 @@ export default function AdminReport() {
     background: "#102a43",
     color: "#ffffff",
     padding: "32px",
+    fontSize: "12px",
     position: "absolute",
     top: "0",
     left: "0",

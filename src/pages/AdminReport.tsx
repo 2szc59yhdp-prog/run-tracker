@@ -379,13 +379,9 @@ export default function AdminReport() {
       <div className="pdf-capture" id="pdf-container">
       {/* Page 1: Summary */}
       <div ref={(el) => { if (el) pdfPageRefs.current[0] = el; }} style={pdfPageStyle}>
-        <h2 className="text-xl font-bold text-accent-400 mb-1">
-          Madaveli Police
-        </h2>
-        <h1 className="text-2xl font-bold">100K Run Challenge Report</h1>
-        <p className="text-primary-300 text-sm mb-6">
-          Range: {startDate} → {endDate}
-        </p>
+        <h1 className="text-2xl font-bold">Madaveli Police 100K Run Challenge</h1>
+        <h2 className="text-xl font-semibold mb-2">Statistics</h2>
+        <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
 
         {/* SUMMARY */}
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -407,16 +403,67 @@ export default function AdminReport() {
           </div>
         </div>
 
-        {/* Note: Full leaderboard appears on subsequent pages */}
+        <div className="mt-6 space-y-3">
+          <div className="p-3 border border-primary-700 rounded">
+            <h3 className="text-white font-semibold">Elite Runners Table</h3>
+          </div>
+          <div className="p-3 border border-primary-700 rounded">
+            <h3 className="text-white font-semibold">Leader Board</h3>
+          </div>
+          <div className="p-3 border border-primary-700 rounded">
+            <h3 className="text-white font-semibold">Station Performance Board</h3>
+          </div>
+        </div>
 
         <p className="text-center text-primary-500 text-xs mt-6">
           This document is electronically generated and does not require a
           signature.
         </p>
       </div>
+      {/* Elite Runners pages */}
+      {elitePages.map((page, idx) => (
+        <div key={`elite-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+          <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+          <h1 className="text-2xl font-bold">Elite Runners</h1>
+          <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "280px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "96px" }} />
+              <col style={{ width: "72px" }} />
+              <col style={{ width: "82px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Approved</th>
+                <th className="text-center">Rejected</th>
+                <th className="text-center">KM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {page.map((p) => (
+                <tr key={p.serviceNumber} className="border-b border-primary-700">
+                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                  <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
       {/* Leaderboard pages */}
       {leaderboardPages.map((page, idx) => (
-        <div key={`lb-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+        <div key={`lb-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + elitePages.length + idx] = el; }} style={pdfPageStyle}>
           <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
           <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
           <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
@@ -467,49 +514,8 @@ export default function AdminReport() {
         </div>
       ))}
 
-      {/* Elite Runners pages */}
-      {elitePages.map((page, idx) => (
-        <div key={`elite-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + leaderboardPages.length + idx] = el; }} style={pdfPageStyle}>
-          <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
-          <h1 className="text-2xl font-bold">Elite Runners</h1>
-          <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
-          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
-            <colgroup>
-              <col style={{ width: "40px" }} />
-              <col style={{ width: "280px" }} />
-              <col style={{ width: "160px" }} />
-              <col style={{ width: "96px" }} />
-              <col style={{ width: "72px" }} />
-              <col style={{ width: "82px" }} />
-            </colgroup>
-            <thead>
-              <tr className="text-primary-400 border-b border-primary-700">
-                <th className="text-center py-2">#</th>
-                <th className="text-left">Name</th>
-                <th className="text-left">Station</th>
-                <th className="text-center">Approved</th>
-                <th className="text-center">Rejected</th>
-                <th className="text-center">KM</th>
-              </tr>
-            </thead>
-            <tbody>
-              {page.map((p) => (
-                <tr key={p.serviceNumber} className="border-b border-primary-700">
-                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
-                  <td className="px-2 text-white text-left">{p.name}</td>
-                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
-                  <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
       {/* Station Performance */}
-      <div ref={(el) => { if (el) pdfPageRefs.current[1 + leaderboardPages.length + elitePages.length] = el; }} style={pdfPageStyle}>
+      <div ref={(el) => { if (el) pdfPageRefs.current[1 + elitePages.length + leaderboardPages.length] = el; }} style={pdfPageStyle}>
         <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
         <h1 className="text-2xl font-bold">Station Performance</h1>
         <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
@@ -608,8 +614,8 @@ export default function AdminReport() {
         <div className="space-y-6 overflow-x-auto">
           <div className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
             <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
-              <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
-              <h1 className="text-2xl font-bold">100K Run Challenge Report</h1>
+              <h1 className="text-2xl font-bold">Madaveli Police 100K Run Challenge</h1>
+              <h2 className="text-xl font-semibold mb-2">Statistics</h2>
               <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -627,51 +633,19 @@ export default function AdminReport() {
                 </div>
               </div>
 
-              <p className="text-primary-400 text-sm">Full leaderboard appears on next pages.</p>
-            </div>
-          </div>
-
-          {leaderboardPages.map((page, idx) => (
-            <div key={`preview-lb-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
-              <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
-                <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
-                <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
-                <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
-                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
-                  <colgroup>
-                    <col style={{ width: 40 }} />
-                    <col style={{ width: 280 }} />
-                    <col style={{ width: 160 }} />
-                    <col style={{ width: 96 }} />
-                    <col style={{ width: 72 }} />
-                    <col style={{ width: 82 }} />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-primary-400 border-b border-primary-700">
-                      <th className="text-center py-2">#</th>
-                      <th className="text-left">Name</th>
-                      <th className="text-left">Station</th>
-                      <th className="text-center">Approved</th>
-                      <th className="text-center">Rejected</th>
-                      <th className="text-center">KM</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {page.map((p) => (
-                      <tr key={p.serviceNumber} className="border-b border-primary-700">
-                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
-                        <td className="px-2 text-white text-left">{p.name}</td>
-                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
-                        <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="mt-6 space-y-3">
+                <div className="p-3 border border-primary-700 rounded">
+                  <h3 className="text-white font-semibold">Elite Runners Table</h3>
+                </div>
+                <div className="p-3 border border-primary-700 rounded">
+                  <h3 className="text-white font-semibold">Leader Board</h3>
+                </div>
+                <div className="p-3 border border-primary-700 rounded">
+                  <h3 className="text-white font-semibold">Station Performance Board</h3>
+                </div>
               </div>
             </div>
-          ))}
+          </div>
 
           {elitePages.map((page, idx) => (
             <div key={`preview-elite-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
@@ -707,6 +681,48 @@ export default function AdminReport() {
                         <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
                         <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
                         <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          {leaderboardPages.map((page, idx) => (
+            <div key={`preview-lb-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
+              <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
+                <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+                <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
+                <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 280 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 96 }} />
+                    <col style={{ width: 72 }} />
+                    <col style={{ width: 82 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Approved</th>
+                      <th className="text-center">Rejected</th>
+                      <th className="text-center">KM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {page.map((p) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
+                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
                       </tr>
                     ))}
                   </tbody>

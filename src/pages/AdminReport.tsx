@@ -296,6 +296,7 @@ export default function AdminReport() {
   const ELITE_ROWS_PER_PAGE = 30;
   const FIRST_PAGE_ELITE_ROWS = 10;
   const FIRST_PAGE_LB_ROWS = 10;
+  const PROGRESS_ROWS_PER_PAGE = 30;
   function chunk<T>(arr: T[], size: number): T[][] {
     const out: T[][] = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -303,6 +304,27 @@ export default function AdminReport() {
   }
   const leaderboardPages = useMemo(() => chunk(leaderboard, LB_ROWS_PER_PAGE), [leaderboard]);
   const elitePages = useMemo(() => chunk(eliteEntries, ELITE_ROWS_PER_PAGE), [eliteEntries]);
+  const approvedAll = useMemo(() => runs.filter((r) => (r.status || 'pending').toLowerCase().trim() === 'approved' && r.station !== 'General Admin'), [runs]);
+  const runnerStatsAll = useMemo(() => {
+    const map = new Map<string, { serviceNumber: string; name: string; station: string; totalDistance: number; runCount: number }>();
+    users.forEach((u) => {
+      if (!u.station || u.station === 'General Admin') return;
+      map.set(u.serviceNumber, { serviceNumber: u.serviceNumber, name: u.name, station: u.station, totalDistance: 0, runCount: 0 });
+    });
+    approvedAll.forEach((r) => {
+      const e = map.get(r.serviceNumber) || { serviceNumber: r.serviceNumber, name: r.name, station: r.station || '', totalDistance: 0, runCount: 0 };
+      e.totalDistance = Number((e.totalDistance + Number(r.distanceKm || 0)).toFixed(2));
+      e.runCount += 1;
+      e.station = r.station || e.station;
+      map.set(r.serviceNumber, e);
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalDistance - a.totalDistance);
+  }, [approvedAll, users]);
+  const eliteAll = useMemo(() => runnerStatsAll.filter((r) => r.totalDistance >= 100), [runnerStatsAll]);
+  const leaderboardAll = useMemo(() => runnerStatsAll.filter((r) => r.totalDistance < 100), [runnerStatsAll]);
+  const eliteAllPages = useMemo(() => chunk(eliteAll, ELITE_ROWS_PER_PAGE), [eliteAll]);
+  const leaderboardAllPages = useMemo(() => chunk(leaderboardAll, LB_ROWS_PER_PAGE), [leaderboardAll]);
+  const progressPages = useMemo(() => chunk(runnerStatsAll, PROGRESS_ROWS_PER_PAGE), [runnerStatsAll]);
 
   // -----------------------------
   //  TOTALS
@@ -527,12 +549,51 @@ export default function AdminReport() {
           signature.
         </p>
       </div>
-      {/* Elite Runners pages (continued) */}
-      {elitePages.slice(1).map((page, idx) => (
-        <div key={`elite-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+      {progressPages.map((page, idx) => (
+        <div key={`progress-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+          <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+          <h1 className="text-2xl font-bold">Participant Progress</h1>
+          <p className="text-primary-300 text-sm mb-6">All-time progress to 100 KM</p>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "250px" }} />
+              <col style={{ width: "170px" }} />
+              <col style={{ width: "90px" }} />
+              <col style={{ width: "90px" }} />
+              <col style={{ width: "90px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Runs</th>
+                <th className="text-center">KM</th>
+                <th className="text-center">Left</th>
+              </tr>
+            </thead>
+            <tbody>
+              {page.map((p, i) => (
+                <tr key={p.serviceNumber} className="border-b border-primary-700">
+                  <td className="px-2 text-primary-300 text-center">{idx * PROGRESS_ROWS_PER_PAGE + i + 1}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                  <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                  <td className="px-2 text-accent-400 text-center font-bold">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {eliteAllPages.map((page, idx) => (
+        <div key={`elite-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + progressPages.length + idx] = el; }} style={pdfPageStyle}>
           <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
           <h1 className="text-2xl font-bold">Elite Runners</h1>
-          <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
+          <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • All-time</p>
           <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
             <colgroup>
               <col style={{ width: "40px" }} />
@@ -547,19 +608,19 @@ export default function AdminReport() {
                 <th className="text-center py-2">#</th>
                 <th className="text-left">Name</th>
                 <th className="text-left">Station</th>
-                <th className="text-center">Approved</th>
-                <th className="text-center">Rejected</th>
+                <th className="text-center">Runs</th>
+                <th className="text-center">Left</th>
                 <th className="text-center">KM</th>
               </tr>
             </thead>
             <tbody>
-              {page.map((p) => (
+              {page.map((p, i) => (
                 <tr key={p.serviceNumber} className="border-b border-primary-700">
-                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                  <td className="px-2 text-primary-300 text-center">{idx * ELITE_ROWS_PER_PAGE + i + 1}</td>
                   <td className="px-2 text-white text-left">{p.name}</td>
                   <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                  <td className="px-2 text-primary-300 text-center">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
                   <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
                 </tr>
               ))}
@@ -568,12 +629,11 @@ export default function AdminReport() {
         </div>
       ))}
 
-      {/* Leaderboard pages (continued) */}
-      {leaderboardPages.slice(1).map((page, idx) => (
-        <div key={`lb-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + Math.max(elitePages.length - 1, 0) + idx] = el; }} style={pdfPageStyle}>
+      {leaderboardAllPages.map((page, idx) => (
+        <div key={`lb-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + progressPages.length + eliteAllPages.length + idx] = el; }} style={pdfPageStyle}>
           <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
           <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
-          <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
+          <p className="text-primary-300 text-sm mb-6">All-time progress to 100 KM</p>
           <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
             <colgroup>
               <col style={{ width: "40px" }} />
@@ -588,34 +648,22 @@ export default function AdminReport() {
                 <th className="text-center py-2">#</th>
                 <th className="text-left">Name</th>
                 <th className="text-left">Station</th>
-                <th className="text-center">Approved</th>
-                <th className="text-center">Rejected</th>
+                <th className="text-center">Runs</th>
+                <th className="text-center">Left</th>
                 <th className="text-center">KM</th>
               </tr>
             </thead>
             <tbody>
-              {page.map((p) => {
-                const rowClass =
-                  p.totalDistance <= 0
-                    ? 'bg-danger-500/10'
-                    : p.position === 1
-                    ? 'bg-yellow-500/10'
-                    : p.position === 2
-                    ? 'bg-gray-300/10'
-                    : p.position === 3
-                    ? 'bg-orange-600/10'
-                    : '';
-                return (
-                  <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
-                    <td className="px-2 text-primary-300 text-center">{p.position}</td>
-                    <td className="px-2 text-white text-left">{p.name}</td>
-                    <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                    <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                    <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
-                    <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
-                  </tr>
-                );
-              })}
+              {page.map((p, i) => (
+                <tr key={p.serviceNumber} className={`border-b border-primary-700`}>
+                  <td className="px-2 text-primary-300 text-center">{idx * LB_ROWS_PER_PAGE + i + 1}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                  <td className="px-2 text-primary-300 text-center">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
+                  <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -811,12 +859,54 @@ export default function AdminReport() {
             </div>
           </div>
 
-          {elitePages.slice(1).map((page, idx) => (
+          {progressPages.map((page, idx) => (
+            <div key={`preview-progress-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
+              <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
+                <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+                <h1 className="text-2xl font-bold">Participant Progress</h1>
+                <p className="text-primary-300 text-sm mb-6">All-time progress to 100 KM</p>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 250 }} />
+                    <col style={{ width: 170 }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 90 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Runs</th>
+                      <th className="text-center">KM</th>
+                      <th className="text-center">Left</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {page.map((p, i) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
+                        <td className="px-2 text-primary-300 text-center">{idx * PROGRESS_ROWS_PER_PAGE + i + 1}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                        <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                        <td className="px-2 text-accent-400 text-center font-bold">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          {eliteAllPages.map((page, idx) => (
             <div key={`preview-elite-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
               <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
                 <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
                 <h1 className="text-2xl font-bold">Elite Runners</h1>
-                <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
+                <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • All-time</p>
                 <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                   <colgroup>
                     <col style={{ width: 40 }} />
@@ -831,19 +921,19 @@ export default function AdminReport() {
                       <th className="text-center py-2">#</th>
                       <th className="text-left">Name</th>
                       <th className="text-left">Station</th>
-                      <th className="text-center">Approved</th>
-                      <th className="text-center">Rejected</th>
+                      <th className="text-center">Runs</th>
+                      <th className="text-center">Left</th>
                       <th className="text-center">KM</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {page.map((p) => (
+                    {page.map((p, i) => (
                       <tr key={p.serviceNumber} className="border-b border-primary-700">
-                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-primary-300 text-center">{idx * ELITE_ROWS_PER_PAGE + i + 1}</td>
                         <td className="px-2 text-white text-left">{p.name}</td>
                         <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                        <td className="px-2 text-primary-300 text-center">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
                         <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
                       </tr>
                     ))}
@@ -853,12 +943,12 @@ export default function AdminReport() {
             </div>
           ))}
 
-          {leaderboardPages.slice(1).map((page, idx) => (
+          {leaderboardAllPages.map((page, idx) => (
             <div key={`preview-lb-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
               <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
                 <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
                 <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
-                <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
+                <p className="text-primary-300 text-sm mb-6">All-time progress to 100 KM</p>
                 <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                   <colgroup>
                     <col style={{ width: 40 }} />
@@ -873,19 +963,19 @@ export default function AdminReport() {
                       <th className="text-center py-2">#</th>
                       <th className="text-left">Name</th>
                       <th className="text-left">Station</th>
-                      <th className="text-center">Approved</th>
-                      <th className="text-center">Rejected</th>
+                      <th className="text-center">Runs</th>
+                      <th className="text-center">Left</th>
                       <th className="text-center">KM</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {page.map((p) => (
+                    {page.map((p, i) => (
                       <tr key={p.serviceNumber} className="border-b border-primary-700">
-                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-primary-300 text-center">{idx * LB_ROWS_PER_PAGE + i + 1}</td>
                         <td className="px-2 text-white text-left">{p.name}</td>
                         <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
-                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.runCount}</td>
+                        <td className="px-2 text-primary-300 text-center">{Math.max(0, 100 - p.totalDistance).toFixed(1)}</td>
                         <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
                       </tr>
                     ))}

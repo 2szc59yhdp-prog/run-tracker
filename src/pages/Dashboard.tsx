@@ -641,22 +641,12 @@ export default function Dashboard() {
       <div className="space-y-6">
         <div className="animate-fade-in stagger-3">
           <div className="relative">
-            <style>{`@keyframes spinGradient{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-            <div
-              className="pointer-events-none absolute -inset-0 rounded-2xl"
-              style={{
-                padding: '2px',
-                background:
-                  'conic-gradient(from 0deg, transparent 0 350deg, rgba(34,197,94,0.95) 350deg 360deg)',
-                animation: 'spinGradient 2.4s linear infinite',
-                WebkitMask:
-                  'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
-                boxShadow:
-                  '0 0 12px rgba(34,197,94,0.6), 0 0 24px rgba(34,197,94,0.25)'
-              }}
-            />
+            <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@keyframes dash{to{stroke-dashoffset:-28}}`}</style>
+            <div className="pointer-events-none absolute inset-0 rounded-2xl">
+              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <rect x="1" y="1" width="98" height="98" rx="8" ry="8" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="8 20" style={{ filter: 'drop-shadow(0 0 6px rgba(34,197,94,0.7))', animation: 'dash 2.4s linear infinite' }} />
+              </svg>
+            </div>
             <Card>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-success-500/20 text-success-400">

@@ -639,163 +639,7 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-6">
-        {/* Leaderboard - Only APPROVED runs */}
         <div className="animate-fade-in stagger-3">
-          <Card>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning-500/20 text-warning-500">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-display text-xl font-semibold text-white">
-                    Leaderboard
-                  </h2>
-                  <p className="text-xs text-primary-500">Based on approved runs only</p>
-                </div>
-              </div>
-              
-              {/* Leaderboard Filter */}
-              {leaderboardRunners.length > 0 && (
-                <div className="sm:ml-auto">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500" />
-                    <input
-                      type="text"
-                      placeholder="Search name or #"
-                      value={leaderboardFilter}
-                      onChange={(e) => setLeaderboardFilter(e.target.value)}
-                      className="w-full sm:w-44 pl-9 pr-8 py-2 bg-primary-800/50 border border-primary-700 rounded-lg text-white text-sm placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-warning-500/50 transition-all"
-                    />
-                    {leaderboardFilter && (
-                      <button
-                        onClick={() => setLeaderboardFilter('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-primary-500 hover:text-white transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {leaderboardRunners.length === 0 ? (
-              <p className="text-primary-400 text-center py-8">
-                No approved runs yet. Be the first!
-              </p>
-            ) : (() => {
-              // Filter runners based on search
-              const filteredRunners = leaderboardFilter
-                ? leaderboardRunners.filter(runner => 
-                    runner.name.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
-                    runner.serviceNumber.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
-                    runner.station.toLowerCase().includes(leaderboardFilter.toLowerCase())
-                  )
-                : leaderboardRunners;
-              
-              if (filteredRunners.length === 0) {
-                return (
-                  <div className="text-center py-8">
-                    <p className="text-primary-400 mb-2">No runners found for "{leaderboardFilter}"</p>
-                    <button
-                      onClick={() => setLeaderboardFilter('')}
-                      className="text-warning-400 hover:text-warning-300 text-sm underline"
-                    >
-                      Clear filter
-                    </button>
-                  </div>
-                );
-              }
-              
-              return (
-              <div className="space-y-1">
-                {/* Results count when filtered */}
-                {leaderboardFilter && (
-                  <p className="text-xs text-primary-500 mb-3">
-                    Showing {filteredRunners.length} of {leaderboardRunners.length} runners
-                  </p>
-                )}
-                <div className="max-h-[70vh] overflow-y-auto pr-2">
-                {filteredRunners.map((runner) => {
-                  // Get the original rank (position in unfiltered list)
-                  const originalRank = leaderboardRunners.findIndex(r => r.serviceNumber === runner.serviceNumber);
-                  return (
-                  <div
-                    key={runner.serviceNumber}
-                    className={`
-                      flex items-center gap-3 py-2 px-3 rounded-lg transition-all
-                      ${originalRank === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5' : 
-                        originalRank === 1 ? 'bg-primary-700/20' :
-                        originalRank === 2 ? 'bg-primary-700/10' :
-                        'hover:bg-primary-800/20'}
-                    `}
-                  >
-                    {/* Rank */}
-                    <div className={`
-                      w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
-                      ${originalRank === 0 ? 'bg-warning-500 text-primary-900' :
-                        originalRank === 1 ? 'bg-primary-400 text-primary-900' :
-                        originalRank === 2 ? 'bg-orange-600 text-white' :
-                        'bg-primary-700 text-primary-300'}
-                    `}>
-                      {originalRank + 1}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-white text-sm truncate">
-                          {runner.name}
-                        </p>
-                        <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
-                        {runner.totalDistance >= 100 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-500/20 text-success-400 border border-success-500/30">
-                            <Medal className="w-3 h-3" /> 100K
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
-                        </span>
-                        <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
-                          <Footprints className="w-3 h-3" />
-                          {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Distance & Progress */}
-                    <div className="text-right flex-shrink-0 min-w-[90px]">
-                      <p className="font-display font-bold text-white text-sm">
-                        {runner.totalDistance.toFixed(2)}
-                        <span className="text-xs text-primary-500 font-normal">/ 100 km</span>
-                      </p>
-                      <p className="text-xs text-primary-500">
-                        {(100 - runner.totalDistance).toFixed(2)} km left
-                      </p>
-                      <div className="w-full h-1 bg-primary-700 rounded-full overflow-hidden mt-0.5">
-                        <div 
-                          className={`h-full rounded-full ${
-                            runner.totalDistance >= 100 ? 'bg-success-500' : originalRank === 0 ? 'bg-warning-500' : 'bg-accent-500'
-                          }`}
-                          style={{ width: `${Math.min((runner.totalDistance / 100) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-                </div>
-              </div>
-              );
-            })()}
-          </Card>
-        </div>
-
-        <div className="animate-fade-in stagger-4">
           <Card>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
@@ -856,6 +700,155 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+
+        {/* Leaderboard - Only APPROVED runs */}
+        <div className="animate-fade-in stagger-4">
+          <Card>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning-500/20 text-warning-500">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-white">
+                    Leaderboard
+                  </h2>
+                  <p className="text-xs text-primary-500">Based on approved runs only</p>
+                </div>
+              </div>
+              
+              {leaderboardRunners.length > 0 && (
+                <div className="sm:ml-auto">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500" />
+                    <input
+                      type="text"
+                      placeholder="Search name or #"
+                      value={leaderboardFilter}
+                      onChange={(e) => setLeaderboardFilter(e.target.value)}
+                      className="w-full sm:w-44 pl-9 pr-8 py-2 bg-primary-800/50 border border-primary-700 rounded-lg text-white text-sm placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-inset focus:ring-warning-500/50 transition-all"
+                    />
+                    {leaderboardFilter && (
+                      <button
+                        onClick={() => setLeaderboardFilter('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-primary-500 hover:text-white transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {leaderboardRunners.length === 0 ? (
+              <p className="text-primary-400 text-center py-8">
+                No approved runs yet. Be the first!
+              </p>
+            ) : (() => {
+              const filteredRunners = leaderboardFilter
+                ? leaderboardRunners.filter(runner => 
+                    runner.name.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
+                    runner.serviceNumber.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
+                    runner.station.toLowerCase().includes(leaderboardFilter.toLowerCase())
+                  )
+                : leaderboardRunners;
+              
+              if (filteredRunners.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-primary-400 mb-2">No runners found for "{leaderboardFilter}"</p>
+                    <button
+                      onClick={() => setLeaderboardFilter('')}
+                      className="text-warning-400 hover:text-warning-300 text-sm underline"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
+                );
+              }
+              
+              return (
+              <div className="space-y-1">
+                {leaderboardFilter && (
+                  <p className="text-xs text-primary-500 mb-3">
+                    Showing {filteredRunners.length} of {leaderboardRunners.length} runners
+                  </p>
+                )}
+                <div className="max-h-[70vh] overflow-y-auto pr-2">
+                {filteredRunners.map((runner) => {
+                  const originalRank = leaderboardRunners.findIndex(r => r.serviceNumber === runner.serviceNumber);
+                  return (
+                  <div
+                    key={runner.serviceNumber}
+                    className={`
+                      flex items-center gap-3 py-2 px-3 rounded-lg transition-all
+                      ${originalRank === 0 ? 'bg-gradient-to-r from-warning-500/20 to-warning-500/5' : 
+                        originalRank === 1 ? 'bg-primary-700/20' :
+                        originalRank === 2 ? 'bg-primary-700/10' :
+                        'hover:bg-primary-800/20'}
+                    `}
+                  >
+                    <div className={`
+                      w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
+                      ${originalRank === 0 ? 'bg-warning-500 text-primary-900' :
+                        originalRank === 1 ? 'bg-primary-400 text-primary-900' :
+                        originalRank === 2 ? 'bg-orange-600 text-white' :
+                        'bg-primary-700 text-primary-300'}
+                    `}>
+                      {originalRank + 1}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white text-sm truncate">
+                          {runner.name}
+                        </p>
+                        <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
+                        {runner.totalDistance >= 100 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-500/20 text-success-400 border border-success-500/30">
+                            <Medal className="w-3 h-3" /> 100K
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
+                        </span>
+                        <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
+                          <Footprints className="w-3 h-3" />
+                          {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0 min-w-[90px]">
+                      <p className="font-display font-bold text-white text-sm">
+                        {runner.totalDistance.toFixed(2)}
+                        <span className="text-xs text-primary-500 font-normal">/ 100 km</span>
+                      </p>
+                      <p className="text-xs text-primary-500">
+                        {(100 - runner.totalDistance).toFixed(2)} km left
+                      </p>
+                      <div className="w-full h-1 bg-primary-700 rounded-full overflow-hidden mt-0.5">
+                        <div 
+                          className={`h-full rounded-full ${
+                            runner.totalDistance >= 100 ? 'bg-success-500' : originalRank === 0 ? 'bg-warning-500' : 'bg-accent-500'
+                          }`}
+                          style={{ width: `${Math.min((runner.totalDistance / 100) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+                </div>
+              </div>
+              );
+            })()}
           </Card>
         </div>
 

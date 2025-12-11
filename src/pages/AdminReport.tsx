@@ -54,8 +54,7 @@ export default function AdminReport() {
   
 
   // PDF page refs
-  const pdfPage1Ref = useRef<HTMLDivElement>(null);
-  const pdfPage2Ref = useRef<HTMLDivElement>(null);
+  const pdfPageRefs = useRef<HTMLDivElement[]>([]);
 
   // -----------------------------
   //  SECURITY & AUTH
@@ -183,6 +182,10 @@ export default function AdminReport() {
     }));
   }, [filteredApproved, filteredRejected, users]);
 
+  const eliteEntries = useMemo(() => {
+    return leaderboard.filter((p) => p.totalDistance >= 100);
+  }, [leaderboard]);
+
   // -----------------------------
   //  STATION PERFORMANCE
   // -----------------------------
@@ -289,13 +292,15 @@ export default function AdminReport() {
     });
   }, [filteredApproved, users, startDate, endDate]);
 
-  const targetBodyHeightPx = 620;
-  const rowsCount = leaderboard.length || 1;
-  const maxRowHeightPx = 22;
-  const minRowHeightPx = 16;
-  const rowHeightPx = pdfMode ? Math.min(maxRowHeightPx, Math.max(minRowHeightPx, Math.floor(targetBodyHeightPx / rowsCount))) : undefined;
-  const lineHeightPx = pdfMode && rowHeightPx ? Math.max(rowHeightPx - 4, 16) : undefined;
-  const leaderboardFontSizePx = pdfMode && rowHeightPx ? (rowHeightPx <= 18 ? 10 : 11) : undefined;
+  const LB_ROWS_PER_PAGE = 30;
+  const ELITE_ROWS_PER_PAGE = 30;
+  function chunk<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+  const leaderboardPages = useMemo(() => chunk(leaderboard, LB_ROWS_PER_PAGE), [leaderboard]);
+  const elitePages = useMemo(() => chunk(eliteEntries, ELITE_ROWS_PER_PAGE), [eliteEntries]);
 
   // -----------------------------
   //  TOTALS
@@ -324,28 +329,16 @@ export default function AdminReport() {
         unit: "px",
         format: [794, 1123], // exact A4 px mapping
       });
-
-      // Capture Page 1
-      if (pdfPage1Ref.current) {
-        const canvas = await html2canvas(pdfPage1Ref.current, {
+      const pages = pdfPageRefs.current.filter(Boolean);
+      for (let i = 0; i < pages.length; i++) {
+        const el = pages[i];
+        const canvas = await html2canvas(el, {
           scale: 2,
           backgroundColor: "#102a43",
           useCORS: true,
         });
         const img = canvas.toDataURL("image/png");
-        pdf.addImage(img, "PNG", 0, 0, 794, 1123);
-      }
-
-      pdf.addPage();
-
-      // Capture Page 2
-      if (pdfPage2Ref.current) {
-        const canvas = await html2canvas(pdfPage2Ref.current, {
-          scale: 2,
-          backgroundColor: "#102a43",
-          useCORS: true,
-        });
-        const img = canvas.toDataURL("image/png");
+        if (i > 0) pdf.addPage();
         pdf.addImage(img, "PNG", 0, 0, 794, 1123);
       }
 
@@ -384,7 +377,8 @@ export default function AdminReport() {
 
       {/* ------------------ PDF PAGES (CAPTURE-ONLY) ------------------ */}
       <div className="pdf-capture" id="pdf-container">
-      <div ref={pdfPage1Ref} style={pdfPageStyle}>
+      {/* Page 1: Summary */}
+      <div ref={(el) => { if (el) pdfPageRefs.current[0] = el; }} style={pdfPageStyle}>
         <h2 className="text-xl font-bold text-accent-400 mb-1">
           Madaveli Police
         </h2>
@@ -413,72 +407,112 @@ export default function AdminReport() {
           </div>
         </div>
 
-        {/* LEADERBOARD */}
-        <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
-        <table
-          className="text-sm"
-          style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums", fontSize: leaderboardFontSizePx ? `${leaderboardFontSizePx}px` : undefined }}
-        >
-          <colgroup>
-            <col style={{ width: "40px" }} />
-            <col style={{ width: "280px" }} />
-            <col style={{ width: "160px" }} />
-            <col style={{ width: "96px" }} />
-            <col style={{ width: "72px" }} />
-            <col style={{ width: "82px" }} />
-          </colgroup>
-
-          <thead>
-            <tr className="text-primary-400 border-b border-primary-700">
-              <th className="text-center py-2">#</th>
-              <th className="text-left">Name</th>
-              <th className="text-left">Station</th>
-              <th className="text-center">Approved</th>
-              <th className="text-center">Rejected</th>
-              <th className="text-center">KM</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {leaderboard.map((p) => {
-              const rowClass =
-                p.totalDistance <= 0
-                  ? 'bg-danger-500/10'
-                  : p.position === 1
-                  ? 'bg-yellow-500/10'
-                  : p.position === 2
-                  ? 'bg-gray-300/10'
-                  : p.position === 3
-                  ? 'bg-orange-600/10'
-                  : '';
-              return (
-              <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
-                <td className="pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.position}</td>
-                <td className="pdf-nowrap pdf-fix px-2 text-white text-left" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.name}</td>
-                <td className="pdf-nowrap pdf-fix px-2 text-primary-300 text-left" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{STATION_MAP[p.station] || p.station}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.approvedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.rejectedRuns}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ height: rowHeightPx, lineHeight: lineHeightPx }}>{p.totalDistance.toFixed(1)}</td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Note: Full leaderboard appears on subsequent pages */}
 
         <p className="text-center text-primary-500 text-xs mt-6">
           This document is electronically generated and does not require a
           signature.
         </p>
       </div>
+      {/* Leaderboard pages */}
+      {leaderboardPages.map((page, idx) => (
+        <div key={`lb-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+          <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+          <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
+          <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "280px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "96px" }} />
+              <col style={{ width: "72px" }} />
+              <col style={{ width: "82px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Approved</th>
+                <th className="text-center">Rejected</th>
+                <th className="text-center">KM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {page.map((p) => {
+                const rowClass =
+                  p.totalDistance <= 0
+                    ? 'bg-danger-500/10'
+                    : p.position === 1
+                    ? 'bg-yellow-500/10'
+                    : p.position === 2
+                    ? 'bg-gray-300/10'
+                    : p.position === 3
+                    ? 'bg-orange-600/10'
+                    : '';
+                return (
+                  <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
+                    <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                    <td className="px-2 text-white text-left">{p.name}</td>
+                    <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                    <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                    <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                    <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
 
-      <div ref={pdfPage2Ref} style={pdfPageStyle}>
-        <h2 className="text-xl font-bold text-accent-400 mb-1">
-          Madaveli Police
-        </h2>
+      {/* Elite Runners pages */}
+      {elitePages.map((page, idx) => (
+        <div key={`elite-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + leaderboardPages.length + idx] = el; }} style={pdfPageStyle}>
+          <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+          <h1 className="text-2xl font-bold">Elite Runners</h1>
+          <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "280px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "96px" }} />
+              <col style={{ width: "72px" }} />
+              <col style={{ width: "82px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Approved</th>
+                <th className="text-center">Rejected</th>
+                <th className="text-center">KM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {page.map((p) => (
+                <tr key={p.serviceNumber} className="border-b border-primary-700">
+                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                  <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {/* Station Performance */}
+      <div ref={(el) => { if (el) pdfPageRefs.current[1 + leaderboardPages.length + elitePages.length] = el; }} style={pdfPageStyle}>
+        <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
         <h1 className="text-2xl font-bold">Station Performance</h1>
-        <p className="text-primary-300 text-sm mb-6">
-          Range: {startDate} → {endDate}
-        </p>
+        <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
 
         <table
           className="text-sm"
@@ -593,40 +627,38 @@ export default function AdminReport() {
                 </div>
               </div>
 
-              <h3 className="text-lg font-bold text-accent-400 mb-2">Leaderboard</h3>
-              <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
-                <colgroup>
-                  <col style={{ width: 40 }} />
-                  <col style={{ width: 280 }} />
-                  <col style={{ width: 160 }} />
-                  <col style={{ width: 96 }} />
-                  <col style={{ width: 72 }} />
-                  <col style={{ width: 82 }} />
-                </colgroup>
-                <thead>
-                  <tr className="text-primary-400 border-b border-primary-700">
-                    <th className="text-center py-2">#</th>
-                    <th className="text-left">Name</th>
-                    <th className="text-left">Station</th>
-                    <th className="text-center">Approved</th>
-                    <th className="text-center">Rejected</th>
-                    <th className="text-center">KM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((p) => {
-                    const rowClass =
-                      p.totalDistance <= 0
-                        ? 'bg-danger-500/10'
-                        : p.position === 1
-                        ? 'bg-yellow-500/10'
-                        : p.position === 2
-                        ? 'bg-gray-300/10'
-                        : p.position === 3
-                        ? 'bg-orange-600/10'
-                        : '';
-                    return (
-                      <tr key={p.serviceNumber} className={`border-b border-primary-700 ${rowClass}`}>
+              <p className="text-primary-400 text-sm">Full leaderboard appears on next pages.</p>
+            </div>
+          </div>
+
+          {leaderboardPages.map((page, idx) => (
+            <div key={`preview-lb-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
+              <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
+                <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+                <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
+                <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 280 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 96 }} />
+                    <col style={{ width: 72 }} />
+                    <col style={{ width: 82 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Approved</th>
+                      <th className="text-center">Rejected</th>
+                      <th className="text-center">KM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {page.map((p) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
                         <td className="px-2 text-primary-300 text-center">{p.position}</td>
                         <td className="px-2 text-white text-left">{p.name}</td>
                         <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
@@ -634,19 +666,60 @@ export default function AdminReport() {
                         <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
                         <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ))}
+
+          {elitePages.map((page, idx) => (
+            <div key={`preview-elite-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
+              <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
+                <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
+                <h1 className="text-2xl font-bold">Elite Runners</h1>
+                <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 280 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 96 }} />
+                    <col style={{ width: 72 }} />
+                    <col style={{ width: 82 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Approved</th>
+                      <th className="text-center">Rejected</th>
+                      <th className="text-center">KM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {page.map((p) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
+                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
 
           <div className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
             <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
               <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
               <h1 className="text-2xl font-bold">Station Performance</h1>
               <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
-
               <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
                 <colgroup>
                   <col style={{ width: 270 }} />

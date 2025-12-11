@@ -93,14 +93,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     participantRuns.forEach(run => {
       const existing = statsMap.get(run.serviceNumber);
       if (existing) {
-        existing.totalDistance += Number(run.distanceKm || 0);
+        const nextTotal = existing.totalDistance + Number(run.distanceKm || 0);
+        existing.totalDistance = Number(nextTotal.toFixed(2));
         existing.runCount += 1;
       } else {
         statsMap.set(run.serviceNumber, {
           serviceNumber: run.serviceNumber,
           name: run.name,
           station: run.station,
-          totalDistance: Number(run.distanceKm || 0),
+          totalDistance: Number(Number(run.distanceKm || 0).toFixed(2)),
           runCount: 1,
         });
       }

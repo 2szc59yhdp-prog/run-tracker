@@ -640,24 +640,7 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         <div className="animate-fade-in stagger-3">
-          <div className="relative">
-            <style>{`@keyframes spinGradient{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
-            <div
-              className="pointer-events-none absolute inset-0 rounded-2xl"
-              style={{
-                padding: '2px',
-                background:
-                  'conic-gradient(from 0deg, transparent 0deg, rgba(34,197,94,0.95) 2deg, rgba(34,197,94,0.5) 8deg, rgba(34,197,94,0.2) 14deg, transparent 24deg)',
-                transformOrigin: 'center',
-                animation: 'spinGradient 2.4s linear infinite',
-                WebkitMask:
-                  'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
-                filter: 'drop-shadow(0 0 8px rgba(34,197,94,0.55))',
-              }}
-            />
-            <Card>
+          <Card>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
                   <Medal className="w-5 h-5" />
@@ -666,17 +649,6 @@ export default function Dashboard() {
                   <h2 className="font-display text-xl font-semibold text-white">Elite Runners</h2>
                   <p className="text-xs text-primary-500">Completed 100K distance</p>
                 </div>
-              </div>
-              <div className="h-1 rounded-full overflow-hidden bg-primary-700/50 mb-4">
-                <div
-                  className="h-full w-full"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(90deg, rgba(34,197,94,0) 0%, rgba(34,197,94,1) 20%, rgba(6,182,212,1) 40%, rgba(168,85,247,1) 60%, rgba(34,197,94,1) 80%, rgba(34,197,94,0) 100%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 2.2s linear infinite',
-                  }}
-                />
               </div>
 
               {eliteRunners.length === 0 ? (
@@ -727,7 +699,6 @@ export default function Dashboard() {
                 </div>
               )}
             </Card>
-          </div>
         </div>
 
         {/* Leaderboard - Only APPROVED runs */}

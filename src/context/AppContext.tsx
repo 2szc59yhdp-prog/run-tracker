@@ -93,14 +93,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     participantRuns.forEach(run => {
       const existing = statsMap.get(run.serviceNumber);
       if (existing) {
-        existing.totalDistance += run.distanceKm;
+        existing.totalDistance += Number(run.distanceKm || 0);
         existing.runCount += 1;
       } else {
         statsMap.set(run.serviceNumber, {
           serviceNumber: run.serviceNumber,
           name: run.name,
           station: run.station,
-          totalDistance: run.distanceKm,
+          totalDistance: Number(run.distanceKm || 0),
           runCount: 1,
         });
       }
@@ -112,7 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Calculate dashboard statistics from APPROVED runs only (excluding General Admin)
   const dashboardStats: DashboardStats = {
-    totalDistance: participantRuns.reduce((sum, run) => sum + run.distanceKm, 0),
+    totalDistance: participantRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0),
     uniqueRunners: runnerStats.length,
     totalRuns: participantRuns.length,
   };

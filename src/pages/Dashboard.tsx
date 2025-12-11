@@ -640,7 +640,20 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         <div className="animate-fade-in stagger-3">
-          <Card>
+          <div className="relative">
+            <style>{`@keyframes pulseGlow{0%,100%{opacity:.25;filter:drop-shadow(0 0 6px rgba(34,197,94,.35))}50%{opacity:.8;filter:drop-shadow(0 0 16px rgba(34,197,94,.7))}}`}</style>
+            <div
+              className="pointer-events-none absolute inset-0 rounded-2xl"
+              style={{
+                padding: '2px',
+                background: 'linear-gradient(0deg, rgba(34,197,94,0.9), rgba(34,197,94,0.9))',
+                WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
+                animation: 'pulseGlow 4s ease-in-out infinite'
+              }}
+            />
+            <Card>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
                   <Medal className="w-5 h-5" />
@@ -699,6 +712,7 @@ export default function Dashboard() {
                 </div>
               )}
             </Card>
+          </div>
         </div>
 
         {/* Leaderboard - Only APPROVED runs */}

@@ -640,67 +640,87 @@ export default function Dashboard() {
 
       <div className="space-y-6">
         <div className="animate-fade-in stagger-3">
-          <Card>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
-                <Medal className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="font-display text-xl font-semibold text-white">
-                  Elite Runners
-                </h2>
-                <p className="text-xs text-primary-500">Completed 100K distance</p>
-              </div>
-            </div>
-
-            {eliteRunners.length === 0 ? (
-              <p className="text-primary-400 text-center py-8">No elite runners yet.</p>
-            ) : (
-              <div className="space-y-1">
-                <div className="max-h-[60vh] overflow-y-auto pr-2">
-                  {eliteRunners.map((runner, index) => (
-                    <div
-                      key={runner.serviceNumber}
-                      className={`
-                        flex items-center gap-3 py-2 px-3 rounded-lg transition-all
-                        ${index === 0 ? 'bg-gradient-to-r from-success-500/20 to-success-500/5' : index === 1 ? 'bg-primary-700/20' : index === 2 ? 'bg-primary-700/10' : 'hover:bg-primary-800/20'}
-                      `}
-                    >
-                      <div className={`
-                        w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
-                        ${index === 0 ? 'bg-success-500 text-primary-900' : index === 1 ? 'bg-primary-400 text-primary-900' : index === 2 ? 'bg-orange-600 text-white' : 'bg-primary-700 text-primary-300'}
-                      `}>
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-white text-sm truncate">{runner.name}</p>
-                          <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-500/20 text-success-400 border border-success-500/30">
-                            <Medal className="w-3 h-3" /> 100K
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
-                          </span>
-                          <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
-                            <Footprints className="w-3 h-3" />
-                            {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
-                          </span>
-                          <span className="text-success-400 flex items-center gap-0.5 flex-shrink-0">
-                            <TrendingUp className="w-3 h-3" />
-                            {runner.totalDistance.toFixed(1)} km
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+          <div className="relative">
+            <style>{`@keyframes spinGradient{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+            <div
+              className="pointer-events-none absolute -inset-[2px] rounded-2xl opacity-40 blur-[6px]"
+              style={{
+                background:
+                  'conic-gradient(from 0deg, rgba(34,197,94,0.7), rgba(6,182,212,0.7), rgba(168,85,247,0.7), rgba(34,197,94,0.7))',
+                animation: 'spinGradient 8s linear infinite',
+              }}
+            />
+            <Card>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
+                  <Medal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-white">Elite Runners</h2>
+                  <p className="text-xs text-primary-500">Completed 100K distance</p>
                 </div>
               </div>
-            )}
-          </Card>
+              <div className="h-1 rounded-full overflow-hidden bg-primary-700/50 mb-4">
+                <div
+                  className="h-full w-full"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(90deg, rgba(34,197,94,0) 0%, rgba(34,197,94,1) 20%, rgba(6,182,212,1) 40%, rgba(168,85,247,1) 60%, rgba(34,197,94,1) 80%, rgba(34,197,94,0) 100%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2.2s linear infinite',
+                  }}
+                />
+              </div>
+
+              {eliteRunners.length === 0 ? (
+                <p className="text-primary-400 text-center py-8">No elite runners yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  <div className="max-h-[60vh] overflow-y-auto pr-2">
+                    {eliteRunners.map((runner, index) => (
+                      <div
+                        key={runner.serviceNumber}
+                        className={`
+                          flex items-center gap-3 py-2 px-3 rounded-lg transition-all
+                          ${index === 0 ? 'bg-gradient-to-r from-success-500/20 to-success-500/5' : index === 1 ? 'bg-primary-700/20' : index === 2 ? 'bg-primary-700/10' : 'hover:bg-primary-800/20'}
+                        `}
+                      >
+                        <div className={`
+                          w-7 h-7 rounded-full flex items-center justify-center font-display font-bold text-sm flex-shrink-0
+                          ${index === 0 ? 'bg-success-500 text-primary-900' : index === 1 ? 'bg-primary-400 text-primary-900' : index === 2 ? 'bg-orange-600 text-white' : 'bg-primary-700 text-primary-300'}
+                        `}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-white text-sm truncate">{runner.name}</p>
+                            <span className="text-xs text-primary-500">#{runner.serviceNumber}</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success-500/20 text-success-400 border border-success-500/30">
+                              <Medal className="w-3 h-3" /> 100K
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
+                            </span>
+                            <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
+                              <Footprints className="w-3 h-3" />
+                              {runner.runCount} run{runner.runCount !== 1 ? 's' : ''}
+                            </span>
+                            <span className="text-success-400 flex items-center gap-0.5 flex-shrink-0">
+                              <TrendingUp className="w-3 h-3" />
+                              {runner.totalDistance.toFixed(1)} km
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
 
         {/* Leaderboard - Only APPROVED runs */}

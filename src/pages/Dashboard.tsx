@@ -643,11 +643,18 @@ export default function Dashboard() {
           <div className="relative">
             <style>{`@keyframes spinGradient{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
             <div
-              className="pointer-events-none absolute -inset-[2px] rounded-2xl opacity-40 blur-[6px]"
+              className="pointer-events-none absolute -inset-0 rounded-2xl"
               style={{
+                padding: '2px',
                 background:
-                  'conic-gradient(from 0deg, rgba(34,197,94,0.7), rgba(6,182,212,0.7), rgba(168,85,247,0.7), rgba(34,197,94,0.7))',
-                animation: 'spinGradient 8s linear infinite',
+                  'conic-gradient(from 0deg, transparent 0 350deg, rgba(34,197,94,0.95) 350deg 360deg)',
+                animation: 'spinGradient 2.4s linear infinite',
+                WebkitMask:
+                  'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
+                boxShadow:
+                  '0 0 12px rgba(34,197,94,0.6), 0 0 24px rgba(34,197,94,0.25)'
               }}
             />
             <Card>

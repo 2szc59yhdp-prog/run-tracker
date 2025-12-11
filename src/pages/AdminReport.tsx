@@ -294,6 +294,8 @@ export default function AdminReport() {
 
   const LB_ROWS_PER_PAGE = 30;
   const ELITE_ROWS_PER_PAGE = 30;
+  const FIRST_PAGE_ELITE_ROWS = 10;
+  const FIRST_PAGE_LB_ROWS = 10;
   function chunk<T>(arr: T[], size: number): T[][] {
     const out: T[][] = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -377,7 +379,7 @@ export default function AdminReport() {
 
       {/* ------------------ PDF PAGES (CAPTURE-ONLY) ------------------ */}
       <div className="pdf-capture" id="pdf-container">
-      {/* Page 1: Summary */}
+      {/* Page 1: Summary + Sections */}
       <div ref={(el) => { if (el) pdfPageRefs.current[0] = el; }} style={pdfPageStyle}>
         <h1 className="text-2xl font-bold">Madaveli Police 100K Run Challenge</h1>
         <h2 className="text-xl font-semibold mb-2">Statistics</h2>
@@ -403,16 +405,121 @@ export default function AdminReport() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3">
-          <div className="p-3 border border-primary-700 rounded">
-            <h3 className="text-white font-semibold">Elite Runners Table</h3>
-          </div>
-          <div className="p-3 border border-primary-700 rounded">
-            <h3 className="text-white font-semibold">Leader Board</h3>
-          </div>
-          <div className="p-3 border border-primary-700 rounded">
-            <h3 className="text-white font-semibold">Station Performance Board</h3>
-          </div>
+        {/* Elite Runners Table (first page subset) */}
+        <div className="mt-6">
+          <h3 className="text-white font-semibold mb-2">Elite Runners Table</h3>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "280px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "96px" }} />
+              <col style={{ width: "72px" }} />
+              <col style={{ width: "82px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Approved</th>
+                <th className="text-center">Rejected</th>
+                <th className="text-center">KM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(elitePages[0] || []).slice(0, FIRST_PAGE_ELITE_ROWS).map((p) => (
+                <tr key={p.serviceNumber} className="border-b border-primary-700">
+                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                  <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {elitePages.length > 1 || (elitePages[0] && elitePages[0].length > FIRST_PAGE_ELITE_ROWS) ? (
+            <p className="text-primary-400 text-xs mt-2">Continued on next pages</p>
+          ) : null}
+        </div>
+
+        {/* Leader Board (first page subset) */}
+        <div className="mt-6">
+          <h3 className="text-white font-semibold mb-2">Leader Board</h3>
+          <table className="text-sm" style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}>
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "280px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "96px" }} />
+              <col style={{ width: "72px" }} />
+              <col style={{ width: "82px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-center py-2">#</th>
+                <th className="text-left">Name</th>
+                <th className="text-left">Station</th>
+                <th className="text-center">Approved</th>
+                <th className="text-center">Rejected</th>
+                <th className="text-center">KM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(leaderboardPages[0] || []).slice(0, FIRST_PAGE_LB_ROWS).map((p) => (
+                <tr key={p.serviceNumber} className="border-b border-primary-700">
+                  <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                  <td className="px-2 text-white text-left">{p.name}</td>
+                  <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                  <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                  <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {leaderboardPages.length > 1 || (leaderboardPages[0] && leaderboardPages[0].length > FIRST_PAGE_LB_ROWS) ? (
+            <p className="text-primary-400 text-xs mt-2">Continued on next pages</p>
+          ) : null}
+        </div>
+
+        {/* Station Performance Board (full) */}
+        <div className="mt-6">
+          <h3 className="text-white font-semibold mb-2">Station Performance Board</h3>
+          <table
+            className="text-sm"
+            style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
+          >
+            <colgroup>
+              <col style={{ width: "260px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "150px" }} />
+            </colgroup>
+            <thead>
+              <tr className="text-primary-400 border-b border-primary-700">
+                <th className="text-left py-2">Station</th>
+                <th className="text-center">Runners</th>
+                <th className="text-center">Runs</th>
+                <th className="text-center">KM</th>
+                <th className="text-center">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stationBoard.map((s) => (
+                <tr key={s.station} className="border-b border-primary-700">
+                  <td className="pdf-nowrap pdf-fix px-2 text-white text-left" style={{ lineHeight: "22px" }}>{s.station}</td>
+                  <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
+                  <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
+                  <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
+                  <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.performancePercent.toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <p className="text-center text-primary-500 text-xs mt-6">
@@ -420,9 +527,9 @@ export default function AdminReport() {
           signature.
         </p>
       </div>
-      {/* Elite Runners pages */}
-      {elitePages.map((page, idx) => (
-        <div key={`elite-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
+      {/* Elite Runners pages (continued) */}
+      {elitePages.slice(1).map((page, idx) => (
+        <div key={`elite-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + idx] = el; }} style={pdfPageStyle}>
           <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
           <h1 className="text-2xl font-bold">Elite Runners</h1>
           <p className="text-primary-300 text-sm mb-6">Completed ≥ 100 KM • Range: {startDate} → {endDate}</p>
@@ -461,9 +568,9 @@ export default function AdminReport() {
         </div>
       ))}
 
-      {/* Leaderboard pages */}
-      {leaderboardPages.map((page, idx) => (
-        <div key={`lb-${idx}`} ref={(el) => { if (el) pdfPageRefs.current[1 + elitePages.length + idx] = el; }} style={pdfPageStyle}>
+      {/* Leaderboard pages (continued) */}
+      {leaderboardPages.slice(1).map((page, idx) => (
+        <div key={`lb-${idx+1}`} ref={(el) => { if (el) pdfPageRefs.current[1 + Math.max(elitePages.length - 1, 0) + idx] = el; }} style={pdfPageStyle}>
           <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
           <h1 className="text-2xl font-bold">Leaderboard{idx > 0 ? ' (cont.)' : ''}</h1>
           <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
@@ -514,52 +621,7 @@ export default function AdminReport() {
         </div>
       ))}
 
-      {/* Station Performance */}
-      <div ref={(el) => { if (el) pdfPageRefs.current[1 + elitePages.length + leaderboardPages.length] = el; }} style={pdfPageStyle}>
-        <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
-        <h1 className="text-2xl font-bold">Station Performance</h1>
-        <p className="text-primary-300 text-sm mb-6">Range: {startDate} → {endDate}</p>
-
-        <table
-          className="text-sm"
-          style={{ width: "730px", tableLayout: "fixed", fontVariantNumeric: "tabular-nums" }}
-        >
-          <colgroup>
-            <col style={{ width: "260px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "120px" }} />
-            <col style={{ width: "150px" }} />
-          </colgroup>
-
-          <thead>
-            <tr className="text-primary-400 border-b border-primary-700">
-              <th className="text-left py-2">Station</th>
-              <th className="text-center">Runners</th>
-              <th className="text-center">Runs</th>
-              <th className="text-center">KM</th>
-              <th className="text-center">%</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {stationBoard.map((s) => (
-              <tr key={s.station} className="border-b border-primary-700">
-                <td className="pdf-nowrap pdf-fix px-2 text-white text-left" style={{ lineHeight: "22px" }}>{s.station}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runners}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-primary-300 text-center" style={{ lineHeight: "22px" }}>{s.runCount}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-success-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.totalDistance.toFixed(1)}</td>
-                <td className="pdf-numeric pdf-nowrap pdf-fix px-2 text-accent-400 text-center font-bold" style={{ lineHeight: "22px" }}>{s.performancePercent.toFixed(1)}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <p className="text-center text-primary-500 text-xs mt-6">
-          This document is electronically generated and does not require a
-          signature.
-        </p>
-      </div>
+      {/* Station Performance now appears on the first page */}
       </div>
 
       {/* ------------------ ORIGINAL SCREEN UI (UNCHANGED) ------------------ */}
@@ -633,21 +695,123 @@ export default function AdminReport() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="p-3 border border-primary-700 rounded">
-                  <h3 className="text-white font-semibold">Elite Runners Table</h3>
-                </div>
-                <div className="p-3 border border-primary-700 rounded">
-                  <h3 className="text-white font-semibold">Leader Board</h3>
-                </div>
-                <div className="p-3 border border-primary-700 rounded">
-                  <h3 className="text-white font-semibold">Station Performance Board</h3>
-                </div>
+              {/* Elite Runners Table (first page subset) */}
+              <div className="mt-6">
+                <h3 className="text-white font-semibold mb-2">Elite Runners Table</h3>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 280 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 96 }} />
+                    <col style={{ width: 72 }} />
+                    <col style={{ width: 82 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Approved</th>
+                      <th className="text-center">Rejected</th>
+                      <th className="text-center">KM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(elitePages[0] || []).slice(0, FIRST_PAGE_ELITE_ROWS).map((p) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
+                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-success-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {elitePages.length > 1 || (elitePages[0] && elitePages[0].length > FIRST_PAGE_ELITE_ROWS) ? (
+                  <p className="text-primary-400 text-xs mt-2">Continued on next pages</p>
+                ) : null}
+              </div>
+
+              {/* Leader Board (first page subset) */}
+              <div className="mt-6">
+                <h3 className="text-white font-semibold mb-2">Leader Board</h3>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 40 }} />
+                    <col style={{ width: 280 }} />
+                    <col style={{ width: 160 }} />
+                    <col style={{ width: 96 }} />
+                    <col style={{ width: 72 }} />
+                    <col style={{ width: 82 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">#</th>
+                      <th className="text-left">Name</th>
+                      <th className="text-left">Station</th>
+                      <th className="text-center">Approved</th>
+                      <th className="text-center">Rejected</th>
+                      <th className="text-center">KM</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(leaderboardPages[0] || []).slice(0, FIRST_PAGE_LB_ROWS).map((p) => (
+                      <tr key={p.serviceNumber} className="border-b border-primary-700">
+                        <td className="px-2 text-primary-300 text-center">{p.position}</td>
+                        <td className="px-2 text-white text-left">{p.name}</td>
+                        <td className="px-2 text-primary-300 text-left">{STATION_MAP[p.station] || p.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.approvedRuns}</td>
+                        <td className="px-2 text-primary-300 text-center">{p.rejectedRuns}</td>
+                        <td className="px-2 text-accent-400 text-center font-bold">{p.totalDistance.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {leaderboardPages.length > 1 || (leaderboardPages[0] && leaderboardPages[0].length > FIRST_PAGE_LB_ROWS) ? (
+                  <p className="text-primary-400 text-xs mt-2">Continued on next pages</p>
+                ) : null}
+              </div>
+
+              {/* Station Performance Board (full) */}
+              <div className="mt-6">
+                <h3 className="text-white font-semibold mb-2">Station Performance Board</h3>
+                <table className="text-sm" style={{ width: 730, tableLayout: 'fixed', fontVariantNumeric: 'tabular-nums' }}>
+                  <colgroup>
+                    <col style={{ width: 270 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 100 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 164 }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-primary-400 border-b border-primary-700">
+                      <th className="text-center py-2">Station</th>
+                      <th className="text-center">Runners</th>
+                      <th className="text-center">Runs</th>
+                      <th className="text-center">KM</th>
+                      <th className="text-center">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stationBoard.map((s) => (
+                      <tr key={s.station} className="border-b border-primary-700">
+                        <td className="px-2 text-white text-center">{s.station}</td>
+                        <td className="px-2 text-primary-300 text-center">{s.runners}</td>
+                        <td className="px-2 text-primary-300 text-center">{s.runCount}</td>
+                        <td className="px-2 text-success-400 text-center font-bold">{s.totalDistance.toFixed(1)}</td>
+                        <td className="px-2 text-accent-400 text-center font-bold">{s.performancePercent.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
 
-          {elitePages.map((page, idx) => (
+          {elitePages.slice(1).map((page, idx) => (
             <div key={`preview-elite-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
               <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
                 <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>
@@ -689,7 +853,7 @@ export default function AdminReport() {
             </div>
           ))}
 
-          {leaderboardPages.map((page, idx) => (
+          {leaderboardPages.slice(1).map((page, idx) => (
             <div key={`preview-lb-${idx}`} className="inline-block border border-primary-700 rounded-xl shadow-md" style={{ background: '#102a43' }}>
               <div style={{ width: 794, minHeight: 1123, padding: 32, color: '#ffffff' }}>
                 <h2 className="text-xl font-bold text-accent-400 mb-1">Madaveli Police</h2>

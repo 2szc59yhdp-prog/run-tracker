@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw, Building2, Award } from 'lucide-react';
 import Card from '../components/Card';
@@ -80,6 +80,7 @@ export default function Admin() {
   const [tshirtEditingId, setTshirtEditingId] = useState<string | null>(null);
   const [tshirtEditForm, setTshirtEditForm] = useState<{ size: string; sleeveType: 'Longsleeve' | 'Short Sleeve' }>({ size: 'M', sleeveType: 'Short Sleeve' });
   const [tshirtSaving, setTshirtSaving] = useState(false);
+  const tshirtSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-refresh runs every 5 seconds (silent - no loading spinner)
   useEffect(() => {
@@ -416,6 +417,7 @@ export default function Admin() {
               <p className="text-white font-display font-bold">View submissions</p>
             </div>
           </div>
+          <Button variant="secondary" onClick={() => tshirtSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}>Open</Button>
         </Card>
       </div>
 
@@ -803,6 +805,7 @@ export default function Admin() {
         )}
       </Card>
 
+      <div ref={tshirtSectionRef}>
       <Card className="mt-6 animate-fade-in">
         <h2 className="font-display text-xl font-semibold text-white mb-4">Tshirt admission ({tshirtAdmissions.length})</h2>
         {tshirtLoading ? (
@@ -900,6 +903,7 @@ export default function Admin() {
           </div>
         )}
       </Card>
+      </div>
 
       {/* Photo Modal */}
       {selectedPhoto && (

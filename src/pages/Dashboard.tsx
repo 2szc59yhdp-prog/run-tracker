@@ -691,10 +691,10 @@ export default function Dashboard() {
                       }
                       const res = await addTshirtAdmission({ serviceNumber: sn, size: tshirtSize, sleeveType: tshirtSleeve });
                       if (res.success) {
-                        setTshirtMessage({ type: 'success', text: 'Tshirt request submitted' });
                         setTshirtServiceNumber('');
                         setTshirtSize('M');
                         setTshirtSleeve('Short Sleeve');
+                        setShowTshirtModal(false);
                       } else {
                         setTshirtMessage({ type: 'error', text: res.error || 'Failed to submit' });
                       }

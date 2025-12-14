@@ -81,6 +81,7 @@ export default function Admin() {
   const [tshirtEditForm, setTshirtEditForm] = useState<{ size: string; sleeveType: 'Longsleeve' | 'Short Sleeve' }>({ size: 'M', sleeveType: 'Short Sleeve' });
   const [tshirtSaving, setTshirtSaving] = useState(false);
   const tshirtSectionRef = useRef<HTMLDivElement | null>(null);
+  const [tshirtInitialized, setTshirtInitialized] = useState(false);
 
   // Auto-refresh runs every 5 seconds (silent - no loading spinner)
   useEffect(() => {
@@ -92,19 +93,20 @@ export default function Admin() {
   }, [refreshData]);
 
   useEffect(() => {
-    const load = async () => {
-      setTshirtLoading(true);
+    const load = async (silent: boolean) => {
+      if (!tshirtInitialized && !silent) setTshirtLoading(true);
       try {
         const res = await fetchTshirtAdmissions();
         if (res.success && res.data) setTshirtAdmissions(res.data);
       } finally {
-        setTshirtLoading(false);
+        if (!tshirtInitialized && !silent) setTshirtLoading(false);
+        if (!tshirtInitialized) setTshirtInitialized(true);
       }
     };
-    load();
-    const timer = setInterval(load, 10000);
+    load(false);
+    const timer = setInterval(() => load(true), 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [tshirtInitialized]);
 
   // Auto-dismiss message after 4 seconds
   useEffect(() => {

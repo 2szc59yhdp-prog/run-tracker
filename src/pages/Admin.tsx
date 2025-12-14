@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useApp } from '../context/AppContext';
-import { updateRun, deleteRun, updateRunStatus } from '../services/api';
+import { updateRun, deleteRun, updateRunStatus, fetchTshirtAdmissions, updateTshirtAdmission } from '../services/api';
 import type { Run, RunStatus } from '../types';
 import { REJECTION_REASONS } from '../types';
 
@@ -75,6 +75,11 @@ export default function Admin() {
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [customRejectionReason, setCustomRejectionReason] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<Run | null>(null);
+  const [tshirtAdmissions, setTshirtAdmissions] = useState<Array<{ id: string; timestamp: string; serviceNumber: string; size: string; sleeveType: string }>>([]);
+  const [tshirtLoading, setTshirtLoading] = useState(false);
+  const [tshirtEditingId, setTshirtEditingId] = useState<string | null>(null);
+  const [tshirtEditForm, setTshirtEditForm] = useState<{ size: string; sleeveType: 'Longsleeve' | 'Short Sleeve' }>({ size: 'M', sleeveType: 'Short Sleeve' });
+  const [tshirtSaving, setTshirtSaving] = useState(false);
 
   // Auto-refresh runs every 5 seconds (silent - no loading spinner)
   useEffect(() => {
@@ -84,6 +89,21 @@ export default function Admin() {
 
     return () => clearInterval(interval);
   }, [refreshData]);
+
+  useEffect(() => {
+    const load = async () => {
+      setTshirtLoading(true);
+      try {
+        const res = await fetchTshirtAdmissions();
+        if (res.success && res.data) setTshirtAdmissions(res.data);
+      } finally {
+        setTshirtLoading(false);
+      }
+    };
+    load();
+    const timer = setInterval(load, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Auto-dismiss message after 4 seconds
   useEffect(() => {
@@ -385,6 +405,17 @@ export default function Admin() {
             </div>
           </div>
           <Button variant="secondary" onClick={() => navigate('/admin/outstanding')}>Open</Button>
+        </Card>
+        <Card hover className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary-700/50 text-accent-400">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-primary-400 text-sm font-medium">Tshirt admission</p>
+              <p className="text-white font-display font-bold">View submissions</p>
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -768,6 +799,104 @@ export default function Admin() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-6 animate-fade-in">
+        <h2 className="font-display text-xl font-semibold text-white mb-4">Tshirt admission ({tshirtAdmissions.length})</h2>
+        {tshirtLoading ? (
+          <div className="py-8"><LoadingSpinner size="sm" message="Loading" /></div>
+        ) : tshirtAdmissions.length === 0 ? (
+          <p className="text-primary-400">No entries</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-primary-700">
+                  <th className="text-left text-primary-400 text-xs py-2">Timestamp</th>
+                  <th className="text-left text-primary-400 text-xs py-2">Service #</th>
+                  <th className="text-left text-primary-400 text-xs py-2">Size</th>
+                  <th className="text-left text-primary-400 text-xs py-2">Sleeve</th>
+                  <th className="text-left text-primary-400 text-xs py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tshirtAdmissions.map((t) => (
+                  <tr key={t.id} className="border-b border-primary-800/50">
+                    <td className="py-2 text-white text-sm">{t.timestamp}</td>
+                    <td className="py-2 text-white text-sm">{t.serviceNumber}</td>
+                    <td className="py-2 text-white text-sm">
+                      {tshirtEditingId === t.id ? (
+                        <select
+                          value={tshirtEditForm.size}
+                          onChange={(e) => setTshirtEditForm((prev) => ({ ...prev, size: e.target.value }))}
+                          className="bg-primary-900 border border-primary-700 rounded-lg px-2 py-1 text-white"
+                        >
+                          <option value="XS">XS</option>
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="XXL">XXL</option>
+                          <option value="XXXL">XXXL</option>
+                        </select>
+                      ) : (
+                        t.size
+                      )}
+                    </td>
+                    <td className="py-2 text-white text-sm">
+                      {tshirtEditingId === t.id ? (
+                        <select
+                          value={tshirtEditForm.sleeveType}
+                          onChange={(e) => setTshirtEditForm((prev) => ({ ...prev, sleeveType: e.target.value as 'Longsleeve' | 'Short Sleeve' }))}
+                          className="bg-primary-900 border border-primary-700 rounded-lg px-2 py-1 text-white"
+                        >
+                          <option value="Short Sleeve">Short Sleeve</option>
+                          <option value="Longsleeve">Longsleeve</option>
+                        </select>
+                      ) : (
+                        t.sleeveType
+                      )}
+                    </td>
+                    <td className="py-2 text-white text-sm">
+                      {tshirtEditingId === t.id ? (
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => { setTshirtEditingId(null); }}>
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            loading={tshirtSaving}
+                            onClick={async () => {
+                              if (!adminToken) return;
+                              setTshirtSaving(true);
+                              try {
+                                const res = await updateTshirtAdmission(t.id, { size: tshirtEditForm.size, sleeveType: tshirtEditForm.sleeveType }, adminToken);
+                                if (res.success && res.data) {
+                                  const updatedSize = res.data.size as string;
+                                  const updatedSleeve = res.data.sleeveType as string;
+                                  setTshirtAdmissions((prev) => prev.map((row) => row.id === t.id ? { ...row, size: updatedSize, sleeveType: updatedSleeve } : row));
+                                  setTshirtEditingId(null);
+                                }
+                              } finally {
+                                setTshirtSaving(false);
+                              }
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="secondary" onClick={() => { setTshirtEditingId(t.id); setTshirtEditForm({ size: t.size, sleeveType: t.sleeveType as 'Longsleeve' | 'Short Sleeve' }); }}>
+                          Edit
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </Card>

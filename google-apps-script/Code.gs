@@ -77,6 +77,23 @@ function getUsersSheet() {
   return spreadsheet.getSheetByName('Users');
 }
 
+function getTshirtsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('TshirtAdmissions');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('TshirtAdmissions');
+    sheet.getRange(1, 1, 1, 5).setValues([[
+      'ID',
+      'Timestamp',
+      'ServiceNumber',
+      'Size',
+      'SleeveType'
+    ]]);
+  }
+  return sheet;
+}
+
 function getUserLoginsSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
@@ -275,6 +292,9 @@ function doGet(e) {
       case 'getUserByServiceNumber':
         result = getUserByServiceNumber(e.parameter.serviceNumber);
         break;
+      case 'getTshirtAdmissions':
+        result = getTshirtAdmissions();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -351,6 +371,12 @@ function doPost(e) {
       case 'getEmailQuota':
         result = { success: true, data: { remaining: MailApp.getRemainingDailyQuota() } };
         break;
+      case 'addTshirtAdmission':
+        result = addTshirtAdmission(data);
+        break;
+      case 'updateTshirtAdmission':
+        result = updateTshirtAdmission(data);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -359,6 +385,125 @@ function doPost(e) {
   }
   
   return createJsonResponse(result);
+}
+
+function addTshirtAdmission(data) {
+  if (!data.serviceNumber || !data.size || !data.sleeveType) {
+    return { success: false, error: 'All fields are required' };
+  }
+  // Validate service number exists in Users and is a participant (not General Admin)
+  var usersSheet = getUsersSheet();
+  if (!usersSheet) {
+    return { success: false, error: 'Users sheet not found' };
+  }
+  var usersData = usersSheet.getDataRange().getValues();
+  var uHeaders = usersData[0] || [];
+  var uSNIdx = uHeaders.indexOf('ServiceNumber');
+  var uStationIdx = uHeaders.indexOf('Station');
+  var isRegistered = false;
+  for (var i = 1; i < usersData.length; i++) {
+    var row = usersData[i];
+    var sn = (uSNIdx >= 0 ? String(row[uSNIdx]) : '').trim();
+    if (sn && sn === String(data.serviceNumber).trim()) {
+      isRegistered = true;
+      break;
+    }
+  }
+  if (!isRegistered) {
+    return { success: false, error: 'Service number is not registered' };
+  }
+  // Enforce single submission per service number
+  var tshirtSheet = getTshirtsSheet();
+  var tshirtData = tshirtSheet.getDataRange().getValues();
+  var exists = false;
+  for (var j = 1; j < tshirtData.length; j++) {
+    var r = tshirtData[j];
+    var snExisting = r[2] ? String(r[2]).trim() : '';
+    if (snExisting && snExisting === String(data.serviceNumber).trim()) {
+      exists = true;
+      break;
+    }
+  }
+  if (exists) {
+    return { success: false, error: 'A Tshirt admission already exists for this service number' };
+  }
+  const sheet = getTshirtsSheet();
+  const id = generateId();
+  const timestamp = formatDateTime(new Date());
+  sheet.appendRow([id, timestamp, String(data.serviceNumber), String(data.size), String(data.sleeveType)]);
+  return {
+    success: true,
+    data: {
+      id: id,
+      timestamp: timestamp,
+      serviceNumber: String(data.serviceNumber),
+      size: String(data.size),
+      sleeveType: String(data.sleeveType)
+    }
+  };
+}
+
+function getTshirtAdmissions() {
+  const sheet = getTshirtsSheet();
+  const data = sheet.getDataRange().getValues();
+  const result = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[0]) {
+      result.push({
+        id: String(row[0]),
+        timestamp: formatDateTime(row[1]),
+        serviceNumber: String(row[2]),
+        size: String(row[3]),
+        sleeveType: String(row[4])
+      });
+    }
+  }
+  return { success: true, data: result };
+}
+
+function updateTshirtAdmission(data) {
+  if (!data.adminToken || !validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+  var sheet = getTshirtsSheet();
+  var range = sheet.getDataRange();
+  var values = range.getValues();
+  var headers = values[0] || [];
+  var idIdx = headers.indexOf('ID');
+  var sizeIdx = headers.indexOf('Size');
+  var sleeveIdx = headers.indexOf('SleeveType');
+  var foundRow = -1;
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (idIdx >= 0 && String(row[idIdx]).trim() === String(data.id).trim()) {
+      foundRow = i + 1; // sheet rows are 1-based
+      break;
+    }
+  }
+  if (foundRow === -1) {
+    return { success: false, error: 'Record not found' };
+  }
+  if (typeof data.size === 'string') {
+    sheet.getRange(foundRow, sizeIdx + 1).setValue(String(data.size));
+  }
+  if (typeof data.sleeveType === 'string') {
+    sheet.getRange(foundRow, sleeveIdx + 1).setValue(String(data.sleeveType));
+  }
+  var updated = sheet.getRange(foundRow, 1, 1, headers.length).getValues()[0];
+  return {
+    success: true,
+    data: {
+      id: String(updated[idIdx]),
+      timestamp: String(updated[headers.indexOf('Timestamp')]),
+      serviceNumber: String(updated[headers.indexOf('ServiceNumber')]),
+      size: String(updated[sizeIdx]),
+      sleeveType: String(updated[sleeveIdx])
+    }
+  };
 }
 
 /**

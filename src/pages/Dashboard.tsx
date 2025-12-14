@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal, Plus } from 'lucide-react';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
+import Input from '../components/Input';
 import { useApp } from '../context/AppContext';
-import { fetchAllUsers } from '../services/api';
+import { fetchAllUsers, addTshirtAdmission, getUserByServiceNumber, fetchTshirtAdmissions } from '../services/api';
 import type { RunStatus, RegisteredUser } from '../types';
 
 // Challenge dates
@@ -64,12 +66,18 @@ function StatusBadge({ status, rejectionReason }: {
 }
 
 export default function Dashboard() {
-  const { runs, dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData } = useApp();
+  const { runs, dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData, isParticipant, isAdmin } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
   const [leaderboardFilter, setLeaderboardFilter] = useState('');
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'before' as 'before' | 'active' | 'ended' });
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showTshirtModal, setShowTshirtModal] = useState(false);
+  const [tshirtServiceNumber, setTshirtServiceNumber] = useState('');
+  const [tshirtSize, setTshirtSize] = useState('M');
+  const [tshirtSleeve, setTshirtSleeve] = useState<'Longsleeve' | 'Short Sleeve'>('Short Sleeve');
+  const [tshirtSubmitting, setTshirtSubmitting] = useState(false);
+  const [tshirtMessage, setTshirtMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Countdown timer
   useEffect(() => {
@@ -463,6 +471,11 @@ export default function Dashboard() {
     });
   };
 
+  // Require login (participant or admin)
+  if (!isParticipant && !isAdmin) {
+    return <Navigate to="/participant-login" replace />;
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -474,6 +487,12 @@ export default function Dashboard() {
           {isRefreshing && (
             <RefreshCw className="w-5 h-5 text-accent-400 animate-spin" />
           )}
+          <div className="ml-auto">
+            <Button onClick={() => setShowTshirtModal(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Tshirt
+            </Button>
+          </div>
         </div>
         <p className="text-primary-400">
           Team statistics and leaderboard
@@ -595,6 +614,105 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {showTshirtModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg font-semibold text-white">Add Tshirt</h2>
+              <button onClick={() => { setShowTshirtModal(false); setTshirtMessage(null); }} className="text-primary-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {tshirtMessage && (
+              <div className={`p-3 rounded-lg mb-4 ${tshirtMessage.type === 'success' ? 'bg-success-500/10 border border-success-500/30 text-success-400' : 'bg-danger-500/10 border border-danger-500/30 text-danger-400'}`}>
+                {tshirtMessage.text}
+              </div>
+            )}
+            <div className="space-y-4">
+              <Input
+                label="Service Number"
+                value={tshirtServiceNumber}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTshirtServiceNumber(e.target.value)}
+                placeholder="e.g., 5568"
+              />
+              <div>
+                <label className="block text-sm font-medium text-primary-300 mb-1">Tshirt Size</label>
+                <select
+                  value={tshirtSize}
+                  onChange={(e) => setTshirtSize(e.target.value)}
+                  className="w-full bg-primary-900 border border-primary-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                >
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
+                  <option value="XXXL">XXXL</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-300 mb-1">Sleeve Type</label>
+                <select
+                  value={tshirtSleeve}
+                  onChange={(e) => setTshirtSleeve(e.target.value as 'Longsleeve' | 'Short Sleeve')}
+                  className="w-full bg-primary-900 border border-primary-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                >
+                  <option value="Short Sleeve">Short Sleeve</option>
+                  <option value="Longsleeve">Longsleeve</option>
+                </select>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="ghost" onClick={() => { setShowTshirtModal(false); setTshirtMessage(null); }}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    setTshirtMessage(null);
+                    const sn = tshirtServiceNumber.trim();
+                    if (!sn) {
+                      setTshirtMessage({ type: 'error', text: 'Service number is required' });
+                      return;
+                    }
+                    setTshirtSubmitting(true);
+                    try {
+                      const userRes = await getUserByServiceNumber(sn);
+                      if (!userRes.success || !userRes.data) {
+                        setTshirtMessage({ type: 'error', text: 'Service number is not registered' });
+                        setTshirtSubmitting(false);
+                        return;
+                      }
+                      const existingRes = await fetchTshirtAdmissions();
+                      if (existingRes.success && existingRes.data && existingRes.data.some(a => a.serviceNumber === sn)) {
+                        setTshirtMessage({ type: 'error', text: 'You have already submitted a Tshirt request' });
+                        setTshirtSubmitting(false);
+                        return;
+                      }
+                      const res = await addTshirtAdmission({ serviceNumber: sn, size: tshirtSize, sleeveType: tshirtSleeve });
+                      if (res.success) {
+                        setTshirtMessage({ type: 'success', text: 'Tshirt request submitted' });
+                        setTshirtServiceNumber('');
+                        setTshirtSize('M');
+                        setTshirtSleeve('Short Sleeve');
+                      } else {
+                        setTshirtMessage({ type: 'error', text: res.error || 'Failed to submit' });
+                      }
+                    } catch {
+                      setTshirtMessage({ type: 'error', text: 'An error occurred' });
+                    } finally {
+                      setTshirtSubmitting(false);
+                    }
+                  }}
+                  loading={tshirtSubmitting}
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="mb-4 flex justify-end">
         <Button

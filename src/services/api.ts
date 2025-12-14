@@ -6,7 +6,7 @@
  */
 
 import { APPS_SCRIPT_URL } from '../config';
-import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser } from '../types';
+import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser, TshirtAdmission, AddTshirtAdmissionPayload } from '../types';
 
 export interface Sponsor {
   id: string;
@@ -460,6 +460,45 @@ export async function getPinEmailQueueStatus(adminToken: string, actorServiceNum
     return data;
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get PIN email queue status' };
+  }
+}
+
+export async function fetchTshirtAdmissions(): Promise<ApiResponse<TshirtAdmission[]>> {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getTshirtAdmissions`, { method: 'GET' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch T-shirt admissions' };
+  }
+}
+
+export async function addTshirtAdmission(payload: AddTshirtAdmissionPayload): Promise<ApiResponse<TshirtAdmission>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addTshirtAdmission', ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add T-shirt admission' };
+  }
+}
+
+export async function updateTshirtAdmission(id: string, payload: { size: string; sleeveType: 'Longsleeve' | 'Short Sleeve' }, adminToken: string): Promise<ApiResponse<TshirtAdmission>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateTshirtAdmission', id, adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update T-shirt admission' };
   }
 }
 

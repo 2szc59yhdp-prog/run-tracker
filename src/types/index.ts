@@ -95,6 +95,20 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 
+export interface TshirtAdmission {
+  id: string;
+  timestamp: string;
+  serviceNumber: string;
+  size: string;
+  sleeveType: 'Longsleeve' | 'Short Sleeve';
+}
+
+export interface AddTshirtAdmissionPayload {
+  serviceNumber: string;
+  size: string;
+  sleeveType: 'Longsleeve' | 'Short Sleeve';
+}
+
 // Admin authentication state
 export interface AdminState {
   isAdmin: boolean;

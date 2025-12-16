@@ -221,54 +221,54 @@ export default function ActiveDays() {
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-primary-800/30 border-b border-primary-700/50">
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-16">#</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-32">SN</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider min-w-[250px]">Name</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-56">Active Days</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-primary-700/30">
-                    {users.map((row, index) => {
-                      const isQualified = row.activeDays >= 40;
-                      const remainingDays = Math.max(0, 40 - row.activeDays);
-                      
-                      return (
-                        <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
-                          <td className="py-3 px-6 text-primary-500 font-mono text-sm">
-                            {index + 1}
-                          </td>
-                          <td className="py-3 px-6 text-primary-300 text-sm font-mono">
-                            {row.serviceNumber}
-                          </td>
-                          <td className="py-3 px-6">
-                            <span className="text-white font-medium text-sm">{row.name}</span>
-                          </td>
-                          <td className="py-3 px-6 text-center">
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                                isQualified 
-                                  ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
-                                  : 'bg-primary-700/50 text-white'
-                              }`}>
-                                {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-1">/ 40</span>
-                              </span>
-                              <span className={`text-[10px] font-medium ${
-                                remainingDays === 0 ? 'text-success-400' : 'text-primary-400'
-                              }`}>
-                                {remainingDays === 0 ? 'Qualified' : `${remainingDays} days left`}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                   <thead>
+                     <tr className="bg-primary-800/30 border-b border-primary-700/50">
+                       <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-12 text-center">#</th>
+                       <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-24">SN</th>
+                       <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider">Name</th>
+                       <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-32">Active Days</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-primary-700/30">
+                     {users.map((row, index) => {
+                       const isQualified = row.activeDays >= 40;
+                       const remainingDays = Math.max(0, 40 - row.activeDays);
+                       
+                       return (
+                         <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
+                           <td className="py-3 px-2 sm:px-4 text-primary-500 font-mono text-sm text-center">
+                             {index + 1}
+                           </td>
+                           <td className="py-3 px-2 sm:px-4 text-primary-300 text-sm font-mono">
+                             {row.serviceNumber}
+                           </td>
+                           <td className="py-3 px-2 sm:px-4">
+                             <span className="text-white font-medium text-sm">{row.name}</span>
+                           </td>
+                           <td className="py-3 px-2 sm:px-4 text-center">
+                             <div className="flex flex-col items-center justify-center gap-1">
+                               <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                                 isQualified 
+                                   ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
+                                   : 'bg-primary-700/50 text-white'
+                               }`}>
+                                 {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-1">/ 40</span>
+                               </span>
+                               <span className={`text-[10px] font-medium ${
+                                 remainingDays === 0 ? 'text-success-400' : 'text-primary-400'
+                               }`}>
+                                 {remainingDays === 0 ? 'Qualified' : `${remainingDays} days left`}
+                               </span>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     })}
+                   </tbody>
+                 </table>
+               </div>
             </Card>
           ))
         )}

@@ -1,0 +1,284 @@
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { ArrowLeft, Download, Search, X } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import Button from '../components/Button';
+import Card from '../components/Card';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { fetchAllUsers } from '../services/api';
+import type { RegisteredUser } from '../types';
+
+export default function FinishersList() {
+  const navigate = useNavigate();
+  const { runs, isLoading: isLoadingRuns, isAdmin } = useApp();
+  const [filter, setFilter] = useState('');
+  const [users, setUsers] = useState<RegisteredUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  // Redirect if not admin
+  if (!isAdmin) {
+    return <Navigate to="/admin-login" replace />;
+  }
+
+  // Fetch users on mount
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const response = await fetchAllUsers();
+        if (response.success && response.data) {
+          setUsers(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load users', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    }
+    loadUsers();
+  }, []);
+
+  const finishersData = useMemo(() => {
+    if (users.length === 0 || runs.length === 0) return [];
+
+    // 1. Filter approved runs
+    const approvedRuns = runs.filter(run => run.status === 'approved');
+
+    // 2. Group runs by user
+    const runsByUser = new Map<string, typeof approvedRuns>();
+    approvedRuns.forEach(run => {
+      if (!runsByUser.has(run.serviceNumber)) {
+        runsByUser.set(run.serviceNumber, []);
+      }
+      runsByUser.get(run.serviceNumber)?.push(run);
+    });
+
+    const finishers: {
+      rank: number;
+      serviceNumber: string;
+      name: string;
+      station: string;
+      daysToComplete: number;
+      completionDate: Date;
+      activeDays: number;
+    }[] = [];
+
+    // 3. Process each user
+    users.forEach(user => {
+      const userRuns = runsByUser.get(user.serviceNumber) || [];
+      
+      // Sort runs by date ascending
+      userRuns.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      let totalDistance = 0;
+      let completionDate: Date | null = null;
+      let firstRunDate: Date | null = null;
+      const activeDates = new Set<string>();
+
+      for (const run of userRuns) {
+        if (!firstRunDate) {
+          firstRunDate = new Date(run.date);
+        }
+        
+        activeDates.add(run.date);
+        totalDistance += run.distanceKm;
+
+        if (totalDistance >= 100 && !completionDate) {
+          completionDate = new Date(run.date);
+          // Don't break here because we need to count total active days?
+          // The prompt says "active days/40". Usually this means total active days up to now.
+          // But maybe it means active days *at the time of completion*?
+          // "active days/40" usually implies "Current Status".
+          // I will continue loop to count all active days.
+        }
+      }
+
+      if (completionDate && firstRunDate) {
+        // Calculate days to complete (inclusive)
+        const diffTime = Math.abs(completionDate.getTime() - firstRunDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+        // Note: If completion is same day as first run, diffTime is 0, diffDays is 1. Correct.
+        // If completion is next day, diffTime is 24h, diffDays is 2. Correct.
+
+        finishers.push({
+          rank: 0, // Will assign later
+          serviceNumber: user.serviceNumber,
+          name: user.name,
+          station: user.station,
+          daysToComplete: diffDays,
+          completionDate: completionDate,
+          activeDays: activeDates.size
+        });
+      }
+    });
+
+    // 4. Sort by completion date
+    finishers.sort((a, b) => a.completionDate.getTime() - b.completionDate.getTime());
+
+    // 5. Assign ranks
+    finishers.forEach((f, index) => {
+      f.rank = index + 1;
+    });
+
+    return finishers;
+  }, [runs, users]);
+
+  // Filter logic
+  const filteredFinishers = useMemo(() => {
+    if (!filter.trim()) return finishersData;
+    const lowerFilter = filter.toLowerCase();
+    return finishersData.filter(item => 
+      item.name.toLowerCase().includes(lowerFilter) || 
+      item.serviceNumber.includes(lowerFilter) ||
+      item.station.toLowerCase().includes(lowerFilter)
+    );
+  }, [finishersData, filter]);
+
+  const downloadCSV = () => {
+    const headers = ['Rank', 'Service Number', 'Name', 'Station', 'Days to Complete', 'Active Days'];
+    const rows = filteredFinishers.map(row => [
+      row.rank,
+      row.serviceNumber,
+      row.name,
+      row.station,
+      row.daysToComplete,
+      row.activeDays
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', '100k_finishers_list.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  if (isLoadingRuns || isLoadingUsers) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16">
+        <LoadingSpinner size="lg" message="Loading finishers data..." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8 animate-fade-in">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/admin')}
+          className="mb-4 text-primary-400 hover:text-white pl-0 gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Admin
+        </Button>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight">
+              100K Finishers List
+            </h1>
+            <p className="text-primary-400">
+              Participants who have completed 100km, ordered by completion time.
+            </p>
+          </div>
+          
+          <Button onClick={downloadCSV} icon={<Download className="w-4 h-4" />}>
+            Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter */}
+      <div className="mb-6 relative animate-fade-in stagger-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-500" />
+        <input
+          type="text"
+          placeholder="Search by name, service number, or station..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full pl-10 pr-10 py-3 bg-primary-800/50 border border-primary-700 rounded-xl text-white placeholder-primary-500 outline-none ring-0 focus:ring-2 focus:ring-accent-500 transition-all"
+        />
+        {filter && (
+          <button
+            onClick={() => setFilter('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-primary-500 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Table */}
+      <Card className="animate-fade-in stagger-2 overflow-hidden !p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-primary-800/50 border-b border-primary-700">
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-12 text-center">#</th>
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-24">SN</th>
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider">Name</th>
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-24 sm:w-32 hidden sm:table-cell">Station</th>
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-24">Days</th>
+                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-28">Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-primary-700/50">
+              {filteredFinishers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-primary-400">
+                    No finishers found yet.
+                  </td>
+                </tr>
+              ) : (
+                filteredFinishers.map((row) => (
+                  <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
+                    <td className="py-3 px-2 sm:px-4 text-primary-500 font-mono text-sm text-center">
+                      {row.rank}
+                    </td>
+                    <td className="py-3 px-2 sm:px-4 text-primary-300 text-sm font-mono">
+                      {row.serviceNumber}
+                    </td>
+                    <td className="py-3 px-2 sm:px-4">
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium text-sm truncate max-w-[120px] sm:max-w-none">{row.name}</span>
+                        <span className="text-xs text-primary-500 sm:hidden">{row.station}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 sm:px-4 text-primary-300 text-sm hidden sm:table-cell">
+                      {row.station}
+                    </td>
+                    <td className="py-3 px-2 sm:px-4 text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/10 text-accent-400 border border-accent-500/20 whitespace-nowrap">
+                        {row.daysToComplete}d
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 sm:px-4 text-center">
+                      <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                        row.activeDays >= 40
+                          ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
+                          : 'bg-primary-700/50 text-white'
+                      }`}>
+                        {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-0.5">/40</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}

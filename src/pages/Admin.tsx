@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw, Building2, Award, Calendar } from 'lucide-react';
+import { Shield, Edit2, Trash2, Save, X, AlertCircle, CheckCircle, Clock, XCircle, Image, Filter, ChevronDown, MessageSquare, RefreshCw, Building2, Award, Calendar, Medal } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -396,6 +396,18 @@ export default function Admin() {
             </div>
           </div>
           <Button variant="secondary" onClick={() => navigate('/admin/active-days')}>Open</Button>
+        </Card>
+        <Card hover className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary-700/50 text-warning-400">
+              <Medal className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-primary-400 text-sm font-medium">Finishers List</p>
+              <p className="text-white font-display font-bold">View 100K finishers</p>
+            </div>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/admin/finishers')}>Open</Button>
         </Card>
         <Card hover className="flex items-center justify-between">
           <div className="flex items-center gap-3">

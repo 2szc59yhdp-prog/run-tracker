@@ -81,20 +81,50 @@ export default function ActiveDays() {
     );
   }, [activeDaysData, filter]);
 
+  // Group by station
+  const groupedData = useMemo(() => {
+    const groups = new Map<string, typeof filteredData>();
+    
+    filteredData.forEach(user => {
+      if (!groups.has(user.station)) {
+        groups.set(user.station, []);
+      }
+      groups.get(user.station)?.push(user);
+    });
+
+    // Sort stations alphabetically
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([station, users]) => ({
+        station,
+        users: users.sort((a, b) => b.activeDays - a.activeDays) // Ensure users are sorted by active days within station
+      }));
+  }, [filteredData]);
+
   // Redirect if not admin and trying to access admin view (must be after hooks)
   if (isAdminView && !isAdmin) {
     return <Navigate to="/admin-login" replace />;
   }
 
   const downloadCSV = () => {
-    const headers = ['Rank', 'Service Number', 'Name', 'Station', 'Active Days'];
-    const rows = filteredData.map((row, index) => [
-      index + 1,
-      row.serviceNumber,
-      row.name,
-      row.station,
-      row.activeDays
-    ]);
+    const headers = ['Station', 'Rank', 'Service Number', 'Name', 'Active Days', 'Remaining Days'];
+    
+    // Create rows based on the grouped structure to match the view
+    const rows: (string | number)[][] = [];
+    
+    groupedData.forEach(({ station, users }) => {
+      users.forEach((row, index) => {
+        const remainingDays = Math.max(0, 40 - row.activeDays);
+        rows.push([
+          station,
+          index + 1,
+          row.serviceNumber,
+          row.name,
+          row.activeDays,
+          remainingDays
+        ]);
+      });
+    });
 
     const csvContent = [
       headers.join(','),
@@ -154,7 +184,7 @@ export default function ActiveDays() {
       </div>
 
       {/* Filter */}
-      <div className="mb-6 relative animate-fade-in stagger-1">
+      <div className="mb-8 relative animate-fade-in stagger-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-500" />
         <input
           type="text"
@@ -173,67 +203,79 @@ export default function ActiveDays() {
         )}
       </div>
 
-      {/* Table */}
-      <Card className="animate-fade-in stagger-2 overflow-hidden !p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-primary-800/50 border-b border-primary-700">
-                <th className="py-4 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider">Rank</th>
-                <th className="py-4 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider">Participant</th>
-                <th className="py-4 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider">Station</th>
-                <th className="py-4 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center">Active Days</th>
-                <th className="py-4 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-primary-700/50">
-              {filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-primary-400">
-                    No participants found.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((row, index) => {
-                  const isQualified = row.activeDays >= 40;
-                  return (
-                    <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
-                      <td className="py-4 px-6 text-primary-500 font-mono text-sm">
-                        {index + 1}
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex flex-col">
-                          <span className="text-white font-medium">{row.name}</span>
-                          <span className="text-xs text-primary-500">#{row.serviceNumber}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-primary-300 text-sm">
-                        {row.station}
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
-                          isQualified 
-                            ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
-                            : 'bg-primary-700/50 text-white'
-                        }`}>
-                          {row.activeDays} <span className="text-xs font-normal opacity-70 ml-1">/ 40</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        {isQualified ? (
-                          <span className="text-xs font-bold text-success-400 uppercase tracking-wider">Qualified</span>
-                        ) : (
-                          <span className="text-xs text-primary-500">In Progress</span>
-                        )}
-                      </td>
+      {/* Station Cards */}
+      <div className="space-y-8 animate-fade-in stagger-2">
+        {groupedData.length === 0 ? (
+          <div className="text-center py-12 bg-primary-800/30 rounded-2xl border border-primary-700/50">
+            <p className="text-primary-400">No participants found matching your criteria.</p>
+          </div>
+        ) : (
+          groupedData.map(({ station, users }) => (
+            <Card key={station} className="overflow-hidden !p-0 border-primary-700/50">
+              {/* Card Header */}
+              <div className="px-6 py-4 bg-primary-800/80 border-b border-primary-700 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                  {station}
+                  <span className="px-2 py-0.5 rounded-full bg-primary-700 text-xs font-medium text-primary-300">
+                    {users.length}
+                  </span>
+                </h2>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-primary-800/30 border-b border-primary-700/50">
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-16">#</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-32">SN</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider">Name</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-40">Active Days</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-32">Remaining</th>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  </thead>
+                  <tbody className="divide-y divide-primary-700/30">
+                    {users.map((row, index) => {
+                      const isQualified = row.activeDays >= 40;
+                      const remainingDays = Math.max(0, 40 - row.activeDays);
+                      
+                      return (
+                        <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
+                          <td className="py-3 px-6 text-primary-500 font-mono text-sm">
+                            {index + 1}
+                          </td>
+                          <td className="py-3 px-6 text-primary-300 text-sm font-mono">
+                            {row.serviceNumber}
+                          </td>
+                          <td className="py-3 px-6">
+                            <span className="text-white font-medium text-sm">{row.name}</span>
+                          </td>
+                          <td className="py-3 px-6 text-center">
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${
+                              isQualified 
+                                ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
+                                : 'bg-primary-700/50 text-white'
+                            }`}>
+                              {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-1">/ 40</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-6 text-center">
+                            <span className={`text-sm font-medium ${
+                              remainingDays === 0 ? 'text-success-400' : 'text-primary-400'
+                            }`}>
+                              {remainingDays}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { RegisteredUsers } from './pages/RegisteredUsers';
 import Sponsors from './pages/Sponsors';
 import Outstanding from './pages/Outstanding';
 import PinList from './pages/PinList';
+import ActiveDays from './pages/ActiveDays';
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
           <Route path="admin-login" element={<AdminLogin />} />
           <Route path="admin" element={<Admin />} />
           <Route path="admin/report" element={<AdminReport />} />
+          <Route path="admin/active-days" element={<ActiveDays />} />
+          <Route path="active-days" element={<ActiveDays />} />
           <Route path="admin/pins" element={<PinList />} />
           <Route path="admin/users" element={<RegisteredUsers />} />
           <Route path="admin/sponsors" element={<Sponsors />} />

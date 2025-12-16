@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal, Plus } from 'lucide-react';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -66,6 +66,7 @@ function StatusBadge({ status, rejectionReason }: {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { runs, dashboardStats, runnerStats, recentRuns, isLoading, isRefreshing, error, refreshData, isParticipant, isAdmin } = useApp();
   const [serviceFilter, setServiceFilter] = useState('');
   const [leaderboardFilter, setLeaderboardFilter] = useState('');
@@ -984,16 +985,27 @@ export default function Dashboard() {
 
         <div className="animate-fade-in stagger-4">
           <Card>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
-                <Footprints className="w-5 h-5" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success-500/20 text-success-400">
+                  <Footprints className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-white">
+                    Consistent Runners
+                  </h2>
+                  <p className="text-xs text-primary-500">Consistency status for all participants</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-xl font-semibold text-white">
-                  Consistent Runners
-                </h2>
-                <p className="text-xs text-primary-500">Consistency status for all participants</p>
-              </div>
+              <Button 
+                onClick={() => navigate('/active-days')} 
+                size="sm" 
+                variant="secondary" 
+                className="gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="hidden sm:inline">Active Days</span>
+              </Button>
             </div>
 
             <div className="mb-4 p-3 bg-primary-800/30 rounded-lg text-xs text-primary-400">

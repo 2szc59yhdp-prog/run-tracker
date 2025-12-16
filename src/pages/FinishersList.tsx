@@ -162,29 +162,29 @@ export default function FinishersList() {
     }
   };
 
-  const getRankDisplay = (rank: number) => {
+  const getRankIcon = (rank: number) => {
     if (rank === 1) {
       return (
-        <div className="flex justify-center" title="1st Place">
-          <Medal className="w-5 h-5 text-yellow-400 drop-shadow-sm" fill="currentColor" />
-        </div>
+        <span title="1st Place">
+          <Medal className="w-4 h-4 text-yellow-400 drop-shadow-sm ml-1.5 shrink-0" fill="currentColor" />
+        </span>
       );
     }
     if (rank === 2) {
       return (
-        <div className="flex justify-center" title="2nd Place">
-          <Medal className="w-5 h-5 text-gray-300 drop-shadow-sm" fill="currentColor" />
-        </div>
+        <span title="2nd Place">
+          <Medal className="w-4 h-4 text-gray-300 drop-shadow-sm ml-1.5 shrink-0" fill="currentColor" />
+        </span>
       );
     }
     if (rank === 3) {
       return (
-        <div className="flex justify-center" title="3rd Place">
-          <Medal className="w-5 h-5 text-amber-600 drop-shadow-sm" fill="currentColor" />
-        </div>
+        <span title="3rd Place">
+          <Medal className="w-4 h-4 text-amber-600 drop-shadow-sm ml-1.5 shrink-0" fill="currentColor" />
+        </span>
       );
     }
-    return rank;
+    return null;
   };
 
   if (isLoadingRuns || isLoadingUsers) {
@@ -269,14 +269,17 @@ export default function FinishersList() {
                 filteredFinishers.map((row) => (
                   <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
                     <td className="py-3 px-2 sm:px-4 text-primary-500 font-mono text-sm text-center">
-                      {getRankDisplay(row.rank)}
+                      {row.rank}
                     </td>
                     <td className="py-3 px-2 sm:px-4 text-primary-300 text-sm font-mono">
                       {row.serviceNumber}
                     </td>
                     <td className="py-3 px-2 sm:px-4">
                       <div className="flex flex-col">
-                        <span className="text-white font-medium text-sm truncate max-w-[120px] sm:max-w-none">{row.name}</span>
+                        <div className="flex items-center">
+                          <span className="text-white font-medium text-sm truncate max-w-[120px] sm:max-w-none">{row.name}</span>
+                          {getRankIcon(row.rank)}
+                        </div>
                         <span className="text-xs text-primary-500 sm:hidden">{row.station}</span>
                       </div>
                     </td>

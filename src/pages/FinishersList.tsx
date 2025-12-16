@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Download, Search, X } from 'lucide-react';
+import { ArrowLeft, Download, Search, X, Medal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -162,6 +162,31 @@ export default function FinishersList() {
     }
   };
 
+  const getRankDisplay = (rank: number) => {
+    if (rank === 1) {
+      return (
+        <div className="flex justify-center" title="1st Place">
+          <Medal className="w-5 h-5 text-yellow-400 drop-shadow-sm" fill="currentColor" />
+        </div>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <div className="flex justify-center" title="2nd Place">
+          <Medal className="w-5 h-5 text-gray-300 drop-shadow-sm" fill="currentColor" />
+        </div>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <div className="flex justify-center" title="3rd Place">
+          <Medal className="w-5 h-5 text-amber-600 drop-shadow-sm" fill="currentColor" />
+        </div>
+      );
+    }
+    return rank;
+  };
+
   if (isLoadingRuns || isLoadingUsers) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16">
@@ -244,7 +269,7 @@ export default function FinishersList() {
                 filteredFinishers.map((row) => (
                   <tr key={row.serviceNumber} className="hover:bg-primary-800/30 transition-colors">
                     <td className="py-3 px-2 sm:px-4 text-primary-500 font-mono text-sm text-center">
-                      {row.rank}
+                      {getRankDisplay(row.rank)}
                     </td>
                     <td className="py-3 px-2 sm:px-4 text-primary-300 text-sm font-mono">
                       {row.serviceNumber}

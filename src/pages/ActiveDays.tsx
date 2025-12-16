@@ -107,21 +107,19 @@ export default function ActiveDays() {
   }
 
   const downloadCSV = () => {
-    const headers = ['Station', 'Rank', 'Service Number', 'Name', 'Active Days', 'Remaining Days'];
+    const headers = ['Station', 'Rank', 'Service Number', 'Name', 'Active Days'];
     
     // Create rows based on the grouped structure to match the view
     const rows: (string | number)[][] = [];
     
     groupedData.forEach(({ station, users }) => {
       users.forEach((row, index) => {
-        const remainingDays = Math.max(0, 40 - row.activeDays);
         rows.push([
           station,
           index + 1,
           row.serviceNumber,
           row.name,
-          row.activeDays,
-          remainingDays
+          row.activeDays
         ]);
       });
     });
@@ -229,9 +227,8 @@ export default function ActiveDays() {
                     <tr className="bg-primary-800/30 border-b border-primary-700/50">
                       <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-16">#</th>
                       <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider w-32">SN</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider">Name</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-40">Active Days</th>
-                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-32">Remaining</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider min-w-[250px]">Name</th>
+                      <th className="py-3 px-6 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-56">Active Days</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-primary-700/30">
@@ -251,20 +248,20 @@ export default function ActiveDays() {
                             <span className="text-white font-medium text-sm">{row.name}</span>
                           </td>
                           <td className="py-3 px-6 text-center">
-                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${
-                              isQualified 
-                                ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
-                                : 'bg-primary-700/50 text-white'
-                            }`}>
-                              {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-1">/ 40</span>
-                            </span>
-                          </td>
-                          <td className="py-3 px-6 text-center">
-                            <span className={`text-sm font-medium ${
-                              remainingDays === 0 ? 'text-success-400' : 'text-primary-400'
-                            }`}>
-                              {remainingDays}
-                            </span>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                                isQualified 
+                                  ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
+                                  : 'bg-primary-700/50 text-white'
+                              }`}>
+                                {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-1">/ 40</span>
+                              </span>
+                              <span className={`text-[10px] font-medium ${
+                                remainingDays === 0 ? 'text-success-400' : 'text-primary-400'
+                              }`}>
+                                {remainingDays === 0 ? 'Qualified' : `${remainingDays} days left`}
+                              </span>
+                            </div>
                           </td>
                         </tr>
                       );

@@ -216,7 +216,7 @@ export default function ActiveDays() {
                             ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
                             : 'bg-primary-700/50 text-white'
                         }`}>
-                          {row.activeDays}
+                          {row.activeDays} <span className="text-xs font-normal opacity-70 ml-1">/ 40</span>
                         </span>
                       </td>
                       <td className="py-4 px-6 text-center">

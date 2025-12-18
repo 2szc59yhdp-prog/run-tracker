@@ -445,6 +445,18 @@ export default function Admin() {
           </div>
           <Button variant="secondary" onClick={() => tshirtSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}>Open</Button>
         </Card>
+        <Card hover className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary-700/50 text-success-400">
+              <Eye className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-primary-400 text-sm font-medium">Sponsor View</p>
+              <p className="text-white font-display font-bold">Read-only access</p>
+            </div>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/sponsors-view')}>Open</Button>
+        </Card>
       </div>
 
       {/* Message */}

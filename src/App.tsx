@@ -13,6 +13,7 @@ import Outstanding from './pages/Outstanding';
 import PinList from './pages/PinList';
 import ActiveDays from './pages/ActiveDays';
 import FinishersList from './pages/FinishersList';
+import SponsorsView from './pages/SponsorsView';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="admin/pins" element={<PinList />} />
           <Route path="admin/users" element={<RegisteredUsers />} />
           <Route path="admin/sponsors" element={<Sponsors />} />
+          <Route path="sponsors-view" element={<SponsorsView />} />
           <Route path="admin/outstanding" element={<Outstanding />} />
         </Route>
       </Routes>

@@ -715,6 +715,62 @@ export async function addFundUsageApi(payload: Omit<FundUsageEntry, 'id' | 'date
   }
 }
 
+export async function updateSponsorApi(id: string, payload: Partial<Omit<Sponsor, 'id' | 'createdAt'>>, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateSponsor', id, adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update sponsor' };
+  }
+}
+
+export async function deleteSponsorApi(id: string, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteSponsor', id, adminToken }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete sponsor' };
+  }
+}
+
+export async function updateFundUsageApi(id: string, payload: Partial<Omit<FundUsageEntry, 'id' | 'date'>>, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateFundUsage', id, adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update fund usage' };
+  }
+}
+
+export async function deleteFundUsageApi(id: string, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteFundUsage', id, adminToken }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete fund usage' };
+  }
+}
+
 export async function fetchOutstandings(): Promise<ApiResponse<OutstandingEntry[]>> {
   try {
     const response = await fetch(`${APPS_SCRIPT_URL}?action=getOutstandings`, { method: 'GET' });

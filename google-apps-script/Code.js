@@ -424,8 +424,20 @@ function doPost(e) {
       case 'addSponsor':
         result = addSponsor(data);
         break;
+      case 'updateSponsor':
+        result = updateSponsor(data);
+        break;
+      case 'deleteSponsor':
+        result = deleteSponsor(data);
+        break;
       case 'addFundUsage':
         result = addFundUsage(data);
+        break;
+      case 'updateFundUsage':
+        result = updateFundUsage(data);
+        break;
+      case 'deleteFundUsage':
+        result = deleteFundUsage(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -2781,4 +2793,151 @@ function addFundUsage(data) {
       date: formatDate(date)
     }
   };
+}
+
+function updateSponsor(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+
+  const sheet = getSponsorsSheet();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  const headers = values[0];
+  const idCol = headers.indexOf('ID');
+  
+  if (idCol === -1) return { success: false, error: 'ID column not found' };
+  
+  let rowIndex = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][idCol] == data.id) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  
+  if (rowIndex === -1) {
+    return { success: false, error: 'Sponsor not found' };
+  }
+  
+  const colIndex = {
+    businessName: headers.indexOf('BusinessName'),
+    details: headers.indexOf('Details'),
+    amountSponsored: headers.indexOf('AmountSponsored'),
+    contactName: headers.indexOf('ContactName'),
+    contactPhone: headers.indexOf('ContactPhone'),
+    contactEmail: headers.indexOf('ContactEmail')
+  };
+  
+  // Only update fields that are provided
+  if (data.businessName && colIndex.businessName >= 0) sheet.getRange(rowIndex, colIndex.businessName + 1).setValue(data.businessName.toString().trim());
+  if (data.details !== undefined && colIndex.details >= 0) sheet.getRange(rowIndex, colIndex.details + 1).setValue(data.details.toString().trim());
+  if (data.amountSponsored && colIndex.amountSponsored >= 0) sheet.getRange(rowIndex, colIndex.amountSponsored + 1).setValue(parseFloat(data.amountSponsored));
+  if (data.contactName && colIndex.contactName >= 0) sheet.getRange(rowIndex, colIndex.contactName + 1).setValue(data.contactName.toString().trim());
+  if (data.contactPhone !== undefined && colIndex.contactPhone >= 0) sheet.getRange(rowIndex, colIndex.contactPhone + 1).setValue(data.contactPhone.toString().trim());
+  if (data.contactEmail !== undefined && colIndex.contactEmail >= 0) sheet.getRange(rowIndex, colIndex.contactEmail + 1).setValue(data.contactEmail.toString().trim());
+  
+  return { success: true };
+}
+
+function deleteSponsor(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+  
+  const sheet = getSponsorsSheet();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  const headers = values[0];
+  const idCol = headers.indexOf('ID');
+  
+  if (idCol === -1) return { success: false, error: 'ID column not found' };
+  
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][idCol] == data.id) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  
+  return { success: false, error: 'Sponsor not found' };
+}
+
+function updateFundUsage(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+
+  const sheet = getFundUsagesSheet();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  const headers = values[0];
+  const idCol = headers.indexOf('ID');
+  
+  if (idCol === -1) return { success: false, error: 'ID column not found' };
+  
+  let rowIndex = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][idCol] == data.id) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  
+  if (rowIndex === -1) {
+    return { success: false, error: 'Fund usage not found' };
+  }
+  
+  const colIndex = {
+    purpose: headers.indexOf('Purpose'),
+    amountUsed: headers.indexOf('AmountUsed'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    sponsorId: headers.indexOf('SponsorId')
+  };
+  
+  if (data.purpose && colIndex.purpose >= 0) sheet.getRange(rowIndex, colIndex.purpose + 1).setValue(data.purpose.toString().trim());
+  if (data.amountUsed && colIndex.amountUsed >= 0) sheet.getRange(rowIndex, colIndex.amountUsed + 1).setValue(parseFloat(data.amountUsed));
+  if (data.serviceNumber && colIndex.serviceNumber >= 0) sheet.getRange(rowIndex, colIndex.serviceNumber + 1).setValue(data.serviceNumber.toString().trim());
+  if (data.sponsorId !== undefined && colIndex.sponsorId >= 0) sheet.getRange(rowIndex, colIndex.sponsorId + 1).setValue(data.sponsorId.toString().trim());
+  
+  return { success: true };
+}
+
+function deleteFundUsage(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+  
+  const sheet = getFundUsagesSheet();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  const headers = values[0];
+  const idCol = headers.indexOf('ID');
+  
+  if (idCol === -1) return { success: false, error: 'ID column not found' };
+  
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][idCol] == data.id) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  
+  return { success: false, error: 'Fund usage not found' };
 }

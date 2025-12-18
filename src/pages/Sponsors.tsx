@@ -2,9 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Input from '../components/Input';
-import { Building2, HandCoins, Plus, X, Wallet, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { Building2, HandCoins, Plus, X, Wallet, CheckCircle, AlertCircle, ChevronDown, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { fetchSponsors, fetchFundUsages, addSponsorApi, addFundUsageApi, type Sponsor as SponsorApi, type FundUsageEntry } from '../services/api';
+import { 
+  fetchSponsors, 
+  fetchFundUsages, 
+  addSponsorApi, 
+  addFundUsageApi, 
+  updateSponsorApi,
+  deleteSponsorApi,
+  updateFundUsageApi,
+  deleteFundUsageApi,
+  type Sponsor as SponsorApi, 
+  type FundUsageEntry 
+} from '../services/api';
 
 interface Sponsor {
   id: string;
@@ -37,6 +48,9 @@ export default function Sponsors() {
   const [fundForm, setFundForm] = useState<Partial<FundUsage>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
+  const [editingFundUsageId, setEditingFundUsageId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -60,13 +74,41 @@ export default function Sponsors() {
   }, [message]);
 
   const openAddSponsor = () => {
+    setEditingSponsorId(null);
     setSponsorForm({});
     setErrors({});
     setShowAddSponsor(true);
   };
 
+  const openEditSponsor = (sponsor: Sponsor) => {
+    setEditingSponsorId(sponsor.id);
+    setSponsorForm({
+      businessName: sponsor.businessName,
+      details: sponsor.details,
+      amountSponsored: sponsor.amountSponsored,
+      contactName: sponsor.contactName,
+      contactPhone: sponsor.contactPhone,
+      contactEmail: sponsor.contactEmail,
+    });
+    setErrors({});
+    setShowAddSponsor(true);
+  };
+
   const openUseFunds = () => {
+    setEditingFundUsageId(null);
     setFundForm({});
+    setErrors({});
+    setShowUseFunds(true);
+  };
+
+  const openEditFundUsage = (usage: FundUsage) => {
+    setEditingFundUsageId(usage.id);
+    setFundForm({
+      purpose: usage.purpose,
+      amountUsed: usage.amountUsed,
+      serviceNumber: usage.serviceNumber,
+      sponsorId: usage.sponsorId,
+    });
     setErrors({});
     setShowUseFunds(true);
   };
@@ -75,6 +117,36 @@ export default function Sponsors() {
     setShowAddSponsor(false);
     setShowUseFunds(false);
     setDropdownOpen(false);
+    setEditingSponsorId(null);
+    setEditingFundUsageId(null);
+  };
+
+  const handleDeleteSponsor = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this sponsor?')) return;
+    if (!adminToken) return;
+
+    const res = await deleteSponsorApi(id, adminToken);
+    if (res.success) {
+      const s = await fetchSponsors();
+      if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+      setMessage({ type: 'success', text: 'Sponsor deleted' });
+    } else {
+      setMessage({ type: 'error', text: res.error || 'Failed to delete sponsor' });
+    }
+  };
+
+  const handleDeleteFundUsage = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this usage entry?')) return;
+    if (!adminToken) return;
+
+    const res = await deleteFundUsageApi(id, adminToken);
+    if (res.success) {
+      const f = await fetchFundUsages();
+      if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+      setMessage({ type: 'success', text: 'Usage entry deleted' });
+    } else {
+      setMessage({ type: 'error', text: res.error || 'Failed to delete usage entry' });
+    }
   };
 
   const validateEmail = (email?: string) => {
@@ -92,37 +164,48 @@ export default function Sponsors() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const newSponsor: Sponsor = {
-      id: crypto.randomUUID(),
-      businessName: sponsorForm.businessName!.trim(),
-      details: sponsorForm.details?.trim() || undefined,
-      amountSponsored: Number(sponsorForm.amountSponsored),
-      contactName: sponsorForm.contactName!.trim(),
-      contactPhone: sponsorForm.contactPhone?.trim() || undefined,
-      contactEmail: sponsorForm.contactEmail?.trim() || undefined,
-    };
-
     if (!adminToken || !isAdmin) {
       setMessage({ type: 'error', text: 'Admin session required' });
       return;
     }
-    addSponsorApi({
-      businessName: newSponsor.businessName,
-      details: newSponsor.details,
-      amountSponsored: newSponsor.amountSponsored,
-      contactName: newSponsor.contactName,
-      contactPhone: newSponsor.contactPhone,
-      contactEmail: newSponsor.contactEmail,
-    }, adminToken).then(async (res) => {
-      if (res.success) {
-        const s = await fetchSponsors();
-        if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
-        setMessage({ type: 'success', text: 'Sponsor added' });
-        setShowAddSponsor(false);
-      } else {
-        setMessage({ type: 'error', text: res.error || 'Failed to add sponsor' });
-      }
-    });
+
+    if (editingSponsorId) {
+      updateSponsorApi(editingSponsorId, {
+        businessName: sponsorForm.businessName!.trim(),
+        details: sponsorForm.details?.trim() || undefined,
+        amountSponsored: Number(sponsorForm.amountSponsored),
+        contactName: sponsorForm.contactName!.trim(),
+        contactPhone: sponsorForm.contactPhone?.trim() || undefined,
+        contactEmail: sponsorForm.contactEmail?.trim() || undefined,
+      }, adminToken).then(async (res) => {
+        if (res.success) {
+          const s = await fetchSponsors();
+          if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+          setMessage({ type: 'success', text: 'Sponsor updated' });
+          closeModals();
+        } else {
+          setMessage({ type: 'error', text: res.error || 'Failed to update sponsor' });
+        }
+      });
+    } else {
+      addSponsorApi({
+        businessName: sponsorForm.businessName!.trim(),
+        details: sponsorForm.details?.trim() || undefined,
+        amountSponsored: Number(sponsorForm.amountSponsored),
+        contactName: sponsorForm.contactName!.trim(),
+        contactPhone: sponsorForm.contactPhone?.trim() || undefined,
+        contactEmail: sponsorForm.contactEmail?.trim() || undefined,
+      }, adminToken).then(async (res) => {
+        if (res.success) {
+          const s = await fetchSponsors();
+          if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+          setMessage({ type: 'success', text: 'Sponsor added' });
+          closeModals();
+        } else {
+          setMessage({ type: 'error', text: res.error || 'Failed to add sponsor' });
+        }
+      });
+    }
   };
 
   const handleSaveUsage = (e: React.FormEvent) => {
@@ -134,34 +217,44 @@ export default function Sponsors() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const newUsage: FundUsage = {
-      id: crypto.randomUUID(),
-      purpose: fundForm.purpose!.trim(),
-      amountUsed: Number(fundForm.amountUsed),
-      serviceNumber: fundForm.serviceNumber!.trim(),
-      sponsorId: fundForm.sponsorId || undefined,
-      date: new Date().toISOString(),
-    };
-
     if (!adminToken || !isAdmin) {
       setMessage({ type: 'error', text: 'Admin session required' });
       return;
     }
-    addFundUsageApi({
-      purpose: newUsage.purpose,
-      amountUsed: newUsage.amountUsed,
-      serviceNumber: newUsage.serviceNumber,
-      sponsorId: newUsage.sponsorId,
-    }, adminToken).then(async (res) => {
-      if (res.success) {
-        const f = await fetchFundUsages();
-        if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
-        setMessage({ type: 'success', text: 'Usage recorded' });
-        setShowUseFunds(false);
-      } else {
-        setMessage({ type: 'error', text: res.error || 'Failed to record usage' });
-      }
-    });
+
+    if (editingFundUsageId) {
+      updateFundUsageApi(editingFundUsageId, {
+        purpose: fundForm.purpose!.trim(),
+        amountUsed: Number(fundForm.amountUsed),
+        serviceNumber: fundForm.serviceNumber!.trim(),
+        sponsorId: fundForm.sponsorId || undefined,
+      }, adminToken).then(async (res) => {
+        if (res.success) {
+          const f = await fetchFundUsages();
+          if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+          setMessage({ type: 'success', text: 'Usage updated' });
+          closeModals();
+        } else {
+          setMessage({ type: 'error', text: res.error || 'Failed to update usage' });
+        }
+      });
+    } else {
+      addFundUsageApi({
+        purpose: fundForm.purpose!.trim(),
+        amountUsed: Number(fundForm.amountUsed),
+        serviceNumber: fundForm.serviceNumber!.trim(),
+        sponsorId: fundForm.sponsorId || undefined,
+      }, adminToken).then(async (res) => {
+        if (res.success) {
+          const f = await fetchFundUsages();
+          if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+          setMessage({ type: 'success', text: 'Usage recorded' });
+          closeModals();
+        } else {
+          setMessage({ type: 'error', text: res.error || 'Failed to record usage' });
+        }
+      });
+    }
   };
 
   return (
@@ -222,12 +315,13 @@ export default function Sponsors() {
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Contact Name</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Contact</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Email</th>
+                <th className="text-right py-3 px-4 text-primary-400 font-medium text-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sponsors.length === 0 ? (
                 <tr>
-                  <td className="py-6 px-4 text-primary-400" colSpan={6}>No sponsors added yet</td>
+                  <td className="py-6 px-4 text-primary-400" colSpan={7}>No sponsors added yet</td>
                 </tr>
               ) : (
                 sponsors.map((s) => (
@@ -238,6 +332,12 @@ export default function Sponsors() {
                     <td className="py-3 px-4 text-primary-300">{s.contactName}</td>
                     <td className="py-3 px-4 text-primary-300">{s.contactPhone || '-'}</td>
                     <td className="py-3 px-4 text-primary-300">{s.contactEmail || '-'}</td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => openEditSponsor(s)} className="p-1 hover:text-accent-400 text-primary-400 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 hover:text-danger-400 text-primary-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -275,12 +375,13 @@ export default function Sponsors() {
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Amount Used</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Requesting Officer</th>
                 <th className="text-left py-3 px-4 text-primary-400 font-medium text-sm">Sponsor</th>
+                <th className="text-right py-3 px-4 text-primary-400 font-medium text-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
               {fundUsages.length === 0 ? (
                 <tr>
-                  <td className="py-6 px-4 text-primary-400" colSpan={5}>No fund usage recorded yet</td>
+                  <td className="py-6 px-4 text-primary-400" colSpan={6}>No fund usage recorded yet</td>
                 </tr>
               ) : (
                 fundUsages.map(u => (
@@ -290,6 +391,12 @@ export default function Sponsors() {
                     <td className="py-3 px-4 text-danger-400 font-semibold">{u.amountUsed.toLocaleString()}</td>
                     <td className="py-3 px-4 text-primary-300">#{u.serviceNumber}</td>
                     <td className="py-3 px-4 text-primary-300">{u.sponsorId ? (sponsors.find(s => s.id === u.sponsorId)?.businessName || '-') : '-'}</td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => openEditFundUsage(u)} className="p-1 hover:text-accent-400 text-primary-400 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteFundUsage(u.id)} className="p-1 hover:text-danger-400 text-primary-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -302,7 +409,7 @@ export default function Sponsors() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
           <Card className="w-full max-w-[600px] md:max-w-[720px] my-8 relative z-[10000] !overflow-visible">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Add Sponsor</h2>
+              <h2 className="text-xl font-bold text-white">{editingSponsorId ? 'Edit Sponsor' : 'Add Sponsor'}</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
             <form onSubmit={handleSaveSponsor} className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
@@ -327,7 +434,7 @@ export default function Sponsors() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
           <Card className="w-full max-w-[600px] md:max-w-[720px] my-8 relative z-[10000] !overflow-visible">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Use Funds</h2>
+              <h2 className="text-xl font-bold text-white">{editingFundUsageId ? 'Edit Fund Usage' : 'Use Funds'}</h2>
               <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
             <form onSubmit={handleSaveUsage} className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">

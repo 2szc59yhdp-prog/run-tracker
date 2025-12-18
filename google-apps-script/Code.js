@@ -424,6 +424,9 @@ function doPost(e) {
       case 'addSponsor':
         result = addSponsor(data);
         break;
+      case 'addFundUsage':
+        result = addFundUsage(data);
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -2660,7 +2663,8 @@ function addSponsor(data) {
   
   const sheet = getSponsorsSheet();
   const id = generateId();
-  const createdAt = new Date();
+  // Use Maldives timezone for consistency
+  const createdAt = Utilities.formatDate(new Date(), 'Indian/Maldives', 'yyyy-MM-dd HH:mm:ss');
   
   // Get headers to match columns dynamically
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -2730,4 +2734,51 @@ function getFundUsages() {
     }
   }
   return { success: true, data: usages };
+}
+
+function addFundUsage(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.purpose || !data.amountUsed || !data.serviceNumber) {
+    return { success: false, error: 'Purpose, Amount, and Service Number are required' };
+  }
+  
+  const sheet = getFundUsagesSheet();
+  const id = generateId();
+  const date = Utilities.formatDate(new Date(), 'Indian/Maldives', 'yyyy-MM-dd HH:mm:ss');
+  
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = {
+    id: headers.indexOf('ID'),
+    purpose: headers.indexOf('Purpose'),
+    amountUsed: headers.indexOf('AmountUsed'),
+    serviceNumber: headers.indexOf('ServiceNumber'),
+    sponsorId: headers.indexOf('SponsorId'),
+    date: headers.indexOf('Date')
+  };
+  
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  
+  if (colIndex.id >= 0) newRow[colIndex.id] = id;
+  if (colIndex.purpose >= 0) newRow[colIndex.purpose] = data.purpose.toString().trim();
+  if (colIndex.amountUsed >= 0) newRow[colIndex.amountUsed] = parseFloat(data.amountUsed);
+  if (colIndex.serviceNumber >= 0) newRow[colIndex.serviceNumber] = data.serviceNumber.toString().trim();
+  if (colIndex.sponsorId >= 0) newRow[colIndex.sponsorId] = (data.sponsorId || '').toString().trim();
+  if (colIndex.date >= 0) newRow[colIndex.date] = date;
+  
+  sheet.appendRow(newRow);
+  
+  return {
+    success: true,
+    data: {
+      id: id,
+      purpose: data.purpose,
+      amountUsed: parseFloat(data.amountUsed),
+      serviceNumber: data.serviceNumber,
+      sponsorId: data.sponsorId,
+      date: formatDate(date)
+    }
+  };
 }

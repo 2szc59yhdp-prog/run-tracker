@@ -94,6 +94,44 @@ function getTshirtsSheet() {
   return sheet;
 }
 
+function getSponsorsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('Sponsors');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('Sponsors');
+    sheet.getRange(1, 1, 1, 8).setValues([[
+      'ID',
+      'BusinessName',
+      'Details',
+      'AmountSponsored',
+      'ContactName',
+      'ContactPhone',
+      'ContactEmail',
+      'CreatedAt'
+    ]]);
+  }
+  return sheet;
+}
+
+function getFundUsagesSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('FundUsages');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('FundUsages');
+    sheet.getRange(1, 1, 1, 6).setValues([[
+      'ID',
+      'Purpose',
+      'AmountUsed',
+      'ServiceNumber',
+      'SponsorId',
+      'Date'
+    ]]);
+  }
+  return sheet;
+}
+
 function getUserLoginsSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
@@ -295,6 +333,12 @@ function doGet(e) {
       case 'getTshirtAdmissions':
         result = getTshirtAdmissions();
         break;
+      case 'getSponsors':
+        result = getSponsors();
+        break;
+      case 'getFundUsages':
+        result = getFundUsages();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -376,6 +420,9 @@ function doPost(e) {
         break;
       case 'updateTshirtAdmission':
         result = updateTshirtAdmission(data);
+        break;
+      case 'addSponsor':
+        result = addSponsor(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -2566,4 +2613,121 @@ function logUserLogin(data) {
   ];
   sheet.appendRow(row);
   return { success: true };
+}
+
+function getSponsors() {
+  const sheet = getSponsorsSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const sponsors = [];
+  
+  // Find column indices
+  const idCol = headers.indexOf('ID');
+  const businessNameCol = headers.indexOf('BusinessName');
+  const detailsCol = headers.indexOf('Details');
+  const amountSponsoredCol = headers.indexOf('AmountSponsored');
+  const contactNameCol = headers.indexOf('ContactName');
+  const contactPhoneCol = headers.indexOf('ContactPhone');
+  const contactEmailCol = headers.indexOf('ContactEmail');
+  const createdAtCol = headers.indexOf('CreatedAt');
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[idCol]) {
+      sponsors.push({
+        id: row[idCol].toString(),
+        businessName: businessNameCol >= 0 ? row[businessNameCol].toString() : '',
+        details: detailsCol >= 0 ? row[detailsCol].toString() : '',
+        amountSponsored: amountSponsoredCol >= 0 ? parseFloat(row[amountSponsoredCol]) || 0 : 0,
+        contactName: contactNameCol >= 0 ? row[contactNameCol].toString() : '',
+        contactPhone: contactPhoneCol >= 0 ? row[contactPhoneCol].toString() : '',
+        contactEmail: contactEmailCol >= 0 ? row[contactEmailCol].toString() : '',
+        createdAt: createdAtCol >= 0 ? formatDateTime(row[createdAtCol]) : ''
+      });
+    }
+  }
+  return { success: true, data: sponsors };
+}
+
+function addSponsor(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.businessName || !data.amountSponsored || !data.contactName) {
+    return { success: false, error: 'Business Name, Amount, and Contact Name are required' };
+  }
+  
+  const sheet = getSponsorsSheet();
+  const id = generateId();
+  const createdAt = new Date();
+  
+  // Get headers to match columns dynamically
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = {
+    id: headers.indexOf('ID'),
+    businessName: headers.indexOf('BusinessName'),
+    details: headers.indexOf('Details'),
+    amountSponsored: headers.indexOf('AmountSponsored'),
+    contactName: headers.indexOf('ContactName'),
+    contactPhone: headers.indexOf('ContactPhone'),
+    contactEmail: headers.indexOf('ContactEmail'),
+    createdAt: headers.indexOf('CreatedAt')
+  };
+  
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  
+  if (colIndex.id >= 0) newRow[colIndex.id] = id;
+  if (colIndex.businessName >= 0) newRow[colIndex.businessName] = data.businessName.toString().trim();
+  if (colIndex.details >= 0) newRow[colIndex.details] = (data.details || '').toString().trim();
+  if (colIndex.amountSponsored >= 0) newRow[colIndex.amountSponsored] = parseFloat(data.amountSponsored);
+  if (colIndex.contactName >= 0) newRow[colIndex.contactName] = data.contactName.toString().trim();
+  if (colIndex.contactPhone >= 0) newRow[colIndex.contactPhone] = (data.contactPhone || '').toString().trim();
+  if (colIndex.contactEmail >= 0) newRow[colIndex.contactEmail] = (data.contactEmail || '').toString().trim();
+  if (colIndex.createdAt >= 0) newRow[colIndex.createdAt] = createdAt;
+  
+  sheet.appendRow(newRow);
+  
+  return {
+    success: true,
+    data: {
+      id: id,
+      businessName: data.businessName,
+      details: data.details,
+      amountSponsored: parseFloat(data.amountSponsored),
+      contactName: data.contactName,
+      contactPhone: data.contactPhone,
+      contactEmail: data.contactEmail,
+      createdAt: formatDateTime(createdAt)
+    }
+  };
+}
+
+function getFundUsages() {
+  const sheet = getFundUsagesSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const usages = [];
+  
+  const idCol = headers.indexOf('ID');
+  const purposeCol = headers.indexOf('Purpose');
+  const amountUsedCol = headers.indexOf('AmountUsed');
+  const serviceNumberCol = headers.indexOf('ServiceNumber');
+  const sponsorIdCol = headers.indexOf('SponsorId');
+  const dateCol = headers.indexOf('Date');
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[idCol]) {
+      usages.push({
+        id: row[idCol].toString(),
+        purpose: purposeCol >= 0 ? row[purposeCol].toString() : '',
+        amountUsed: amountUsedCol >= 0 ? parseFloat(row[amountUsedCol]) || 0 : 0,
+        serviceNumber: serviceNumberCol >= 0 ? row[serviceNumberCol].toString() : '',
+        sponsorId: sponsorIdCol >= 0 ? row[sponsorIdCol].toString() : '',
+        date: dateCol >= 0 ? formatDate(row[dateCol]) : ''
+      });
+    }
+  }
+  return { success: true, data: usages };
 }

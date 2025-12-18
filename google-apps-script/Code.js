@@ -77,6 +77,23 @@ function getUsersSheet() {
   return spreadsheet.getSheetByName('Users');
 }
 
+function getTshirtsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('TshirtAdmissions');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('TshirtAdmissions');
+    sheet.getRange(1, 1, 1, 5).setValues([[
+      'ID',
+      'Timestamp',
+      'ServiceNumber',
+      'Size',
+      'SleeveType'
+    ]]);
+  }
+  return sheet;
+}
+
 function getSponsorsSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
@@ -84,37 +101,62 @@ function getSponsorsSheet() {
   if (!sheet) {
     sheet = spreadsheet.insertSheet('Sponsors');
     sheet.getRange(1, 1, 1, 8).setValues([[
-      'ID', 'BusinessName', 'Details', 'AmountSponsored', 'ContactName', 'ContactPhone', 'ContactEmail', 'CreatedAt'
+      'ID',
+      'BusinessName',
+      'Details',
+      'AmountSponsored',
+      'ContactName',
+      'ContactPhone',
+      'ContactEmail',
+      'CreatedAt'
     ]]);
   }
   return sheet;
 }
 
-function getFundUsageSheet() {
+function getFundUsagesSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
-  let sheet = spreadsheet.getSheetByName('FundUsage');
+  let sheet = spreadsheet.getSheetByName('FundUsages');
   if (!sheet) {
-    sheet = spreadsheet.insertSheet('FundUsage');
+    sheet = spreadsheet.insertSheet('FundUsages');
     sheet.getRange(1, 1, 1, 6).setValues([[
-      'ID', 'Purpose', 'AmountUsed', 'ServiceNumber', 'SponsorId', 'Date'
+      'ID',
+      'Purpose',
+      'AmountUsed',
+      'ServiceNumber',
+      'SponsorId',
+      'Date'
     ]]);
   }
   return sheet;
 }
 
-function getOutstandingsSheet() {
+function getUserLoginsSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
-  let sheet = spreadsheet.getSheetByName('Outstanding');
+  let sheet = spreadsheet.getSheetByName('UserLogins');
   if (!sheet) {
-    sheet = spreadsheet.insertSheet('Outstanding');
-    sheet.getRange(1, 1, 1, 7).setValues([[
-      'ID', 'ServiceNumber', 'Name', 'Station', 'Reason', 'AddedByServiceNumber', 'Date'
+    sheet = spreadsheet.insertSheet('UserLogins');
+    sheet.getRange(1, 1, 1, 10).setValues([[
+      'Timestamp',
+      'ServiceNumber',
+      'Name',
+      'Station',
+      'UserAgent',
+      'Language',
+      'Timezone',
+      'Platform',
+      'IP',
+      'Origin'
     ]]);
   }
   return sheet;
 }
+
+// PINs access control
+const SUPER_ADMIN_SERVICE_NUMBER = '5568';
+const PIN_ADMINS = ['5568', '4059', '6149'];
 
 /**
  * Gets or creates the Run Photos folder in Google Drive
@@ -285,17 +327,17 @@ function doGet(e) {
       case 'getUsers':
         result = getAllUsers();
         break;
-      case 'getSponsors':
-        result = getAllSponsors();
-        break;
-      case 'getFundUsages':
-        result = getAllFundUsages();
-        break;
-      case 'getOutstandings':
-        result = getAllOutstandings();
-        break;
       case 'getUserByServiceNumber':
         result = getUserByServiceNumber(e.parameter.serviceNumber);
+        break;
+      case 'getTshirtAdmissions':
+        result = getTshirtAdmissions();
+        break;
+      case 'getSponsors':
+        result = getSponsors();
+        break;
+      case 'getFundUsages':
+        result = getFundUsages();
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -349,17 +391,38 @@ function doPost(e) {
       case 'deleteUser':
         result = deleteUser(data);
         break;
+      case 'logUserLogin':
+        result = logUserLogin(data);
+        break;
+      case 'updateUserPin':
+        result = updateUserPin(data);
+        break;
+      case 'getUsersWithPins':
+        result = getUsersWithPins(data);
+        break;
+      case 'sendPinEmails':
+        result = sendPinEmails(data);
+        break;
+      case 'sendPinEmailsList':
+        result = sendPinEmailsList(data);
+        break;
+      case 'enqueuePinEmailsList':
+        result = enqueuePinEmailsList(data);
+        break;
+      case 'getPinEmailQueueStatus':
+        result = getPinEmailQueueStatus(data);
+        break;
+      case 'getEmailQuota':
+        result = { success: true, data: { remaining: MailApp.getRemainingDailyQuota() } };
+        break;
+      case 'addTshirtAdmission':
+        result = addTshirtAdmission(data);
+        break;
+      case 'updateTshirtAdmission':
+        result = updateTshirtAdmission(data);
+        break;
       case 'addSponsor':
         result = addSponsor(data);
-        break;
-      case 'addFundUsage':
-        result = addFundUsage(data);
-        break;
-      case 'addOutstanding':
-        result = addOutstanding(data);
-        break;
-      case 'clearOutstanding':
-        result = clearOutstanding(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -369,6 +432,125 @@ function doPost(e) {
   }
   
   return createJsonResponse(result);
+}
+
+function addTshirtAdmission(data) {
+  if (!data.serviceNumber || !data.size || !data.sleeveType) {
+    return { success: false, error: 'All fields are required' };
+  }
+  // Validate service number exists in Users and is a participant (not General Admin)
+  var usersSheet = getUsersSheet();
+  if (!usersSheet) {
+    return { success: false, error: 'Users sheet not found' };
+  }
+  var usersData = usersSheet.getDataRange().getValues();
+  var uHeaders = usersData[0] || [];
+  var uSNIdx = uHeaders.indexOf('ServiceNumber');
+  var uStationIdx = uHeaders.indexOf('Station');
+  var isRegistered = false;
+  for (var i = 1; i < usersData.length; i++) {
+    var row = usersData[i];
+    var sn = (uSNIdx >= 0 ? String(row[uSNIdx]) : '').trim();
+    if (sn && sn === String(data.serviceNumber).trim()) {
+      isRegistered = true;
+      break;
+    }
+  }
+  if (!isRegistered) {
+    return { success: false, error: 'Service number is not registered' };
+  }
+  // Enforce single submission per service number
+  var tshirtSheet = getTshirtsSheet();
+  var tshirtData = tshirtSheet.getDataRange().getValues();
+  var exists = false;
+  for (var j = 1; j < tshirtData.length; j++) {
+    var r = tshirtData[j];
+    var snExisting = r[2] ? String(r[2]).trim() : '';
+    if (snExisting && snExisting === String(data.serviceNumber).trim()) {
+      exists = true;
+      break;
+    }
+  }
+  if (exists) {
+    return { success: false, error: 'A Tshirt admission already exists for this service number' };
+  }
+  const sheet = getTshirtsSheet();
+  const id = generateId();
+  const timestamp = formatDateTime(new Date());
+  sheet.appendRow([id, timestamp, String(data.serviceNumber), String(data.size), String(data.sleeveType)]);
+  return {
+    success: true,
+    data: {
+      id: id,
+      timestamp: timestamp,
+      serviceNumber: String(data.serviceNumber),
+      size: String(data.size),
+      sleeveType: String(data.sleeveType)
+    }
+  };
+}
+
+function getTshirtAdmissions() {
+  const sheet = getTshirtsSheet();
+  const data = sheet.getDataRange().getValues();
+  const result = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[0]) {
+      result.push({
+        id: String(row[0]),
+        timestamp: formatDateTime(row[1]),
+        serviceNumber: String(row[2]),
+        size: String(row[3]),
+        sleeveType: String(row[4])
+      });
+    }
+  }
+  return { success: true, data: result };
+}
+
+function updateTshirtAdmission(data) {
+  if (!data.adminToken || !validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  if (!data.id) {
+    return { success: false, error: 'ID is required' };
+  }
+  var sheet = getTshirtsSheet();
+  var range = sheet.getDataRange();
+  var values = range.getValues();
+  var headers = values[0] || [];
+  var idIdx = headers.indexOf('ID');
+  var sizeIdx = headers.indexOf('Size');
+  var sleeveIdx = headers.indexOf('SleeveType');
+  var foundRow = -1;
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (idIdx >= 0 && String(row[idIdx]).trim() === String(data.id).trim()) {
+      foundRow = i + 1; // sheet rows are 1-based
+      break;
+    }
+  }
+  if (foundRow === -1) {
+    return { success: false, error: 'Record not found' };
+  }
+  if (typeof data.size === 'string') {
+    sheet.getRange(foundRow, sizeIdx + 1).setValue(String(data.size));
+  }
+  if (typeof data.sleeveType === 'string') {
+    sheet.getRange(foundRow, sleeveIdx + 1).setValue(String(data.sleeveType));
+  }
+  var updated = sheet.getRange(foundRow, 1, 1, headers.length).getValues()[0];
+  return {
+    success: true,
+    data: {
+      id: String(updated[idIdx]),
+      timestamp: String(updated[headers.indexOf('Timestamp')]),
+      serviceNumber: String(updated[headers.indexOf('ServiceNumber')]),
+      size: String(updated[sizeIdx]),
+      sleeveType: String(updated[sleeveIdx])
+    }
+  };
 }
 
 /**
@@ -434,198 +616,10 @@ function getAllRuns() {
   return { success: true, data: runs };
 }
 
-function getAllSponsors() {
-  const sheet = getSponsorsSheet();
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0]) {
-      list.push({
-        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
-        businessName: headers.indexOf('BusinessName') >= 0 && row[headers.indexOf('BusinessName')] ? row[headers.indexOf('BusinessName')].toString() : '',
-        details: headers.indexOf('Details') >= 0 && row[headers.indexOf('Details')] ? row[headers.indexOf('Details')].toString() : '',
-        amountSponsored: headers.indexOf('AmountSponsored') >= 0 ? (parseFloat(row[headers.indexOf('AmountSponsored')]) || 0) : 0,
-        contactName: headers.indexOf('ContactName') >= 0 && row[headers.indexOf('ContactName')] ? row[headers.indexOf('ContactName')].toString() : '',
-        contactPhone: headers.indexOf('ContactPhone') >= 0 && row[headers.indexOf('ContactPhone')] ? row[headers.indexOf('ContactPhone')].toString() : '',
-        contactEmail: headers.indexOf('ContactEmail') >= 0 && row[headers.indexOf('ContactEmail')] ? row[headers.indexOf('ContactEmail')].toString() : '',
-        createdAt: headers.indexOf('CreatedAt') >= 0 && row[headers.indexOf('CreatedAt')] ? formatDateTime(row[headers.indexOf('CreatedAt')]) : ''
-      });
-    }
-  }
-  return { success: true, data: list };
-}
-
-function addSponsor(data) {
-  if (!validateAdminToken(data.adminToken)) {
-    return { success: false, error: 'Unauthorized: Invalid admin token' };
-  }
-  if (!data.businessName || data.amountSponsored == null || !data.contactName) {
-    return { success: false, error: 'Missing required fields' };
-  }
-  const sheet = getSponsorsSheet();
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const newRow = new Array(sheet.getLastColumn()).fill('');
-  const id = generateId();
-  const createdAt = new Date();
-  const col = {
-    id: headers.indexOf('ID'),
-    businessName: headers.indexOf('BusinessName'),
-    details: headers.indexOf('Details'),
-    amountSponsored: headers.indexOf('AmountSponsored'),
-    contactName: headers.indexOf('ContactName'),
-    contactPhone: headers.indexOf('ContactPhone'),
-    contactEmail: headers.indexOf('ContactEmail'),
-    createdAt: headers.indexOf('CreatedAt'),
-  };
-  if (col.id >= 0) newRow[col.id] = id;
-  if (col.businessName >= 0) newRow[col.businessName] = data.businessName.toString().trim();
-  if (col.details >= 0) newRow[col.details] = (data.details || '').toString().trim();
-  if (col.amountSponsored >= 0) newRow[col.amountSponsored] = parseFloat(data.amountSponsored);
-  if (col.contactName >= 0) newRow[col.contactName] = data.contactName.toString().trim();
-  if (col.contactPhone >= 0) newRow[col.contactPhone] = (data.contactPhone || '').toString().trim();
-  if (col.contactEmail >= 0) newRow[col.contactEmail] = (data.contactEmail || '').toString().trim();
-  if (col.createdAt >= 0) newRow[col.createdAt] = createdAt;
-  sheet.appendRow(newRow);
-  return { success: true, data: { id: id } };
-}
-
-function getAllFundUsages() {
-  const sheet = getFundUsageSheet();
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0]) {
-      list.push({
-        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
-        purpose: headers.indexOf('Purpose') >= 0 && row[headers.indexOf('Purpose')] ? row[headers.indexOf('Purpose')].toString() : '',
-        amountUsed: headers.indexOf('AmountUsed') >= 0 ? (parseFloat(row[headers.indexOf('AmountUsed')]) || 0) : 0,
-        serviceNumber: headers.indexOf('ServiceNumber') >= 0 && row[headers.indexOf('ServiceNumber')] ? row[headers.indexOf('ServiceNumber')].toString() : '',
-        sponsorId: headers.indexOf('SponsorId') >= 0 && row[headers.indexOf('SponsorId')] ? row[headers.indexOf('SponsorId')].toString() : '',
-        date: headers.indexOf('Date') >= 0 && row[headers.indexOf('Date')] ? formatDateTime(row[headers.indexOf('Date')]) : ''
-      });
-    }
-  }
-  return { success: true, data: list };
-}
-
-function addFundUsage(data) {
-  if (!validateAdminToken(data.adminToken)) {
-    return { success: false, error: 'Unauthorized: Invalid admin token' };
-  }
-  if (!data.purpose || data.amountUsed == null || !data.serviceNumber) {
-    return { success: false, error: 'Missing required fields' };
-  }
-  const sheet = getFundUsageSheet();
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const newRow = new Array(sheet.getLastColumn()).fill('');
-  const id = generateId();
-  const date = new Date();
-  const col = {
-    id: headers.indexOf('ID'),
-    purpose: headers.indexOf('Purpose'),
-    amountUsed: headers.indexOf('AmountUsed'),
-    serviceNumber: headers.indexOf('ServiceNumber'),
-    sponsorId: headers.indexOf('SponsorId'),
-    date: headers.indexOf('Date'),
-  };
-  if (col.id >= 0) newRow[col.id] = id;
-  if (col.purpose >= 0) newRow[col.purpose] = data.purpose.toString().trim();
-  if (col.amountUsed >= 0) newRow[col.amountUsed] = parseFloat(data.amountUsed);
-  if (col.serviceNumber >= 0) newRow[col.serviceNumber] = data.serviceNumber.toString().trim();
-  if (col.sponsorId >= 0) newRow[col.sponsorId] = (data.sponsorId || '').toString().trim();
-  if (col.date >= 0) newRow[col.date] = date;
-  sheet.appendRow(newRow);
-  return { success: true, data: { id: id } };
-}
-
-function getAllOutstandings() {
-  const sheet = getOutstandingsSheet();
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0]) {
-      list.push({
-        id: row[headers.indexOf('ID')] ? row[headers.indexOf('ID')].toString() : '',
-        serviceNumber: headers.indexOf('ServiceNumber') >= 0 && row[headers.indexOf('ServiceNumber')] ? row[headers.indexOf('ServiceNumber')].toString() : '',
-        name: headers.indexOf('Name') >= 0 && row[headers.indexOf('Name')] ? row[headers.indexOf('Name')].toString() : '',
-        station: headers.indexOf('Station') >= 0 && row[headers.indexOf('Station')] ? row[headers.indexOf('Station')].toString() : '',
-        reason: headers.indexOf('Reason') >= 0 && row[headers.indexOf('Reason')] ? row[headers.indexOf('Reason')].toString() : '',
-        addedByServiceNumber: headers.indexOf('AddedByServiceNumber') >= 0 && row[headers.indexOf('AddedByServiceNumber')] ? row[headers.indexOf('AddedByServiceNumber')].toString() : '',
-        date: headers.indexOf('Date') >= 0 && row[headers.indexOf('Date')] ? formatDateTime(row[headers.indexOf('Date')]) : ''
-      });
-    }
-  }
-  return { success: true, data: list };
-}
-
-function addOutstanding(data) {
-  if (!validateAdminToken(data.adminToken)) {
-    return { success: false, error: 'Unauthorized: Invalid admin token' };
-  }
-  if (!data.serviceNumber || !data.name || !data.reason || !data.addedByServiceNumber) {
-    return { success: false, error: 'Missing required fields' };
-  }
-  const sheet = getOutstandingsSheet();
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const newRow = new Array(sheet.getLastColumn()).fill('');
-  const id = generateId();
-  const date = new Date();
-  const col = {
-    id: headers.indexOf('ID'),
-    serviceNumber: headers.indexOf('ServiceNumber'),
-    name: headers.indexOf('Name'),
-    station: headers.indexOf('Station'),
-    reason: headers.indexOf('Reason'),
-    addedByServiceNumber: headers.indexOf('AddedByServiceNumber'),
-    date: headers.indexOf('Date'),
-  };
-  if (col.id >= 0) newRow[col.id] = id;
-  if (col.serviceNumber >= 0) newRow[col.serviceNumber] = data.serviceNumber.toString().trim();
-  if (col.name >= 0) newRow[col.name] = data.name.toString().trim();
-  if (col.station >= 0) newRow[col.station] = (data.station || '').toString().trim();
-  if (col.reason >= 0) newRow[col.reason] = data.reason.toString().trim();
-  if (col.addedByServiceNumber >= 0) newRow[col.addedByServiceNumber] = data.addedByServiceNumber.toString().trim();
-  if (col.date >= 0) newRow[col.date] = date;
-  sheet.appendRow(newRow);
-  return { success: true, data: { id: id } };
-}
-
-function clearOutstanding(data) {
-  if (!validateAdminToken(data.adminToken)) {
-    return { success: false, error: 'Unauthorized: Invalid admin token' };
-  }
-  // Only service number 5568 can clear outstanding entries
-  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== '5568') {
-    return { success: false, error: 'Only service number 5568 can clear outstanding entries' };
-  }
-  if (!data.id) {
-    return { success: false, error: 'ID is required' };
-  }
-  const sheet = getOutstandingsSheet();
-  const values = sheet.getDataRange().getValues();
-  let rowIndex = -1;
-  for (let i = 1; i < values.length; i++) {
-    if (values[i][0] && values[i][0].toString() === data.id.toString()) {
-      rowIndex = i + 1;
-      break;
-    }
-  }
-  if (rowIndex === -1) {
-    return { success: false, error: 'Entry not found' };
-  }
-  sheet.deleteRow(rowIndex);
-  return { success: true };
-}
-
 /**
  * Checks runs for a given service number and date
  * Returns count, total distance, and whether limits are reached
+ * NOTE: Only counts approved + pending runs (rejected runs don't count toward limit)
  * @param {string} serviceNumber - The service number to check
  * @param {string} date - The date to check (YYYY-MM-DD)
  * @returns {Object} Response with count and total distance for that day
@@ -637,6 +631,7 @@ function checkDuplicateRun(serviceNumber, date) {
   const MAX_RUNS_PER_DAY = 2;
   const MAX_DISTANCE_PER_DAY = 10; // 10km max per day
   
+  // Find column indices
   const serviceNumberColIndex = headers.indexOf('ServiceNumber');
   const dateColIndex = headers.indexOf('Date');
   const distanceColIndex = headers.indexOf('DistanceKm');
@@ -985,11 +980,26 @@ function updateRunStatus(data) {
     approvedAtColIndex = lastCol;
   }
   
-  // Find the row with matching ID
+  // Find the row with matching ID and get run details for email
   let rowIndex = -1;
+  let runDetails = null;
+  
+  // Find column indices for run details
+  const dateColIndex = headers.indexOf('Date');
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const nameColIndex = headers.indexOf('Name');
+  const distanceColIndex = headers.indexOf('DistanceKm');
+  
   for (let i = 1; i < dataRange.length; i++) {
     if (dataRange[i][0].toString() === data.id.toString()) {
       rowIndex = i + 1; // Sheet rows are 1-indexed
+      // Store run details for email notification
+      runDetails = {
+        date: dateColIndex >= 0 ? formatDate(dataRange[i][dateColIndex]) : '',
+        serviceNumber: serviceNumberColIndex >= 0 ? dataRange[i][serviceNumberColIndex].toString() : '',
+        name: nameColIndex >= 0 ? dataRange[i][nameColIndex].toString() : '',
+        distanceKm: distanceColIndex >= 0 ? parseFloat(dataRange[i][distanceColIndex]) || 0 : 0
+      };
       break;
     }
   }
@@ -1013,6 +1023,23 @@ function updateRunStatus(data) {
   sheet.getRange(rowIndex, approvedByColIndex + 1).setValue(approvedBy);
   sheet.getRange(rowIndex, approvedByNameColIndex + 1).setValue(approvedByName);
   sheet.getRange(rowIndex, approvedAtColIndex + 1).setValue(approvedAt);
+  
+  // Send email notification to user about approval/rejection
+  if (runDetails && (data.status === 'approved' || data.status === 'rejected')) {
+    try {
+      sendRunStatusNotification({
+        name: runDetails.name,
+        serviceNumber: runDetails.serviceNumber,
+        date: runDetails.date,
+        distanceKm: runDetails.distanceKm,
+        status: data.status,
+        rejectionReason: rejectionReason
+      });
+    } catch (e) {
+      Logger.log('Failed to send status notification: ' + e.message);
+      // Don't fail the status update if email fails
+    }
+  }
   
   return {
     success: true,
@@ -1083,6 +1110,7 @@ function getAllUsers() {
   
   // Find admin column indices
   const isAdminColIndex = headers.indexOf('IsAdmin');
+  const pinColIndex = headers.indexOf('Pin');
   
   const users = [];
   for (let i = 1; i < data.length; i++) {
@@ -1121,6 +1149,8 @@ function getUserByServiceNumber(serviceNumber) {
   }
   
   const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const pinColIndex = headers.indexOf('Pin');
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
@@ -1135,13 +1165,89 @@ function getUserByServiceNumber(serviceNumber) {
           email: row[4].toString(),
           phone: row[5].toString(),
           station: row[6].toString(),
-          createdAt: formatDate(row[7])
+          createdAt: formatDate(row[7]),
+          pin: pinColIndex >= 0 ? (row[pinColIndex] || '').toString() : ''
         }
       };
     }
   }
   
   return { success: true, data: null };
+}
+
+/**
+ * Admin-only: Get all users including PINs
+ */
+function getUsersWithPins(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString().trim()) === -1) {
+    return { success: false, error: 'Forbidden: Only PIN admins can access PINs' };
+  }
+  const sheet = getUsersSheet();
+  if (!sheet) return { success: false, error: 'Users sheet not found. Run setupUsersSheet() first.' };
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  const isAdminColIndex = headers.indexOf('IsAdmin');
+  const pinColIndex = headers.indexOf('Pin');
+  const users = [];
+  for (let i = 1; i < dataRange.length; i++) {
+    const row = dataRange[i];
+    if (row[0]) {
+      users.push({
+        id: row[0].toString(),
+        serviceNumber: row[1].toString(),
+        name: row[2].toString(),
+        rank: row[3].toString(),
+        email: row[4].toString(),
+        phone: row[5].toString(),
+        station: row[6].toString(),
+        createdAt: formatDate(row[7]),
+        isAdmin: isAdminColIndex >= 0 ? (row[isAdminColIndex] === true || row[isAdminColIndex] === 'TRUE' || row[isAdminColIndex] === 'true') : false,
+        pin: pinColIndex >= 0 ? (row[pinColIndex] || '').toString() : ''
+      });
+    }
+  }
+  return { success: true, data: users };
+}
+
+/**
+ * Admin-only: Update a user's PIN (writes to Users sheet 'Pin' column)
+ */
+function updateUserPin(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can assign PINs' };
+  }
+  if (!data.id || !data.pin) {
+    return { success: false, error: 'User ID and PIN are required' };
+  }
+  const sheet = getUsersSheet();
+  if (!sheet) return { success: false, error: 'Users sheet not found' };
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  const pinColIndex = headers.indexOf('Pin');
+  // Create Pin column if missing
+  if (pinColIndex === -1) {
+    sheet.insertColumnAfter(headers.length);
+    sheet.getRange(1, headers.length + 1).setValue('Pin');
+  }
+  const latestData = sheet.getDataRange().getValues();
+  const latestHeaders = latestData[0];
+  const latestPinColIndex = latestHeaders.indexOf('Pin');
+  let rowIndex = -1;
+  for (let i = 1; i < latestData.length; i++) {
+    if (latestData[i][0].toString() === data.id.toString()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  if (rowIndex === -1) return { success: false, error: 'User not found' };
+  sheet.getRange(rowIndex, latestPinColIndex + 1).setValue(data.pin.toString());
+  return { success: true, data: { id: data.id, pin: data.pin } };
 }
 
 /**
@@ -1697,6 +1803,501 @@ function testEmailNotification() {
   Logger.log('Test notification sent!');
 }
 
+/**
+ * Gets a user's email by their service number
+ * @param {string} serviceNumber - The service number to look up
+ * @returns {string|null} The user's email or null if not found
+ */
+function getUserEmail(serviceNumber) {
+  const sheet = getUsersSheet();
+  if (!sheet) {
+    return null;
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const emailColIndex = headers.indexOf('Email');
+  
+  if (serviceNumberColIndex === -1 || emailColIndex === -1) {
+    return null;
+  }
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[serviceNumberColIndex].toString() === serviceNumber.toString()) {
+      const email = row[emailColIndex] ? row[emailColIndex].toString().trim() : '';
+      return email && email.includes('@') ? email : null;
+    }
+  }
+  
+  return null;
+}
+
+function sendPinEmails(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can send PINs' };
+  }
+  const sheet = getUsersSheet();
+  if (!sheet) {
+    return { success: false, error: 'Users sheet not found. Run setupUsersSheet() first.' };
+  }
+  const dataRange = sheet.getDataRange().getValues();
+  const headers = dataRange[0];
+  const emailColIndex = headers.indexOf('Email');
+  let pinColIndex = headers.indexOf('Pin');
+  const nameColIndex = headers.indexOf('Name');
+  const serviceNumberColIndex = headers.indexOf('ServiceNumber');
+  const stationColIndex = headers.indexOf('Station');
+  if (emailColIndex === -1 || nameColIndex === -1 || serviceNumberColIndex === -1 || stationColIndex === -1) {
+    return { success: false, error: 'Required columns missing in Users sheet' };
+  }
+  if (pinColIndex === -1) {
+    sheet.insertColumnAfter(headers.length);
+    sheet.getRange(1, headers.length + 1).setValue('Pin');
+    const latestData = sheet.getDataRange().getValues();
+    const latestHeaders = latestData[0];
+    pinColIndex = latestHeaders.indexOf('Pin');
+  }
+  let sent = 0;
+  let skipped = 0;
+  let missingEmail = 0;
+  let excludedAdmin = 0;
+  let autoAssigned = 0;
+  const failed = [];
+  const succeeded = [];
+  for (let i = 1; i < dataRange.length; i++) {
+    const row = dataRange[i];
+    const station = row[stationColIndex] ? row[stationColIndex].toString() : '';
+    if (!station || station === 'General Admin') {
+      excludedAdmin++;
+      continue;
+    }
+    const email = row[emailColIndex] ? row[emailColIndex].toString().trim() : '';
+    let pin = pinColIndex >= 0 ? (row[pinColIndex] || '').toString().trim() : '';
+    const name = row[nameColIndex] ? row[nameColIndex].toString() : '';
+    const serviceNumber = row[serviceNumberColIndex] ? row[serviceNumberColIndex].toString() : '';
+    if (!email || !email.includes('@')) {
+      skipped++;
+      missingEmail++;
+      continue;
+    }
+    if (!pin || pin.length !== 4 || pin.charAt(0) === '0') {
+      const base = serviceNumber + '|' + (email || '') + '|pins-v1';
+      let h = 0;
+      for (let j = 0; j < base.length; j++) {
+        h = (h * 31 + base.charCodeAt(j)) >>> 0;
+      }
+      const n = (h % 9000) + 1000;
+      pin = n.toString();
+      sheet.getRange(i + 1, pinColIndex + 1).setValue(pin);
+      autoAssigned++;
+    }
+    const subject = 'Your Assigned PIN - 100K Run Challenge';
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2186eb; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Your Assigned PIN</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin: 0 0 15px; color: #333;">Hi ${name},</p>
+          <p style="margin: 0 0 15px; color: #333;">Your assigned PIN for the 100K Run Challenge is:</p>
+          <div style="text-align: center; margin: 16px 0;">
+            <div style="display: inline-block; background: #fff; border: 2px dashed #2186eb; border-radius: 10px; padding: 14px 22px; font-size: 24px; color: #2186eb; font-weight: bold; letter-spacing: 2px;">${pin}</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 10px; color: #666;">Station</td>
+              <td style="padding: 10px; color: #333;">${station}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login</a>
+          </div>
+          <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">Use this PIN to log in and submit your runs.</p>
+        </div>
+      </div>
+    `;
+    const plainBody = `
+Hi ${name},
+
+Your assigned PIN for the 100K Run Challenge is ${pin}.
+
+Station: ${station}
+
+Login: https://run.huvadhoofulusclub.events/participant-login
+`;
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
+      sent++;
+      succeeded.push({ email: email, name: name });
+    } catch (e) {
+      Logger.log('Failed to send PIN to ' + email + ': ' + e.message);
+      skipped++;
+      failed.push({ email: email, name: name, error: e && e.message ? e.message : 'unknown error' });
+    }
+    Utilities.sleep(200);
+  }
+  return { success: true, data: { sent: sent, skipped: skipped, missingEmail: missingEmail, excludedAdmin: excludedAdmin, autoAssigned: autoAssigned, failed: failed, succeeded: succeeded } };
+}
+
+function sendPinEmailsList(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can send PINs' };
+  }
+  const entries = Array.isArray(data.entries) ? data.entries : [];
+  let sent = 0;
+  let skipped = 0;
+  const failed = [];
+  const succeeded = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i] || {};
+    const email = (entry.email || '').toString().trim();
+    const name = (entry.name || '').toString();
+    const serviceNumber = (entry.serviceNumber || '').toString();
+    const station = (entry.station || '').toString();
+    const pin = (entry.pin || '').toString();
+    if (!email || !email.includes('@') || !pin) {
+      skipped++;
+      continue;
+    }
+    const subject = 'Your Assigned PIN - 100K Run Challenge';
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2186eb; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Your Assigned PIN</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin: 0 0 15px; color: #333;">Hi ${name},</p>
+          <p style="margin: 0 0 15px; color: #333;">Your assigned PIN for the 100K Run Challenge is:</p>
+          <div style="text-align: center; margin: 16px 0;">
+            <div style="display: inline-block; background: #fff; border: 2px dashed #2186eb; border-radius: 10px; padding: 14px 22px; font-size: 24px; color: #2186eb; font-weight: bold; letter-spacing: 2px;">${pin}</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 10px; color: #666;">Station</td>
+              <td style="padding: 10px; color: #333;">${station}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login</a>
+          </div>
+          <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">Use this PIN to log in and submit your runs.</p>
+        </div>
+      </div>
+    `;
+    const plainBody = `
+Hi ${name},
+
+Your assigned PIN for the 100K Run Challenge is ${pin}.
+
+Station: ${station}
+
+Login: https://run.huvadhoofulusclub.events/participant-login
+`;
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
+      sent++;
+      succeeded.push({ email: email, name: name });
+    } catch (e) {
+      skipped++;
+      failed.push({ email: email, name: name, error: e && e.message ? e.message : 'unknown error' });
+    }
+    Utilities.sleep(200);
+  }
+  return { success: true, data: { sent: sent, skipped: skipped, failed: failed, succeeded: succeeded } };
+}
+
+function getPinEmailQueueSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('PinEmailQueue');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('PinEmailQueue');
+    const headers = ['Email', 'Name', 'ServiceNumber', 'Station', 'Pin', 'Status', 'LastError', 'EnqueuedAt', 'SentAt'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function enqueuePinEmailsList(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || data.actorServiceNumber.toString() !== SUPER_ADMIN_SERVICE_NUMBER) {
+    return { success: false, error: 'Forbidden: Only 5568 can enqueue PINs' };
+  }
+  const entries = Array.isArray(data.entries) ? data.entries : [];
+  const sheet = getPinEmailQueueSheet();
+  const now = new Date();
+  const rows = [];
+  entries.forEach(e => {
+    const email = (e.email || '').toString().trim();
+    const pin = (e.pin || '').toString().trim();
+    if (!email || !email.includes('@') || !pin) return;
+    rows.push([
+      email,
+      (e.name || '').toString(),
+      (e.serviceNumber || '').toString(),
+      (e.station || '').toString(),
+      pin,
+      'pending',
+      '',
+      now,
+      ''
+    ]);
+  });
+  if (rows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  }
+  const remaining = MailApp.getRemainingDailyQuota();
+  return { success: true, data: { queued: rows.length, remaining: remaining } };
+}
+
+function processPinEmailQueue() {
+  const sheet = getPinEmailQueueSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const statusCol = headers.indexOf('Status');
+  const lastErrorCol = headers.indexOf('LastError');
+  const emailCol = headers.indexOf('Email');
+  const nameCol = headers.indexOf('Name');
+  const snCol = headers.indexOf('ServiceNumber');
+  const stationCol = headers.indexOf('Station');
+  const pinCol = headers.indexOf('Pin');
+  const sentAtCol = headers.indexOf('SentAt');
+  let remaining = MailApp.getRemainingDailyQuota();
+  for (let i = 1; i < data.length; i++) {
+    if (remaining <= 0) break;
+    const row = data[i];
+    if ((row[statusCol] || '').toString() !== 'pending') continue;
+    const email = (row[emailCol] || '').toString().trim();
+    const name = (row[nameCol] || '').toString();
+    const serviceNumber = (row[snCol] || '').toString();
+    const station = (row[stationCol] || '').toString();
+    const pin = (row[pinCol] || '').toString();
+    if (!email || !email.includes('@') || !pin) {
+      sheet.getRange(i + 1, statusCol + 1).setValue('error');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue('Invalid email or pin');
+      continue;
+    }
+    const subject = 'Your Assigned PIN - 100K Run Challenge';
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2186eb; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Your Assigned PIN</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin: 0 0 15px; color: #333;">Hi ${name},</p>
+          <p style="margin: 0 0 15px; color: #333;">Your assigned PIN for the 100K Run Challenge is:</p>
+          <div style="text-align: center; margin: 16px 0;">
+            <div style="display: inline-block; background: #fff; border: 2px dashed #2186eb; border-radius: 10px; padding: 14px 22px; font-size: 24px; color: #2186eb; font-weight: bold; letter-spacing: 2px;">${pin}</div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+              <td style="padding: 10px; color: #666;">Station</td>
+              <td style="padding: 10px; color: #333;">${station}</td>
+            </tr>
+          </table>
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login</a>
+          </div>
+          <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">Use this PIN to log in and submit your runs.</p>
+        </div>
+      </div>
+    `;
+    const plainBody = `
+Hi ${name},
+
+Your assigned PIN for the 100K Run Challenge is ${pin}.
+
+Station: ${station}
+
+Login: https://run.huvadhoofulusclub.events/participant-login
+`;
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: plainBody, htmlBody: htmlBody });
+      sheet.getRange(i + 1, statusCol + 1).setValue('sent');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue('');
+      sheet.getRange(i + 1, sentAtCol + 1).setValue(new Date());
+      remaining--;
+    } catch (e) {
+      sheet.getRange(i + 1, statusCol + 1).setValue('error');
+      sheet.getRange(i + 1, lastErrorCol + 1).setValue(e && e.message ? e.message : 'unknown error');
+    }
+    Utilities.sleep(300);
+  }
+  return { success: true, data: { remaining: remaining } };
+}
+
+function setupPinEmailQueueTrigger() {
+  ScriptApp.newTrigger('processPinEmailQueue').timeBased().everyHours(1).create();
+  return { success: true };
+}
+
+function getPinEmailQueueStatus(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized: Invalid admin token' };
+  }
+  if (!data.actorServiceNumber || PIN_ADMINS.indexOf(data.actorServiceNumber.toString().trim()) === -1) {
+    return { success: false, error: 'Forbidden: Only PIN admins can view PIN email queue' };
+  }
+  const sheet = getPinEmailQueueSheet();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const statusCol = headers.indexOf('Status');
+  const emailCol = headers.indexOf('Email');
+  const nameCol = headers.indexOf('Name');
+  const lastErrorCol = headers.indexOf('LastError');
+  const sentAtCol = headers.indexOf('SentAt');
+  const sent = [];
+  const failed = [];
+  const pending = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const status = (row[statusCol] || '').toString();
+    const email = (row[emailCol] || '').toString();
+    const name = (row[nameCol] || '').toString();
+    if (status === 'sent') {
+      sent.push({ email: email, name: name, sentAt: row[sentAtCol] ? formatDateTime(row[sentAtCol]) : '' });
+    } else if (status === 'error') {
+      failed.push({ email: email, name: name, error: (row[lastErrorCol] || '').toString() });
+    } else if (status === 'pending') {
+      pending.push({ email: email, name: name });
+    }
+  }
+  return {
+    success: true,
+    data: {
+      sent: sent,
+      failed: failed,
+      pending: pending,
+      counts: { sent: sent.length, failed: failed.length, pending: pending.length },
+      remaining: MailApp.getRemainingDailyQuota()
+    }
+  };
+}
+/**
+ * Sends email notification to user when their run is approved or rejected
+ * @param {Object} runData - Run details (name, serviceNumber, date, distanceKm, status, rejectionReason)
+ */
+function sendRunStatusNotification(runData) {
+  const userEmail = getUserEmail(runData.serviceNumber);
+  
+  if (!userEmail) {
+    Logger.log('No email found for user: ' + runData.serviceNumber);
+    return;
+  }
+  
+  const isApproved = runData.status === 'approved';
+  const statusEmoji = isApproved ? '✅' : '❌';
+  const statusText = isApproved ? 'Approved' : 'Rejected';
+  const statusColor = isApproved ? '#27ae60' : '#e74c3c';
+  
+  const subject = `${statusEmoji} Your Run Has Been ${statusText} - 100K Run Challenge`;
+  
+  const formattedDate = runData.date;
+  
+  let rejectionSection = '';
+  if (!isApproved && runData.rejectionReason) {
+    rejectionSection = `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Reason</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #e74c3c; font-weight: bold;">${runData.rejectionReason}</td>
+      </tr>
+    `;
+  }
+  
+  let actionMessage = '';
+  if (isApproved) {
+    actionMessage = '<p style="color: #27ae60; font-weight: bold;">Great job! Your run has been verified and added to your total.</p>';
+  } else {
+    actionMessage = '<p style="color: #e74c3c;">Please review the reason above and submit a new run with the correct screenshot.</p>';
+  }
+  
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+      <div style="background: ${statusColor}; color: white; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">${statusEmoji} Run ${statusText}</h1>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+        <p style="margin: 0 0 15px; color: #333;">Hi ${runData.name},</p>
+        
+        <p style="margin: 0 0 15px; color: #333;">Your run submission has been reviewed:</p>
+        
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666; width: 40%;">Date</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Distance</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #333; font-weight: bold;">${runData.distanceDisplay || runData.distanceKm} km</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: #666;">Status</td>
+            <td style="padding: 10px; border-bottom: 1px solid #e9ecef; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+          </tr>
+          ${rejectionSection}
+        </table>
+        
+        <div style="margin-top: 20px;">
+          ${actionMessage}
+        </div>
+        
+        <div style="margin-top: 20px; text-align: center;">
+          <a href="https://run.huvadhoofulusclub.events/dashboard" 
+             style="display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            View Dashboard →
+          </a>
+        </div>
+        
+        <p style="margin: 20px 0 0; color: #999; font-size: 12px; text-align: center;">
+          This is an automated notification from the 100K Run Challenge system.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  const plainBody = `
+Run ${statusText}
+
+Hi ${runData.name},
+
+Your run submission has been reviewed:
+
+Date: ${formattedDate}
+    Distance: ${runData.distanceDisplay || runData.distanceKm} km
+Status: ${statusText}
+${!isApproved && runData.rejectionReason ? 'Reason: ' + runData.rejectionReason : ''}
+
+${isApproved ? 'Great job! Your run has been verified and added to your total.' : 'Please review the reason and submit a new run with the correct screenshot.'}
+
+View Dashboard: https://run.huvadhoofulusclub.events/dashboard
+  `;
+  
+  try {
+    MailApp.sendEmail({
+      to: userEmail,
+      subject: subject,
+      body: plainBody,
+      htmlBody: htmlBody
+    });
+    Logger.log('Status notification sent to: ' + userEmail);
+  } catch (e) {
+    Logger.log('Failed to send status notification to ' + userEmail + ': ' + e.message);
+  }
+}
+
 // ============================================================
 // SETUP FUNCTIONS
 // ============================================================
@@ -1994,4 +2595,139 @@ function debugGetAllRuns() {
     Logger.log('CAUGHT ERROR: ' + e.message);
     Logger.log('Stack: ' + e.stack);
   }
+}
+function logUserLogin(data) {
+  const sheet = getUserLoginsSheet();
+  const now = new Date();
+  const row = [
+    now,
+    (data.serviceNumber || '').toString(),
+    (data.name || '').toString(),
+    (data.station || '').toString(),
+    (data.userAgent || '').toString(),
+    (data.language || '').toString(),
+    (data.timezone || '').toString(),
+    (data.platform || '').toString(),
+    (data.ip || '').toString(),
+    (data.origin || '').toString()
+  ];
+  sheet.appendRow(row);
+  return { success: true };
+}
+
+function getSponsors() {
+  const sheet = getSponsorsSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const sponsors = [];
+  
+  // Find column indices
+  const idCol = headers.indexOf('ID');
+  const businessNameCol = headers.indexOf('BusinessName');
+  const detailsCol = headers.indexOf('Details');
+  const amountSponsoredCol = headers.indexOf('AmountSponsored');
+  const contactNameCol = headers.indexOf('ContactName');
+  const contactPhoneCol = headers.indexOf('ContactPhone');
+  const contactEmailCol = headers.indexOf('ContactEmail');
+  const createdAtCol = headers.indexOf('CreatedAt');
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[idCol]) {
+      sponsors.push({
+        id: row[idCol].toString(),
+        businessName: businessNameCol >= 0 ? row[businessNameCol].toString() : '',
+        details: detailsCol >= 0 ? row[detailsCol].toString() : '',
+        amountSponsored: amountSponsoredCol >= 0 ? parseFloat(row[amountSponsoredCol]) || 0 : 0,
+        contactName: contactNameCol >= 0 ? row[contactNameCol].toString() : '',
+        contactPhone: contactPhoneCol >= 0 ? row[contactPhoneCol].toString() : '',
+        contactEmail: contactEmailCol >= 0 ? row[contactEmailCol].toString() : '',
+        createdAt: createdAtCol >= 0 ? formatDateTime(row[createdAtCol]) : ''
+      });
+    }
+  }
+  return { success: true, data: sponsors };
+}
+
+function addSponsor(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  if (!data.businessName || !data.amountSponsored || !data.contactName) {
+    return { success: false, error: 'Business Name, Amount, and Contact Name are required' };
+  }
+  
+  const sheet = getSponsorsSheet();
+  const id = generateId();
+  const createdAt = new Date();
+  
+  // Get headers to match columns dynamically
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = {
+    id: headers.indexOf('ID'),
+    businessName: headers.indexOf('BusinessName'),
+    details: headers.indexOf('Details'),
+    amountSponsored: headers.indexOf('AmountSponsored'),
+    contactName: headers.indexOf('ContactName'),
+    contactPhone: headers.indexOf('ContactPhone'),
+    contactEmail: headers.indexOf('ContactEmail'),
+    createdAt: headers.indexOf('CreatedAt')
+  };
+  
+  const newRow = new Array(sheet.getLastColumn()).fill('');
+  
+  if (colIndex.id >= 0) newRow[colIndex.id] = id;
+  if (colIndex.businessName >= 0) newRow[colIndex.businessName] = data.businessName.toString().trim();
+  if (colIndex.details >= 0) newRow[colIndex.details] = (data.details || '').toString().trim();
+  if (colIndex.amountSponsored >= 0) newRow[colIndex.amountSponsored] = parseFloat(data.amountSponsored);
+  if (colIndex.contactName >= 0) newRow[colIndex.contactName] = data.contactName.toString().trim();
+  if (colIndex.contactPhone >= 0) newRow[colIndex.contactPhone] = (data.contactPhone || '').toString().trim();
+  if (colIndex.contactEmail >= 0) newRow[colIndex.contactEmail] = (data.contactEmail || '').toString().trim();
+  if (colIndex.createdAt >= 0) newRow[colIndex.createdAt] = createdAt;
+  
+  sheet.appendRow(newRow);
+  
+  return {
+    success: true,
+    data: {
+      id: id,
+      businessName: data.businessName,
+      details: data.details,
+      amountSponsored: parseFloat(data.amountSponsored),
+      contactName: data.contactName,
+      contactPhone: data.contactPhone,
+      contactEmail: data.contactEmail,
+      createdAt: formatDateTime(createdAt)
+    }
+  };
+}
+
+function getFundUsages() {
+  const sheet = getFundUsagesSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const usages = [];
+  
+  const idCol = headers.indexOf('ID');
+  const purposeCol = headers.indexOf('Purpose');
+  const amountUsedCol = headers.indexOf('AmountUsed');
+  const serviceNumberCol = headers.indexOf('ServiceNumber');
+  const sponsorIdCol = headers.indexOf('SponsorId');
+  const dateCol = headers.indexOf('Date');
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[idCol]) {
+      usages.push({
+        id: row[idCol].toString(),
+        purpose: purposeCol >= 0 ? row[purposeCol].toString() : '',
+        amountUsed: amountUsedCol >= 0 ? parseFloat(row[amountUsedCol]) || 0 : 0,
+        serviceNumber: serviceNumberCol >= 0 ? row[serviceNumberCol].toString() : '',
+        sponsorId: sponsorIdCol >= 0 ? row[sponsorIdCol].toString() : '',
+        date: dateCol >= 0 ? formatDate(row[dateCol]) : ''
+      });
+    }
+  }
+  return { success: true, data: usages };
 }

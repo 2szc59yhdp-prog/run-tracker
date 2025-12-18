@@ -51,6 +51,14 @@ export default function Sponsors() {
   
   const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
   const [editingFundUsageId, setEditingFundUsageId] = useState<string | null>(null);
+  
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    type: 'sponsor' | 'fundUsage';
+    id: string;
+    title: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -119,34 +127,52 @@ export default function Sponsors() {
     setDropdownOpen(false);
     setEditingSponsorId(null);
     setEditingFundUsageId(null);
+    setDeleteConfirmation(null);
   };
 
-  const handleDeleteSponsor = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this sponsor?')) return;
-    if (!adminToken) return;
-
-    const res = await deleteSponsorApi(id, adminToken);
-    if (res.success) {
-      const s = await fetchSponsors();
-      if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
-      setMessage({ type: 'success', text: 'Sponsor deleted' });
-    } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to delete sponsor' });
-    }
+  const handleDeleteSponsor = (id: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: 'sponsor',
+      id,
+      title: 'Delete Sponsor',
+      message: 'Are you sure you want to delete this sponsor? This action cannot be undone.'
+    });
   };
 
-  const handleDeleteFundUsage = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this usage entry?')) return;
-    if (!adminToken) return;
+  const handleDeleteFundUsage = (id: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      type: 'fundUsage',
+      id,
+      title: 'Delete Usage Entry',
+      message: 'Are you sure you want to delete this usage entry? This action cannot be undone.'
+    });
+  };
 
-    const res = await deleteFundUsageApi(id, adminToken);
-    if (res.success) {
-      const f = await fetchFundUsages();
-      if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
-      setMessage({ type: 'success', text: 'Usage entry deleted' });
+  const confirmDelete = async () => {
+    if (!deleteConfirmation || !adminToken) return;
+
+    if (deleteConfirmation.type === 'sponsor') {
+      const res = await deleteSponsorApi(deleteConfirmation.id, adminToken);
+      if (res.success) {
+        const s = await fetchSponsors();
+        if (s.success && s.data) setSponsors(s.data as SponsorApi[] as Sponsor[]);
+        setMessage({ type: 'success', text: 'Sponsor deleted' });
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to delete sponsor' });
+      }
     } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to delete usage entry' });
+      const res = await deleteFundUsageApi(deleteConfirmation.id, adminToken);
+      if (res.success) {
+        const f = await fetchFundUsages();
+        if (f.success && f.data) setFundUsages(f.data as FundUsageEntry[] as FundUsage[]);
+        setMessage({ type: 'success', text: 'Usage entry deleted' });
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to delete usage entry' });
+      }
     }
+    setDeleteConfirmation(null);
   };
 
   const validateEmail = (email?: string) => {
@@ -466,6 +492,25 @@ export default function Sponsors() {
                 <Button type="submit" className="flex-1">Save</Button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {deleteConfirmation && deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
+          <Card className="w-full max-w-[500px] my-8 relative z-[10000] !overflow-visible">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 text-danger-500" />
+                {deleteConfirmation.title}
+              </h2>
+              <button onClick={closeModals} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+            <p className="text-primary-200 mb-6">{deleteConfirmation.message}</p>
+            <div className="flex gap-3 mt-2">
+              <Button type="button" variant="secondary" onClick={closeModals} className="flex-1">Cancel</Button>
+              <Button type="button" variant="danger" onClick={confirmDelete} className="flex-1">Delete</Button>
+            </div>
           </Card>
         </div>
       )}

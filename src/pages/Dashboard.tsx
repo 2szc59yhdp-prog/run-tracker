@@ -1574,7 +1574,39 @@ export default function Dashboard() {
                           ) : selectedJourneyRunner.rank === 3 ? (
                             `${selectedJourneyRunner.name} took the 3rd place podium! An incredible achievement showing what discipline can do.`
                           ) : (
-                            `${selectedJourneyRunner.name} has crossed the finish line in ${selectedJourneyRunner.rank}th place! A journey of a thousand miles begins with a single step, and you've taken them all.`
+                            (() => {
+                              const messages = [
+                                "Consistency is the bridge between goals and accomplishment. You've crossed it!",
+                                "It does not matter how slowly you go as long as you do not stop. You made it!",
+                                "Success isn't always about greatness. It's about consistency. And you have shown it.",
+                                "The pain you feel today will be the strength you feel tomorrow. 100K done!",
+                                "Discipline is doing what needs to be done, even if you don't want to do it. You did it!",
+                                "You didn't just run 100K; you proved to yourself that you are capable of more than you thought.",
+                                "Every kilometer was a victory. Every run was a statement. You are a finisher!",
+                                "The only bad run is the one that didn't happen. You made 100km happen!",
+                                "Your legs got tired, but your heart kept going. That is the spirit of a champion.",
+                                "100K is not just a number; it's a testament to your willpower.",
+                                "Great things never come from comfort zones. You stepped out and crushed it.",
+                                "You are stronger than your excuses. 100km of proof right here.",
+                                "Dedication doesn't have an off-season. You stayed the course.",
+                                "Sweat, determination, and hard work. You've earned this finish.",
+                                "The miracle isn't that you finished. The miracle is that you had the courage to start.",
+                                "Run when you can, walk if you have to, crawl if you must; just never give up. You didn't!",
+                                "There are no shortcuts to any place worth going. You took the long road and won.",
+                                "Pain is temporary. Pride is forever. Wear your 100K finish with pride.",
+                                "You conquered the distance, but more importantly, you conquered yourself.",
+                                "This 100K is a reminder that you can do hard things.",
+                                "Excellence is not an act, but a habit. You are excellent.",
+                                "The finish line is just the beginning of a whole new race. Keep going!",
+                                "Your body can stand almost anything. It’s your mind that you have to convince. You convinced it!",
+                                "Don't stop when you're tired. Stop when you're done. And you are DONE!",
+                                "Strength doesn't come from what you can do. It comes from overcoming the things you once thought you couldn't."
+                              ];
+                              // Use rank to deterministically pick a message
+                              // rank 4 gets index 0, rank 5 gets index 1, etc.
+                              const messageIndex = (selectedJourneyRunner.rank! - 4) % messages.length;
+                              return `${selectedJourneyRunner.name}, ${messages[messageIndex]}`;
+                            })()
                           )}
                         </>
                       )

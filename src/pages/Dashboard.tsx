@@ -588,6 +588,54 @@ export default function Dashboard() {
     return <Navigate to="/participant-login" replace />;
   }
 
+  const countdownColors = useMemo(() => {
+    if (countdown.status === 'before') return {
+      border: 'border-accent-500/30',
+      bg: 'bg-accent-500/20',
+      text: 'text-accent-400',
+      boxBg: 'bg-accent-500/20'
+    };
+    if (countdown.status === 'ended') return {
+      border: 'border-primary-600',
+      bg: 'bg-primary-700',
+      text: 'text-primary-400',
+      boxBg: 'bg-primary-700'
+    };
+    
+    // Active status logic
+    const { days } = countdown;
+    
+    // Last 10 days: Blinking Red
+    if (days <= 10) return {
+      border: 'border-danger-500/50',
+      bg: 'bg-danger-500/20',
+      text: 'text-danger-400 animate-pulse',
+      boxBg: 'bg-danger-500/20'
+    };
+    // Last 15 days: Red
+    if (days <= 15) return {
+      border: 'border-danger-500/30',
+      bg: 'bg-danger-500/20',
+      text: 'text-danger-400',
+      boxBg: 'bg-danger-500/20'
+    };
+    // Last 1 month (30 days): Orange
+    if (days <= 30) return {
+      border: 'border-warning-500/30',
+      bg: 'bg-warning-500/20',
+      text: 'text-warning-400',
+      boxBg: 'bg-warning-500/20'
+    };
+    
+    // Default Green (> 30 days)
+    return {
+      border: 'border-success-500/30',
+      bg: 'bg-success-500/20',
+      text: 'text-success-400',
+      boxBg: 'bg-success-500/20'
+    };
+  }, [countdown]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -613,15 +661,15 @@ export default function Dashboard() {
 
       {/* Countdown Timer */}
       <div className="mb-8 animate-fade-in">
-        <Card className={`overflow-hidden ${countdown.status === 'active' ? 'border-success-500/30' : countdown.status === 'ended' ? 'border-primary-600' : 'border-accent-500/30'}`}>
+        <Card className={`overflow-hidden ${countdownColors.border}`}>
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             {/* Icon & Title - Icon hidden on mobile */}
             <div className="flex items-center gap-3">
-              <div className={`hidden sm:flex p-3 rounded-xl ${countdown.status === 'active' ? 'bg-success-500/20' : countdown.status === 'ended' ? 'bg-primary-700' : 'bg-accent-500/20'}`}>
-                <Timer className={`w-6 h-6 ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`} />
+              <div className={`hidden sm:flex p-3 rounded-xl ${countdownColors.bg}`}>
+                <Timer className={`w-6 h-6 ${countdownColors.text}`} />
               </div>
               <div className="text-center">
-                <p className={`font-display font-bold text-xl sm:text-lg ${countdown.status === 'active' ? 'text-success-400' : countdown.status === 'ended' ? 'text-primary-400' : 'text-accent-400'}`}>
+                <p className={`font-display font-bold text-xl sm:text-lg ${countdownColors.text}`}>
                   {countdown.status === 'before' && <><span className="hidden sm:inline">🚀 </span>Challenge Starts In</>}
                   {countdown.status === 'active' && <><span className="hidden sm:inline">🏃 </span>Time Remaining</>}
                   {countdown.status === 'ended' && <><span className="hidden sm:inline">🏁 </span>Challenge Completed!</>}
@@ -638,25 +686,25 @@ export default function Dashboard() {
             {countdown.status !== 'ended' && (
               <div className="flex gap-2 sm:gap-4 sm:ml-auto">
                 <div className="flex flex-col items-center">
-                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdownColors.boxBg} ${countdownColors.text}`}>
                     {String(countdown.days).padStart(2, '0')}
                   </div>
                   <span className="text-xs text-primary-500 mt-1">Days</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdownColors.boxBg} ${countdownColors.text}`}>
                     {String(countdown.hours).padStart(2, '0')}
                   </div>
                   <span className="text-xs text-primary-500 mt-1">Hours</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdownColors.boxBg} ${countdownColors.text}`}>
                     {String(countdown.minutes).padStart(2, '0')}
                   </div>
                   <span className="text-xs text-primary-500 mt-1">Mins</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdown.status === 'active' ? 'bg-success-500/20 text-success-400' : 'bg-accent-500/20 text-accent-400'}`}>
+                  <div className={`w-14 sm:w-16 h-14 sm:h-16 rounded-xl flex items-center justify-center font-display text-2xl sm:text-3xl font-bold ${countdownColors.boxBg} ${countdownColors.text}`}>
                     {String(countdown.seconds).padStart(2, '0')}
                   </div>
                   <span className="text-xs text-primary-500 mt-1">Secs</span>

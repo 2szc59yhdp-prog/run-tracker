@@ -439,6 +439,9 @@ function doPost(e) {
       case 'deleteFundUsage':
         result = deleteFundUsage(data);
         break;
+      case 'sendCountdownEmailsManual':
+        result = sendCountdownReminders(true); // Force send
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -2941,4 +2944,170 @@ function deleteFundUsage(data) {
   }
   
   return { success: false, error: 'Fund usage not found' };
+}
+
+// ============================================================
+// COUNTDOWN EMAIL REMINDERS
+// ============================================================
+
+/**
+ * Calculates days remaining until Jan 31, 2026
+ */
+function getDaysRemaining() {
+  const endDate = new Date('2026-01-31T23:59:59');
+  const now = new Date();
+  const diffTime = endDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+/**
+ * Sends countdown reminder emails
+ * @param {boolean} force - If true, sends email regardless of date trigger
+ */
+function sendCountdownReminders(force) {
+  const days = getDaysRemaining();
+  // Triggers: 30 days (start of warning), 15 days (urgent), 10 days (final countdown)
+  const isTriggerDay = (days === 30 || days === 15 || days === 10);
+  
+  if (!isTriggerDay && !force) {
+    Logger.log('Not a reminder day. Days remaining: ' + days);
+    return { success: true, message: 'Not a reminder day' };
+  }
+  
+  const usersResponse = getAllUsers();
+  if (!usersResponse.success) return usersResponse;
+  const users = usersResponse.data;
+  
+  const runsResponse = getAllRuns();
+  if (!runsResponse.success) return runsResponse;
+  const runs = runsResponse.data;
+  
+  // Calculate total approved distance per user
+  const userDistances = {};
+  runs.forEach(run => {
+    if (run.status === 'approved') {
+      const sn = run.serviceNumber;
+      if (!userDistances[sn]) userDistances[sn] = 0;
+      userDistances[sn] += run.distanceKm;
+    }
+  });
+  
+  let sentCount = 0;
+  let errorCount = 0;
+  
+  users.forEach(user => {
+    if (!user.email || !user.email.includes('@')) return;
+    
+    const totalDistance = userDistances[user.serviceNumber] || 0;
+    const isCompleted = totalDistance >= 100;
+    
+    let subject, htmlBody, plainBody;
+    
+    // Common styles
+    const containerStyle = 'font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;';
+    const headerStyle = 'background: #102a43; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;';
+    const contentStyle = 'background: #f0f4f8; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #d9e2ec;';
+    const buttonStyle = 'display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px;';
+    
+    if (isCompleted) {
+      subject = `🎉 You are a 100K Finisher! ${days} Days Left in the Challenge`;
+      htmlBody = `
+        <div style="${containerStyle}">
+          <div style="${headerStyle}">
+            <h1 style="margin:0;">Congratulations Finisher! 🏅</h1>
+          </div>
+          <div style="${contentStyle}">
+            <h2 style="color: #102a43;">You've Conquered the 100K!</h2>
+            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+              ${user.name}, you have proven that discipline and consistency yield results. 
+              We applaud your achievement!
+            </p>
+            <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <p style="margin:0; font-weight: bold; color: #27ae60; font-size: 18px;">Total Distance: ${totalDistance.toFixed(2)} km</p>
+            </div>
+            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+              <strong>Keep the streak alive!</strong> There are still ${days} days remaining in the challenge event. 
+              Continue running and inspire others with your 40-day streak of dedication!
+            </p>
+            <div style="text-align: center;">
+              <a href="https://run.huvadhoofulusclub.events/dashboard" style="${buttonStyle}">View Leaderboard</a>
+            </div>
+          </div>
+        </div>
+      `;
+      plainBody = `Congratulations ${user.name}!\n\nYou have completed the 100K Challenge with ${totalDistance.toFixed(2)} km.\n\nKeep the streak alive! There are ${days} days remaining. Continue running and inspire others with your 40-day streak of dedication!\n\nView Leaderboard: https://run.huvadhoofulusclub.events/dashboard`;
+    } else {
+      const remainingDist = Math.max(0, 100 - totalDistance).toFixed(2);
+      subject = `🏃 ${days} Days Left: Keep Pushing for 100K!`;
+      htmlBody = `
+        <div style="${containerStyle}">
+          <div style="${headerStyle}">
+            <h1 style="margin:0;">The Clock is Ticking! ⏳</h1>
+          </div>
+          <div style="${contentStyle}">
+            <h2 style="color: #102a43;">You Can Do This!</h2>
+            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+              ${user.name}, the finish line is in sight. You have <strong>${days} days</strong> remaining to complete your 100K journey.
+            </p>
+            <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <p style="margin: 0 0 10px; color: #486581;">Current Progress: <strong>${totalDistance.toFixed(2)} km</strong></p>
+              <p style="margin: 0; color: #e74c3c; font-weight: bold; font-size: 18px;">Remaining: ${remainingDist} km</p>
+            </div>
+            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+              Don't give up now. Consistency is key. Push through for the remaining 40-day streak and claim your victory!
+            </p>
+            <div style="text-align: center;">
+              <a href="https://run.huvadhoofulusclub.events/participant-login" style="${buttonStyle}">Submit a Run</a>
+            </div>
+          </div>
+        </div>
+      `;
+      plainBody = `Hi ${user.name},\n\nYou have ${days} days remaining to complete the 100K Challenge.\n\nCurrent Progress: ${totalDistance.toFixed(2)} km\nRemaining: ${remainingDist} km\n\nDon't give up! Push through for the remaining 40-day streak and claim your victory!\n\nSubmit a run: https://run.huvadhoofulusclub.events/participant-login`;
+    }
+    
+    try {
+      MailApp.sendEmail({
+        to: user.email,
+        subject: subject,
+        htmlBody: htmlBody,
+        body: plainBody
+      });
+      sentCount++;
+    } catch (e) {
+      Logger.log(`Failed to send email to ${user.email}: ${e.message}`);
+      errorCount++;
+    }
+    
+    // Avoid hitting rate limits
+    if (sentCount % 10 === 0) {
+      Utilities.sleep(1000);
+    }
+  });
+  
+  Logger.log(`Sent ${sentCount} countdown emails. Errors: ${errorCount}`);
+  return { success: true, sent: sentCount, errors: errorCount };
+}
+
+/**
+ * Setup daily trigger for countdown emails
+ * Run this once manually
+ */
+function setupCountdownTrigger() {
+  // Check if trigger already exists
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'sendCountdownReminders') {
+      return { success: true, message: 'Trigger already exists' };
+    }
+  }
+  
+  // Create daily trigger at 9 AM
+  ScriptApp.newTrigger('sendCountdownReminders')
+    .timeBased()
+    .everyDays(1)
+    .atHour(9)
+    .create();
+    
+  return { success: true, message: 'Trigger created' };
 }

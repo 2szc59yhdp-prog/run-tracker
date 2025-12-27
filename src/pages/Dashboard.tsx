@@ -84,7 +84,51 @@ export default function Dashboard() {
     runs: { date: string; distance: number; cumulative: number }[];
     totalDistance: number;
     activeDays: number;
+    rank?: number;
   } | null>(null);
+
+  // Calculate finishers and ranks (memoized) to determine rank
+  const finishersWithRank = useMemo(() => {
+    if (runs.length === 0) return [];
+    
+    // Get all unique service numbers from approved runs
+    const runnersMap = new Map<string, typeof runs>();
+    runs.filter(r => r.status === 'approved').forEach(run => {
+      if (!runnersMap.has(run.serviceNumber)) {
+        runnersMap.set(run.serviceNumber, []);
+      }
+      runnersMap.get(run.serviceNumber)!.push(run);
+    });
+
+    const finishers: { serviceNumber: string; completionDate: Date; rank: number }[] = [];
+
+    runnersMap.forEach((userRuns, serviceNumber) => {
+      // Sort by date
+      userRuns.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      let total = 0;
+      for (const run of userRuns) {
+        total += run.distanceKm;
+        total = Math.round(total * 100) / 100;
+        if (total >= 100) {
+          finishers.push({
+            serviceNumber,
+            completionDate: new Date(run.date),
+            rank: 0
+          });
+          break;
+        }
+      }
+    });
+
+    // Sort by completion date
+    finishers.sort((a, b) => a.completionDate.getTime() - b.completionDate.getTime());
+    
+    // Assign ranks
+    finishers.forEach((f, i) => f.rank = i + 1);
+    
+    return finishers;
+  }, [runs]);
 
   // Countdown timer
   useEffect(() => {
@@ -218,11 +262,14 @@ export default function Dashboard() {
       if (totalDistance >= 100) break;
     }
 
+    const finisherInfo = finishersWithRank.find(f => f.serviceNumber === runner.serviceNumber);
+
     setSelectedJourneyRunner({
       name: runner.name,
       runs: journeyRuns,
       totalDistance,
-      activeDays: activeDates.size
+      activeDays: activeDates.size,
+      rank: finisherInfo?.rank
     });
   };
 
@@ -1472,15 +1519,44 @@ export default function Dashboard() {
               </div>
               
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                <div className="p-3 sm:p-4 rounded-xl bg-warning-500/10 border border-warning-500/20 text-warning-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                <div className="p-3 sm:p-4 rounded-xl bg-warning-500/10 border border-warning-500/20 text-warning-500 shadow-[0_0_15px_rgba(234,179,8,0.1)] relative group">
                   <Award className="w-8 h-8 sm:w-10 sm:h-10" />
+                  {selectedJourneyRunner.rank && (
+                    <div className="absolute -top-2 -right-2 bg-gradient-to-br from-warning-400 to-yellow-600 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shadow-lg border border-warning-300">
+                      {selectedJourneyRunner.rank}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h2 className="font-display text-2xl sm:text-3xl font-bold text-white mb-2">
                     The Journey
                   </h2>
                   <p className="text-primary-300 text-sm sm:text-base leading-relaxed max-w-xl">
-                    Every step tells a story of discipline, consistency, and self-growth. This is more than distance, it’s the journey of becoming stronger, fitter, and more accountable.
+                    {selectedJourneyRunner.rank ? (
+                      selectedJourneyRunner.rank === 1 ? (
+                        <>
+                          <span className="text-warning-400 font-bold">1st Place: {selectedJourneyRunner.name}</span>
+                          <br/>
+                          {selectedJourneyRunner.name} was the first participant to complete the 100K challenge, Motivated all the runners to commit harder to reach their goals. Congradulations!!
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-white font-bold">{selectedJourneyRunner.rank}{
+                            selectedJourneyRunner.rank === 2 ? 'nd' : selectedJourneyRunner.rank === 3 ? 'rd' : 'th'
+                          } Place: {selectedJourneyRunner.name}</span>
+                          <br/>
+                          {selectedJourneyRunner.rank === 2 ? (
+                            `${selectedJourneyRunner.name} secured the 2nd place with outstanding determination! A true display of grit and consistency.`
+                          ) : selectedJourneyRunner.rank === 3 ? (
+                            `${selectedJourneyRunner.name} took the 3rd place podium! An incredible achievement showing what discipline can do.`
+                          ) : (
+                            `${selectedJourneyRunner.name} has crossed the finish line in ${selectedJourneyRunner.rank}th place! A journey of a thousand miles begins with a single step, and you've taken them all.`
+                          )}
+                        </>
+                      )
+                    ) : (
+                      "Every step tells a story of discipline, consistency, and self-growth. This is more than distance, it’s the journey of becoming stronger, fitter, and more accountable."
+                    )}
                   </p>
                 </div>
               </div>

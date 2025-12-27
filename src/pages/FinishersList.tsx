@@ -1,12 +1,26 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Download, Search, X, Medal } from 'lucide-react';
+import { ArrowLeft, Download, Search, X, Medal, Info } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { fetchAllUsers } from '../services/api';
-import type { RegisteredUser } from '../types';
+import type { RegisteredUser, Run } from '../types';
+
+interface Finisher {
+  rank: number;
+  serviceNumber: string;
+  name: string;
+  station: string;
+  daysToComplete: number;
+  completionDate: Date;
+  activeDays: number;
+  debugInfo: {
+    runs: { date: string; distance: number; cumulative: number }[];
+    totalDistance: number;
+  };
+}
 
 export default function FinishersList() {
   const navigate = useNavigate();
@@ -14,6 +28,7 @@ export default function FinishersList() {
   const [filter, setFilter] = useState('');
   const [users, setUsers] = useState<RegisteredUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [selectedFinisher, setSelectedFinisher] = useState<Finisher | null>(null);
 
   // Redirect if not admin
   if (!isAdmin) {
@@ -52,15 +67,7 @@ export default function FinishersList() {
       runsByUser.get(run.serviceNumber)?.push(run);
     });
 
-    const finishers: {
-      rank: number;
-      serviceNumber: string;
-      name: string;
-      station: string;
-      daysToComplete: number;
-      completionDate: Date;
-      activeDays: number;
-    }[] = [];
+    const finishers: Finisher[] = [];
 
     // 3. Process each user
     users.forEach(user => {
@@ -73,6 +80,7 @@ export default function FinishersList() {
       let completionDate: Date | null = null;
       let firstRunDate: Date | null = null;
       const activeDates = new Set<string>();
+      const debugRuns: { date: string; distance: number; cumulative: number }[] = [];
 
       for (const run of userRuns) {
         if (!firstRunDate) {
@@ -80,7 +88,18 @@ export default function FinishersList() {
         }
         
         activeDates.add(run.date);
+        // Fix floating point precision issues by rounding to 2 decimals at each step if needed
+        // But better to just sum and check with a small epsilon or explicit rounding
         totalDistance += run.distanceKm;
+        
+        // Ensure totalDistance doesn't have floating point artifacts like 99.999999999994
+        totalDistance = Math.round(totalDistance * 100) / 100;
+
+        debugRuns.push({
+            date: run.date,
+            distance: run.distanceKm,
+            cumulative: totalDistance
+        });
 
         if (totalDistance >= 100 && !completionDate) {
           completionDate = new Date(run.date);
@@ -96,7 +115,11 @@ export default function FinishersList() {
           station: user.station,
           daysToComplete: activeDates.size, // User requested active days count
           completionDate: completionDate,
-          activeDays: activeDates.size
+          activeDays: activeDates.size,
+          debugInfo: {
+            runs: debugRuns,
+            totalDistance: totalDistance
+          }
         });
       }
     });
@@ -276,9 +299,18 @@ export default function FinishersList() {
                       {row.station}
                     </td>
                     <td className="py-3 px-2 sm:px-4 text-center">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/10 text-accent-400 border border-accent-500/20 whitespace-nowrap">
-                        {row.daysToComplete}d
-                      </span>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/10 text-accent-400 border border-accent-500/20 whitespace-nowrap">
+                          {row.daysToComplete}d
+                        </span>
+                        <button 
+                          onClick={() => setSelectedFinisher(row)}
+                          className="p-1 text-primary-500 hover:text-white transition-colors"
+                          title="View Calculation Facts"
+                        >
+                          <Info className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -287,6 +319,63 @@ export default function FinishersList() {
           </table>
         </div>
       </Card>
+
+      {selectedFinisher && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
+          <Card className="w-full max-w-[600px] my-8 relative z-[10000] !overflow-visible max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                Calculation Facts: {selectedFinisher.name}
+              </h2>
+              <button onClick={() => setSelectedFinisher(null)} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 pr-2">
+              <div className="mb-4 p-4 bg-primary-800/50 rounded-xl border border-primary-700">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-primary-400 uppercase font-bold">Total Distance</p>
+                    <p className="text-xl font-mono text-accent-400">{selectedFinisher.debugInfo.totalDistance} km</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-primary-400 uppercase font-bold">Active Days Counted</p>
+                    <p className="text-xl font-mono text-white">{selectedFinisher.activeDays}</p>
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-primary-300 uppercase mb-2">Runs Counted Towards 100K</h3>
+              <div className="border border-primary-700 rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-primary-800 text-primary-400 border-b border-primary-700">
+                      <th className="py-2 px-3 text-left">Date</th>
+                      <th className="py-2 px-3 text-right">Distance</th>
+                      <th className="py-2 px-3 text-right">Cumulative</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-primary-700/50">
+                    {selectedFinisher.debugInfo.runs.map((run, idx) => (
+                      <tr key={idx} className={run.cumulative >= 100 ? 'bg-success-500/10' : ''}>
+                        <td className="py-2 px-3 text-primary-300">{new Date(run.date).toLocaleDateString()}</td>
+                        <td className="py-2 px-3 text-right text-white font-mono">{run.distance} km</td>
+                        <td className={`py-2 px-3 text-right font-mono font-bold ${run.cumulative >= 100 ? 'text-success-400' : 'text-accent-400'}`}>
+                          {run.cumulative.toFixed(2)} km
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-primary-500 mt-2">
+                * Calculation stops as soon as the cumulative distance reaches or exceeds 100km.
+                <br />
+                * Only unique dates within this range are counted as "Active Days".
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -321,16 +321,16 @@ export default function FinishersList() {
       </Card>
 
       {selectedFinisher && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
-          <Card className="w-full max-w-[600px] my-8 relative z-[10000] !overflow-visible max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[99999] overflow-y-auto">
+          <Card className="w-full max-w-[600px] relative z-[100000] !overflow-visible max-h-[80vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between mb-4 shrink-0">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 Calculation Facts: {selectedFinisher.name}
               </h2>
-              <button onClick={() => setSelectedFinisher(null)} className="text-slate-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+              <button onClick={() => setSelectedFinisher(null)} className="text-slate-400 hover:text-white transition-colors p-1"><X className="w-6 h-6" /></button>
             </div>
             
-            <div className="overflow-y-auto flex-1 pr-2">
+            <div className="overflow-y-auto flex-1 pr-2 custom-scrollbar">
               <div className="mb-4 p-4 bg-primary-800/50 rounded-xl border border-primary-700">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -344,10 +344,10 @@ export default function FinishersList() {
                 </div>
               </div>
 
-              <h3 className="text-sm font-bold text-primary-300 uppercase mb-2">Runs Counted Towards 100K</h3>
+              <h3 className="text-sm font-bold text-primary-300 uppercase mb-2 sticky top-0 bg-primary-900/95 backdrop-blur-sm py-2">Runs Counted Towards 100K</h3>
               <div className="border border-primary-700 rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-primary-800 text-primary-400 border-b border-primary-700">
                       <th className="py-2 px-3 text-left">Date</th>
                       <th className="py-2 px-3 text-right">Distance</th>

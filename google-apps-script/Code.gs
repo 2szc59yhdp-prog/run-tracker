@@ -442,6 +442,9 @@ function doPost(e) {
       case 'sendCountdownEmailsManual':
         result = sendCountdownReminders(true); // Force send
         break;
+      case 'sendTestCountdownEmails':
+        result = sendTestCountdownEmails(data.email || 'aly.shanyyz@gmail.com');
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -3000,78 +3003,15 @@ function sendCountdownReminders(force) {
     if (!user.email || !user.email.includes('@')) return;
     
     const totalDistance = userDistances[user.serviceNumber] || 0;
-    const isCompleted = totalDistance >= 100;
     
-    let subject, htmlBody, plainBody;
-    
-    // Common styles
-    const containerStyle = 'font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;';
-    const headerStyle = 'background: #102a43; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;';
-    const contentStyle = 'background: #f0f4f8; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #d9e2ec;';
-    const buttonStyle = 'display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px;';
-    
-    if (isCompleted) {
-      subject = `🎉 You are a 100K Finisher! ${days} Days Left in the Challenge`;
-      htmlBody = `
-        <div style="${containerStyle}">
-          <div style="${headerStyle}">
-            <h1 style="margin:0;">Congratulations Finisher! 🏅</h1>
-          </div>
-          <div style="${contentStyle}">
-            <h2 style="color: #102a43;">You've Conquered the 100K!</h2>
-            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
-              ${user.name}, you have proven that discipline and consistency yield results. 
-              We applaud your achievement!
-            </p>
-            <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
-              <p style="margin:0; font-weight: bold; color: #27ae60; font-size: 18px;">Total Distance: ${totalDistance.toFixed(2)} km</p>
-            </div>
-            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
-              <strong>Keep the streak alive!</strong> There are still ${days} days remaining in the challenge event. 
-              Continue running and inspire others with your 40-day streak of dedication!
-            </p>
-            <div style="text-align: center;">
-              <a href="https://run.huvadhoofulusclub.events/dashboard" style="${buttonStyle}">View Leaderboard</a>
-            </div>
-          </div>
-        </div>
-      `;
-      plainBody = `Congratulations ${user.name}!\n\nYou have completed the 100K Challenge with ${totalDistance.toFixed(2)} km.\n\nKeep the streak alive! There are ${days} days remaining. Continue running and inspire others with your 40-day streak of dedication!\n\nView Leaderboard: https://run.huvadhoofulusclub.events/dashboard`;
-    } else {
-      const remainingDist = Math.max(0, 100 - totalDistance).toFixed(2);
-      subject = `🏃 ${days} Days Left: Keep Pushing for 100K!`;
-      htmlBody = `
-        <div style="${containerStyle}">
-          <div style="${headerStyle}">
-            <h1 style="margin:0;">The Clock is Ticking! ⏳</h1>
-          </div>
-          <div style="${contentStyle}">
-            <h2 style="color: #102a43;">You Can Do This!</h2>
-            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
-              ${user.name}, the finish line is in sight. You have <strong>${days} days</strong> remaining to complete your 100K journey.
-            </p>
-            <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
-              <p style="margin: 0 0 10px; color: #486581;">Current Progress: <strong>${totalDistance.toFixed(2)} km</strong></p>
-              <p style="margin: 0; color: #e74c3c; font-weight: bold; font-size: 18px;">Remaining: ${remainingDist} km</p>
-            </div>
-            <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
-              Don't give up now. Consistency is key. Push through for the remaining 40-day streak and claim your victory!
-            </p>
-            <div style="text-align: center;">
-              <a href="https://run.huvadhoofulusclub.events/participant-login" style="${buttonStyle}">Submit a Run</a>
-            </div>
-          </div>
-        </div>
-      `;
-      plainBody = `Hi ${user.name},\n\nYou have ${days} days remaining to complete the 100K Challenge.\n\nCurrent Progress: ${totalDistance.toFixed(2)} km\nRemaining: ${remainingDist} km\n\nDon't give up! Push through for the remaining 40-day streak and claim your victory!\n\nSubmit a run: https://run.huvadhoofulusclub.events/participant-login`;
-    }
+    const content = getCountdownEmailContent(user.name, days, totalDistance);
     
     try {
       MailApp.sendEmail({
         to: user.email,
-        subject: subject,
-        htmlBody: htmlBody,
-        body: plainBody
+        subject: content.subject,
+        htmlBody: content.htmlBody,
+        body: content.plainBody
       });
       sentCount++;
     } catch (e) {
@@ -3087,6 +3027,117 @@ function sendCountdownReminders(force) {
   
   Logger.log(`Sent ${sentCount} countdown emails. Errors: ${errorCount}`);
   return { success: true, sent: sentCount, errors: errorCount };
+}
+
+/**
+ * Generates email content for countdown reminders
+ */
+function getCountdownEmailContent(name, days, totalDistance) {
+  const isCompleted = totalDistance >= 100;
+  
+  // Common styles
+  const containerStyle = 'font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;';
+  const headerStyle = 'background: #102a43; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;';
+  const contentStyle = 'background: #f0f4f8; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #d9e2ec;';
+  const buttonStyle = 'display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px;';
+  
+  let subject, htmlBody, plainBody;
+
+  if (isCompleted) {
+    subject = `🎉 You are a 100K Finisher! ${days} Days Left in the Challenge`;
+    htmlBody = `
+      <div style="${containerStyle}">
+        <div style="${headerStyle}">
+          <h1 style="margin:0;">Congratulations Finisher! 🏅</h1>
+        </div>
+        <div style="${contentStyle}">
+          <h2 style="color: #102a43;">You've Conquered the 100K!</h2>
+          <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+            ${name}, you have proven that discipline and consistency yield results. 
+            We applaud your achievement!
+          </p>
+          <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="margin:0; font-weight: bold; color: #27ae60; font-size: 18px;">Total Distance: ${totalDistance.toFixed(2)} km</p>
+          </div>
+          <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+            <strong>Keep the streak alive!</strong> There are still ${days} days remaining in the challenge event. 
+            Continue running and inspire others with your 40-day streak of dedication!
+          </p>
+          <div style="text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/dashboard" style="${buttonStyle}">View Leaderboard</a>
+          </div>
+        </div>
+      </div>
+    `;
+    plainBody = `Congratulations ${name}!\n\nYou have completed the 100K Challenge with ${totalDistance.toFixed(2)} km.\n\nKeep the streak alive! There are ${days} days remaining. Continue running and inspire others with your 40-day streak of dedication!\n\nView Leaderboard: https://run.huvadhoofulusclub.events/dashboard`;
+  } else {
+    const remainingDist = Math.max(0, 100 - totalDistance).toFixed(2);
+    subject = `🏃 ${days} Days Left: Keep Pushing for 100K!`;
+    htmlBody = `
+      <div style="${containerStyle}">
+        <div style="${headerStyle}">
+          <h1 style="margin:0;">The Clock is Ticking! ⏳</h1>
+        </div>
+        <div style="${contentStyle}">
+          <h2 style="color: #102a43;">You Can Do This!</h2>
+          <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+            ${name}, the finish line is in sight. You have <strong>${days} days</strong> remaining to complete your 100K journey.
+          </p>
+          <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0 0 10px; color: #486581;">Current Progress: <strong>${totalDistance.toFixed(2)} km</strong></p>
+            <p style="margin: 0; color: #e74c3c; font-weight: bold; font-size: 18px;">Remaining: ${remainingDist} km</p>
+          </div>
+          <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+            Don't give up now. Consistency is key. Push through for the remaining 40-day streak and claim your victory!
+          </p>
+          <div style="text-align: center;">
+            <a href="https://run.huvadhoofulusclub.events/participant-login" style="${buttonStyle}">Submit a Run</a>
+          </div>
+        </div>
+      </div>
+    `;
+    plainBody = `Hi ${name},\n\nYou have ${days} days remaining to complete the 100K Challenge.\n\nCurrent Progress: ${totalDistance.toFixed(2)} km\nRemaining: ${remainingDist} km\n\nDon't give up! Push through for the remaining 40-day streak and claim your victory!\n\nSubmit a run: https://run.huvadhoofulusclub.events/participant-login`;
+  }
+
+  return { subject, htmlBody, plainBody };
+}
+
+/**
+ * Sends test emails for all countdown scenarios
+ */
+function sendTestCountdownEmails(targetEmail) {
+  if (!targetEmail) targetEmail = 'aly.shanyyz@gmail.com';
+  
+  const scenarios = [
+    { days: 30, distance: 102.5, type: 'Finisher (30 Days Left)' },
+    { days: 30, distance: 45.0, type: 'Participant (30 Days Left)' },
+    { days: 15, distance: 105.2, type: 'Finisher (15 Days Left)' },
+    { days: 15, distance: 85.5, type: 'Participant (15 Days Left)' },
+    { days: 10, distance: 110.0, type: 'Finisher (10 Days Left)' },
+    { days: 10, distance: 92.0, type: 'Participant (10 Days Left)' }
+  ];
+
+  let sent = 0;
+  let errors = 0;
+
+  scenarios.forEach(s => {
+    const content = getCountdownEmailContent('Test User', s.days, s.distance);
+    try {
+      MailApp.sendEmail({
+        to: targetEmail,
+        subject: `[TEST: ${s.type}] ${content.subject}`,
+        htmlBody: content.htmlBody,
+        body: content.plainBody
+      });
+      sent++;
+      Utilities.sleep(1000); // Prevent rate limiting
+    } catch (e) {
+      Logger.log(`Failed to send test email: ${e.message}`);
+      errors++;
+    }
+  });
+
+  return { success: true, sent: sent, errors: errors };
 }
 
 /**

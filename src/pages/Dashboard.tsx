@@ -103,17 +103,34 @@ export default function Dashboard() {
     const finishers: { serviceNumber: string; completionDate: Date; rank: number }[] = [];
 
     runnersMap.forEach((userRuns, serviceNumber) => {
-      // Sort by date
-      userRuns.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Sort by date, then by submission time for precise ordering
+      userRuns.sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        
+        // If dates are same, sort by submission time
+        const timeA = a.submittedAt ? new Date(a.submittedAt.replace(' ', 'T')).getTime() : 0;
+        const timeB = b.submittedAt ? new Date(b.submittedAt.replace(' ', 'T')).getTime() : 0;
+        return timeA - timeB;
+      });
       
       let total = 0;
       for (const run of userRuns) {
         total += run.distanceKm;
         total = Math.round(total * 100) / 100;
         if (total >= 100) {
+          // Use submittedAt for precise completion time if available
+          let completionDate = new Date(run.date);
+          if (run.submittedAt) {
+            const submissionTime = new Date(run.submittedAt.replace(' ', 'T'));
+            if (!isNaN(submissionTime.getTime())) {
+              completionDate = submissionTime;
+            }
+          }
+
           finishers.push({
             serviceNumber,
-            completionDate: new Date(run.date),
+            completionDate,
             rank: 0
           });
           break;

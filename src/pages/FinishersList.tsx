@@ -73,8 +73,15 @@ export default function FinishersList() {
     users.forEach(user => {
       const userRuns = runsByUser.get(user.serviceNumber) || [];
       
-      // Sort runs by date ascending
-      userRuns.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Sort runs by date ascending, then by submission time
+      userRuns.sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        
+        const timeA = a.submittedAt ? new Date(a.submittedAt.replace(' ', 'T')).getTime() : 0;
+        const timeB = b.submittedAt ? new Date(b.submittedAt.replace(' ', 'T')).getTime() : 0;
+        return timeA - timeB;
+      });
 
       let totalDistance = 0;
       let completionDate: Date | null = null;
@@ -103,6 +110,12 @@ export default function FinishersList() {
 
         if (totalDistance >= 100 && !completionDate) {
           completionDate = new Date(run.date);
+          if (run.submittedAt) {
+            const submissionTime = new Date(run.submittedAt.replace(' ', 'T'));
+            if (!isNaN(submissionTime.getTime())) {
+              completionDate = submissionTime;
+            }
+          }
           break; // Stop counting days/runs once 100k is reached
         }
       }

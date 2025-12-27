@@ -62,6 +62,23 @@ export default function AddRun() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+  const [isChallengeEnded, setIsChallengeEnded] = useState(false);
+
+  // Check if challenge has ended
+  useEffect(() => {
+    const checkChallengeStatus = () => {
+      const now = new Date();
+      // Challenge ends on Jan 31, 2026 at 00:00 Maldives Time (UTC+5)
+      const endDate = new Date('2026-01-31T00:00:00+05:00');
+      setIsChallengeEnded(now >= endDate);
+    };
+    
+    checkChallengeStatus();
+    const interval = setInterval(checkChallengeStatus, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Gate page: require participant login
   useEffect(() => {
     if (!isParticipant) {
@@ -402,6 +419,32 @@ export default function AddRun() {
           <p className="text-primary-500 text-sm">
             Redirecting to dashboard...
           </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isChallengeEnded) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16">
+        <Card className="text-center py-12 animate-fade-in border-accent-500/30">
+          <div className="w-20 h-20 bg-accent-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-4xl">🏁</span>
+          </div>
+          <h2 className="font-display text-2xl font-bold text-white mb-2">
+            Challenge Completed!!
+          </h2>
+          <p className="text-primary-400 mb-6">
+            The 100K Run Challenge has ended. No new runs can be submitted.
+          </p>
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => navigate('/dashboard')}
+              className="bg-accent-500 hover:bg-accent-600 text-white px-8"
+            >
+              Go to Dashboard
+            </Button>
+          </div>
         </Card>
       </div>
     );

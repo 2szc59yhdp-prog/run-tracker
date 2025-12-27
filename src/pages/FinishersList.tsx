@@ -245,13 +245,12 @@ export default function FinishersList() {
                 <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider">Name</th>
                 <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider w-24 sm:w-32 hidden sm:table-cell">Station</th>
                 <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-24">Days</th>
-                <th className="py-3 px-2 sm:px-4 text-xs font-bold text-primary-400 uppercase tracking-wider text-center w-28">Active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-primary-700/50">
               {filteredFinishers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-primary-400">
+                  <td colSpan={5} className="py-8 text-center text-primary-400">
                     No finishers found yet.
                   </td>
                 </tr>
@@ -279,15 +278,6 @@ export default function FinishersList() {
                     <td className="py-3 px-2 sm:px-4 text-center">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-500/10 text-accent-400 border border-accent-500/20 whitespace-nowrap">
                         {row.daysToComplete}d
-                      </span>
-                    </td>
-                    <td className="py-3 px-2 sm:px-4 text-center">
-                      <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                        row.activeDays >= 40
-                          ? 'bg-success-500/20 text-success-400 border border-success-500/30' 
-                          : 'bg-primary-700/50 text-white'
-                      }`}>
-                        {row.activeDays} <span className="text-[10px] font-normal opacity-70 ml-0.5">/40</span>
                       </span>
                     </td>
                   </tr>

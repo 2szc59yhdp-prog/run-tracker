@@ -13,7 +13,7 @@ export default function Layout() {
       
       <Navbar />
       
-      <main className="flex-1 relative z-0">
+      <main className="flex-1 relative">
         <Outlet />
       </main>
       

@@ -1056,6 +1056,12 @@ function updateRunStatus(data) {
         status: data.status,
         rejectionReason: rejectionReason
       });
+      
+      // Check for 100K completion on approval
+      if (data.status === 'approved') {
+        checkAndSendCompletionEmail(runDetails.serviceNumber, runDetails.distanceKm);
+      }
+      
     } catch (e) {
       Logger.log('Failed to send status notification: ' + e.message);
       // Don't fail the status update if email fails
@@ -3161,4 +3167,103 @@ function setupCountdownTrigger() {
     .create();
     
   return { success: true, message: 'Trigger created' };
+}
+
+// ============================================================
+// COMPLETION EMAIL LOGIC
+// ============================================================
+
+/**
+ * Checks if a user has just crossed the 100K mark and sends a completion email
+ */
+function checkAndSendCompletionEmail(serviceNumber, currentRunDistance) {
+  try {
+    const runsSheet = getRunsSheet();
+    const data = runsSheet.getDataRange().getValues();
+    const headers = data[0];
+    const snIndex = headers.indexOf('ServiceNumber');
+    const distIndex = headers.indexOf('DistanceKm');
+    const statusIndex = headers.indexOf('Status');
+    
+    let totalDistance = 0;
+    
+    // Calculate total approved distance
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (row[snIndex].toString() === serviceNumber.toString() && row[statusIndex] === 'approved') {
+        totalDistance += (parseFloat(row[distIndex]) || 0);
+      }
+    }
+    
+    // Check if this run was the one that crossed the 100K threshold
+    const previousDistance = totalDistance - currentRunDistance;
+    
+    // Use 99.99 to account for minor floating point issues, but strict 100 is usually fine
+    // Trigger if they were below 100 before, and are >= 100 now
+    if (totalDistance >= 100 && previousDistance < 100) {
+      const userResult = getUserByServiceNumber(serviceNumber);
+      if (userResult.success && userResult.data && userResult.data.email) {
+        sendCompletionEmail(userResult.data.email, userResult.data.name, totalDistance);
+      }
+    }
+  } catch (e) {
+    Logger.log('Error in checkAndSendCompletionEmail: ' + e.message);
+  }
+}
+
+/**
+ * Sends the 100K completion email
+ */
+function sendCompletionEmail(email, name, totalDistance) {
+  const daysRemaining = getDaysRemaining();
+  
+  const subject = `🎉 CHALLENGE COMPLETE: You are a 100K Finisher!`;
+  
+  // Common styles
+  const containerStyle = 'font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;';
+  const headerStyle = 'background: #102a43; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;';
+  const contentStyle = 'background: #f0f4f8; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #d9e2ec;';
+  const buttonStyle = 'display: inline-block; background: #2186eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px;';
+  
+  const htmlBody = `
+    <div style="${containerStyle}">
+      <div style="${headerStyle}">
+        <h1 style="margin:0;">MISSION ACCOMPLISHED! 🏅</h1>
+      </div>
+      <div style="${contentStyle}">
+        <h2 style="color: #102a43;">Welcome to the 100K Club!</h2>
+        <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+          ${name}, you did it! You have successfully completed the 100K Run Challenge.
+        </p>
+        <div style="background: #fff; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+          <p style="margin:0; font-weight: bold; color: #27ae60; font-size: 24px;">100 KM UNLOCKED</p>
+          <p style="margin:5px 0 0; color: #486581;">Total Distance: ${totalDistance.toFixed(2)} km</p>
+        </div>
+        <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+          Your dedication and persistence have paid off. This is a massive achievement!
+        </p>
+        <p style="font-size: 16px; color: #334e68; line-height: 1.5;">
+          <strong>What's Next?</strong> There are still ${daysRemaining} days left in the event. 
+          Keep running to improve your rank and maintain your streak!
+        </p>
+        <div style="text-align: center;">
+          <a href="https://run.huvadhoofulusclub.events/dashboard" style="${buttonStyle}">View Your Finisher Status</a>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const plainBody = `CONGRATULATIONS ${name}!\n\nYou have successfully completed the 100K Run Challenge!\n\nTotal Distance: ${totalDistance.toFixed(2)} km\n\nYour dedication and persistence have paid off. This is a massive achievement!\n\nThere are still ${daysRemaining} days left in the event. Keep running to improve your rank!\n\nView Dashboard: https://run.huvadhoofulusclub.events/dashboard`;
+  
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: htmlBody,
+      body: plainBody
+    });
+    Logger.log(`Sent completion email to ${email}`);
+  } catch (e) {
+    Logger.log(`Failed to send completion email to ${email}: ${e.message}`);
+  }
 }

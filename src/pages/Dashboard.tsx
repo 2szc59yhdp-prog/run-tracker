@@ -1459,9 +1459,9 @@ export default function Dashboard() {
       {/* The Journey Modal */}
       {selectedJourneyRunner && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[99999] overflow-y-auto">
-          <div className="bg-primary-900 border border-primary-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in relative my-8">
+          <div className="bg-primary-900 border border-primary-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in relative z-[100000] my-8 flex flex-col max-h-[90vh]">
             {/* Header with decorative background */}
-            <div className="relative p-6 sm:p-8 bg-gradient-to-br from-primary-800 to-primary-900 border-b border-primary-700">
+            <div className="relative p-6 sm:p-8 bg-gradient-to-br from-primary-800 to-primary-900 border-b border-primary-700 shrink-0">
               <div className="absolute top-0 right-0 p-4">
                 <button
                   onClick={() => setSelectedJourneyRunner(null)}
@@ -1505,7 +1505,7 @@ export default function Dashboard() {
             </div>
 
             {/* Run History List */}
-            <div className="max-h-[50vh] overflow-y-auto bg-primary-900/50">
+            <div className="flex-1 overflow-y-auto bg-primary-900/50 custom-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-primary-800/50 sticky top-0 z-10">
                   <tr>
@@ -1551,7 +1551,7 @@ export default function Dashboard() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 sm:p-6 bg-primary-800/30 border-t border-primary-700 text-center">
+            <div className="p-4 sm:p-6 bg-primary-800/30 border-t border-primary-700 text-center shrink-0">
               <p className="text-xs text-primary-500">
                 Challenge completed on {formatDate(selectedJourneyRunner.runs[selectedJourneyRunner.runs.length - 1].date)}
               </p>

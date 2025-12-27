@@ -84,27 +84,17 @@ export default function FinishersList() {
 
         if (totalDistance >= 100 && !completionDate) {
           completionDate = new Date(run.date);
-          // Don't break here because we need to count total active days?
-          // The prompt says "active days/40". Usually this means total active days up to now.
-          // But maybe it means active days *at the time of completion*?
-          // "active days/40" usually implies "Current Status".
-          // I will continue loop to count all active days.
+          break; // Stop counting days/runs once 100k is reached
         }
       }
 
       if (completionDate && firstRunDate) {
-        // Calculate days to complete (inclusive)
-        const diffTime = Math.abs(completionDate.getTime() - firstRunDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-        // Note: If completion is same day as first run, diffTime is 0, diffDays is 1. Correct.
-        // If completion is next day, diffTime is 24h, diffDays is 2. Correct.
-
         finishers.push({
           rank: 0, // Will assign later
           serviceNumber: user.serviceNumber,
           name: user.name,
           station: user.station,
-          daysToComplete: diffDays,
+          daysToComplete: activeDates.size, // User requested active days count
           completionDate: completionDate,
           activeDays: activeDates.size
         });

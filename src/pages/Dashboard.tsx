@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal, Plus } from 'lucide-react';
+import { TrendingUp, Users, Award, MapPin, Calendar, Hash, User, Clock, CheckCircle, XCircle, Image, Search, X, Building2, Trophy, Footprints, RefreshCw, Timer, Camera, ExternalLink, Medal, Plus, Info } from 'lucide-react';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/Button';
@@ -79,6 +79,12 @@ export default function Dashboard() {
   const [tshirtSleeve, setTshirtSleeve] = useState<'Longsleeve' | 'Short Sleeve'>('Short Sleeve');
   const [tshirtSubmitting, setTshirtSubmitting] = useState(false);
   const [tshirtMessage, setTshirtMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedJourneyRunner, setSelectedJourneyRunner] = useState<{
+    name: string;
+    runs: { date: string; distance: number; cumulative: number }[];
+    totalDistance: number;
+    activeDays: number;
+  } | null>(null);
 
   // Countdown timer
   useEffect(() => {
@@ -186,6 +192,40 @@ export default function Dashboard() {
   // Calculate station performance from runner stats
   // A "finisher" must: reach 100km AND have 40+ active days
   // Live progress = average of each runner's progress (min of distance% and days%)
+  const openJourney = (runner: typeof eliteRunners[0]) => {
+    // Filter approved runs for this runner
+    const relevantRuns = runs
+      .filter(r => r.serviceNumber === runner.serviceNumber && r.status === 'approved')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let totalDistance = 0;
+    const activeDates = new Set<string>();
+    const journeyRuns = [];
+    
+    for (const run of relevantRuns) {
+      const distance = Number(run.distanceKm || 0);
+      totalDistance += distance;
+      // Precision fix
+      totalDistance = Math.round(totalDistance * 100) / 100;
+      activeDates.add(run.date);
+      
+      journeyRuns.push({
+        date: run.date,
+        distance: distance,
+        cumulative: totalDistance
+      });
+      
+      if (totalDistance >= 100) break;
+    }
+
+    setSelectedJourneyRunner({
+      name: runner.name,
+      runs: journeyRuns,
+      totalDistance,
+      activeDays: activeDates.size
+    });
+  };
+
   const stationPerformance = useMemo(() => {
     const stationMap = new Map<string, {
       distance: number;
@@ -825,6 +865,20 @@ export default function Dashboard() {
                             </span>
                           </div>
                         </div>
+                        <Button
+                          onClick={() => openJourney(runner)}
+                          variant="secondary"
+                          size="sm"
+                          className="hidden sm:flex ml-2 !py-1 !px-2 !text-xs whitespace-nowrap"
+                        >
+                          Run Info
+                        </Button>
+                        <button
+                          onClick={() => openJourney(runner)}
+                          className="sm:hidden p-2 text-primary-400 hover:text-white transition-colors"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1401,6 +1455,110 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* The Journey Modal */}
+      {selectedJourneyRunner && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[99999] overflow-y-auto">
+          <div className="bg-primary-900 border border-primary-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in relative my-8">
+            {/* Header with decorative background */}
+            <div className="relative p-6 sm:p-8 bg-gradient-to-br from-primary-800 to-primary-900 border-b border-primary-700">
+              <div className="absolute top-0 right-0 p-4">
+                <button
+                  onClick={() => setSelectedJourneyRunner(null)}
+                  className="p-2 bg-primary-800/50 hover:bg-primary-700 text-primary-400 hover:text-white rounded-full transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                <div className="p-3 sm:p-4 rounded-xl bg-warning-500/10 border border-warning-500/20 text-warning-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                  <Award className="w-8 h-8 sm:w-10 sm:h-10" />
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-white mb-2">
+                    The Journey
+                  </h2>
+                  <p className="text-primary-300 text-sm sm:text-base leading-relaxed max-w-xl">
+                    Every step tells a story of discipline, consistency, and self-growth. This is more than distance, it’s the journey of becoming stronger, fitter, and more accountable.
+                  </p>
+                </div>
+              </div>
+
+              {/* Runner Stats Summary */}
+              <div className="flex flex-wrap gap-4 mt-6 pt-6 border-t border-primary-700/50">
+                <div>
+                  <p className="text-xs text-primary-500 uppercase tracking-wider mb-1">Runner</p>
+                  <p className="text-white font-semibold">{selectedJourneyRunner.name}</p>
+                </div>
+                <div className="w-px h-10 bg-primary-700/50 hidden sm:block"></div>
+                <div>
+                  <p className="text-xs text-primary-500 uppercase tracking-wider mb-1">Total Distance</p>
+                  <p className="text-accent-400 font-display font-bold text-lg">{selectedJourneyRunner.totalDistance} km</p>
+                </div>
+                <div className="w-px h-10 bg-primary-700/50 hidden sm:block"></div>
+                <div>
+                  <p className="text-xs text-primary-500 uppercase tracking-wider mb-1">Active Days</p>
+                  <p className="text-warning-400 font-display font-bold text-lg">{selectedJourneyRunner.activeDays}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Run History List */}
+            <div className="max-h-[50vh] overflow-y-auto bg-primary-900/50">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-primary-800/50 sticky top-0 z-10">
+                  <tr>
+                    <th className="py-3 px-4 sm:px-6 text-xs font-semibold text-primary-400 uppercase tracking-wider border-b border-primary-700">Date</th>
+                    <th className="py-3 px-4 sm:px-6 text-xs font-semibold text-primary-400 uppercase tracking-wider border-b border-primary-700 text-right">Distance</th>
+                    <th className="py-3 px-4 sm:px-6 text-xs font-semibold text-primary-400 uppercase tracking-wider border-b border-primary-700 text-right">Progress</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-primary-800/50">
+                  {selectedJourneyRunner.runs.map((run, idx) => (
+                    <tr 
+                      key={idx}
+                      className="hover:bg-primary-800/30 transition-colors group"
+                    >
+                      <td className="py-3 px-4 sm:px-6 text-sm text-primary-300">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-primary-800 flex items-center justify-center text-[10px] text-primary-500 font-mono">
+                            {idx + 1}
+                          </span>
+                          {formatDate(run.date)}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 sm:px-6 text-sm text-white font-medium text-right">
+                        {run.distance} km
+                      </td>
+                      <td className="py-3 px-4 sm:px-6 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <span className="text-xs text-primary-500 font-mono w-16">
+                            {run.cumulative.toFixed(2)} km
+                          </span>
+                          <div className="w-24 h-1.5 bg-primary-800 rounded-full overflow-hidden hidden sm:block">
+                            <div 
+                              className="h-full bg-accent-500 rounded-full transition-all duration-500 group-hover:bg-accent-400"
+                              style={{ width: `${Math.min((run.cumulative / 100) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 sm:p-6 bg-primary-800/30 border-t border-primary-700 text-center">
+              <p className="text-xs text-primary-500">
+                Challenge completed on {formatDate(selectedJourneyRunner.runs[selectedJourneyRunner.runs.length - 1].date)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { fetchAllUsers } from '../services/api';
-import type { RegisteredUser, Run } from '../types';
+import type { RegisteredUser } from '../types';
 
 interface Finisher {
   rank: number;

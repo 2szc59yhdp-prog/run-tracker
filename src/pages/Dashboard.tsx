@@ -224,12 +224,26 @@ export default function Dashboard() {
   const TODAY_STR = new Date().toLocaleDateString('sv-SE', { timeZone: 'Indian/Maldives' });
 
   const eliteRunners = useMemo(() => {
-    return runnerStats.filter(r => r.totalDistance >= 100);
-  }, [runnerStats]);
+    const qualified = runnerStats.filter(r => r.totalDistance >= 100);
+    
+    // Sort by rank from finishersWithRank
+    return qualified.sort((a, b) => {
+      const rankA = finishersWithRank.find(f => f.serviceNumber === a.serviceNumber)?.rank ?? 999999;
+      const rankB = finishersWithRank.find(f => f.serviceNumber === b.serviceNumber)?.rank ?? 999999;
+      return rankA - rankB;
+    });
+  }, [runnerStats, finishersWithRank]);
 
-  const leaderboardRunners = useMemo(() => {
-    return runnerStats.filter(r => r.totalDistance < 100);
-  }, [runnerStats]);
+  const eliteRunners = useMemo(() => {
+    const qualified = runnerStats.filter(r => r.totalDistance >= 100);
+    
+    // Sort by rank from finishersWithRank
+    return qualified.sort((a, b) => {
+      const rankA = finishersWithRank.find(f => f.serviceNumber === a.serviceNumber)?.rank ?? 999999;
+      const rankB = finishersWithRank.find(f => f.serviceNumber === b.serviceNumber)?.rank ?? 999999;
+      return rankA - rankB;
+    });
+  }, [runnerStats, finishersWithRank]);
 
 
 

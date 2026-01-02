@@ -14,6 +14,7 @@ import PinList from './pages/PinList';
 import ActiveDays from './pages/ActiveDays';
 import FinishersList from './pages/FinishersList';
 import SponsorsView from './pages/SponsorsView';
+import Awards from './pages/admin/Awards';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="admin/sponsors" element={<Sponsors />} />
           <Route path="sponsors-view" element={<SponsorsView />} />
           <Route path="admin/outstanding" element={<Outstanding />} />
+          <Route path="admin/awards" element={<Awards />} />
         </Route>
       </Routes>
     </AppProvider>

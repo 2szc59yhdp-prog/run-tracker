@@ -6,7 +6,7 @@
  */
 
 import { APPS_SCRIPT_URL } from '../config';
-import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser, TshirtAdmission, AddTshirtAdmissionPayload } from '../types';
+import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser, TshirtAdmission, AddTshirtAdmissionPayload, ManualAward, SaveManualAwardPayload } from '../types';
 
 export interface Sponsor {
   id: string;

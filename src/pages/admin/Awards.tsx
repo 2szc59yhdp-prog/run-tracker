@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Medal, Award, Activity, Users, Star, ThumbsUp, Edit2, X, Save } from 'lucide-react';
 import { fetchAllRuns, fetchAllUsers, fetchManualAwards, saveManualAward } from '../../services/api';
 import type { RegisteredUser, Run, ManualAward, SaveManualAwardPayload } from '../../types';
-import { useAppContext } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 
 interface UserStats {
   user: RegisteredUser;
@@ -23,7 +23,7 @@ interface StationStats {
 }
 
 const Awards: React.FC = () => {
-  const { isAdmin, adminToken } = useAppContext();
+  const { isAdmin, adminToken } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userStats, setUserStats] = useState<UserStats[]>([]);
@@ -191,7 +191,7 @@ const Awards: React.FC = () => {
     loadData();
   }, []);
 
-  const handleEditManualAward = (key: string, awardTitle: string) => {
+  const handleEditManualAward = (key: string) => {
     const existing = manualAwards[key];
     setEditForm({
       awardKey: key,
@@ -494,7 +494,7 @@ const Awards: React.FC = () => {
           description="For Motivating Others"
           manual
           criteria="Awarded to the runner who has shown exceptional spirit in motivating others. Selected manually."
-          onEdit={isAdmin ? () => handleEditManualAward('inspiring_award', 'Inspiring Award') : undefined}
+          onEdit={isAdmin ? () => handleEditManualAward('inspiring_award') : undefined}
         >
           {manualAwards['inspiring_award'] ? (
              <div className="text-center">
@@ -518,7 +518,7 @@ const Awards: React.FC = () => {
           description="Motivation, Encouragement, Participant Vibe"
           manual
           criteria="Awarded to the runner or group that best exemplifies team spirit. Selected manually."
-          onEdit={isAdmin ? () => handleEditManualAward('team_spirit', 'Best Team Spirit') : undefined}
+          onEdit={isAdmin ? () => handleEditManualAward('team_spirit') : undefined}
         >
           {manualAwards['team_spirit'] ? (
              <div className="text-center">

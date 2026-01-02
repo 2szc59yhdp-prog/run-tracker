@@ -43,6 +43,10 @@ const Awards: React.FC = () => {
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Constants
+  // Challenge ends at the end of Jan 31st 2026 (i.e., start of Feb 1st)
+  const CHALLENGE_END_DATE = new Date('2026-02-01T00:00:00Z');
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -102,10 +106,14 @@ const Awards: React.FC = () => {
         let maxDate: Date | null = null;
 
         runs.forEach(run => {
+          const runDate = new Date(run.date);
+          
+          // Filter out runs after the challenge end date
+          if (runDate > CHALLENGE_END_DATE) return;
+
           const stats = statsMap.get(run.serviceNumber);
           if (!stats) return;
 
-          const runDate = new Date(run.date);
           if (!minDate || runDate < minDate) minDate = runDate;
           if (!maxDate || runDate > maxDate) maxDate = runDate;
 
@@ -132,7 +140,7 @@ const Awards: React.FC = () => {
         });
 
         setChallengeStartDate(minDate);
-        setChallengeEndDate(maxDate);
+        setChallengeEndDate(CHALLENGE_END_DATE); // Use fixed end date for calculations
 
         // Calculate 100k finish date for each user
         statsMap.forEach((stats, serviceNumber) => {

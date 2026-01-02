@@ -132,6 +132,24 @@ function getFundUsagesSheet() {
   return sheet;
 }
 
+function getManualAwardsSheet() {
+  const config = getConfig();
+  const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  let sheet = spreadsheet.getSheetByName('ManualAwards');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('ManualAwards');
+    sheet.getRange(1, 1, 1, 6).setValues([[
+      'AwardKey',
+      'WinnerIdentifier',
+      'WinnerName',
+      'UpdatedAt',
+      'UpdatedBy',
+      'Notes'
+    ]]);
+  }
+  return sheet;
+}
+
 function getUserLoginsSheet() {
   const config = getConfig();
   const spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
@@ -339,6 +357,9 @@ function doGet(e) {
       case 'getFundUsages':
         result = getFundUsages();
         break;
+      case 'getManualAwards':
+        result = getManualAwards();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -444,6 +465,9 @@ function doPost(e) {
         break;
       case 'sendTestCountdownEmails':
         result = sendTestCountdownEmails(data.email || 'aly.shanyyz@gmail.com');
+        break;
+      case 'saveManualAward':
+        result = saveManualAward(data);
         break;
       default:
         result = { success: false, error: 'Unknown action' };
@@ -2953,6 +2977,72 @@ function deleteFundUsage(data) {
   }
   
   return { success: false, error: 'Fund usage not found' };
+}
+
+function getManualAwards() {
+  const sheet = getManualAwardsSheet();
+  const data = sheet.getDataRange().getValues();
+  const result = {};
+  // Skip header
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) {
+      result[row[0]] = {
+        awardKey: row[0].toString(),
+        winnerIdentifier: row[1].toString(),
+        winnerName: row[2].toString(),
+        updatedAt: row[3],
+        updatedBy: row[4].toString(),
+        notes: row[5] ? row[5].toString() : ''
+      };
+    }
+  }
+  return { success: true, data: result };
+}
+
+function saveManualAward(data) {
+  if (!validateAdminToken(data.adminToken)) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  const sheet = getManualAwardsSheet();
+  const rows = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === data.awardKey) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  
+  const timestamp = new Date();
+  // We can't easily get the admin name without passing it, but we have the token.
+  // We'll just say "Admin" for now or use what's passed.
+  const updatedBy = data.updatedBy || 'Admin';
+  
+  if (rowIndex > 0) {
+    // Update
+    sheet.getRange(rowIndex, 2).setValue(data.winnerIdentifier);
+    sheet.getRange(rowIndex, 3).setValue(data.winnerName);
+    sheet.getRange(rowIndex, 4).setValue(timestamp);
+    sheet.getRange(rowIndex, 5).setValue(updatedBy);
+    if (data.notes !== undefined) {
+      sheet.getRange(rowIndex, 6).setValue(data.notes);
+    }
+  } else {
+    // Insert
+    sheet.appendRow([
+      data.awardKey,
+      data.winnerIdentifier,
+      data.winnerName,
+      timestamp,
+      updatedBy,
+      data.notes || ''
+    ]);
+  }
+  
+  return { success: true };
 }
 
 // ============================================================

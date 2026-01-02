@@ -701,6 +701,31 @@ export async function fetchFundUsages(): Promise<ApiResponse<FundUsageEntry[]>> 
   }
 }
 
+export async function fetchManualAwards(): Promise<ApiResponse<Record<string, ManualAward>>> {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getManualAwards`, { method: 'GET' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch manual awards' };
+  }
+}
+
+export async function saveManualAward(payload: SaveManualAwardPayload, adminToken: string): Promise<ApiResponse<void>> {
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveManualAward', adminToken, ...payload }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to save manual award' };
+  }
+}
+
 export async function addFundUsageApi(payload: Omit<FundUsageEntry, 'id' | 'date'>, adminToken: string): Promise<ApiResponse<{ id: string }>> {
   try {
     const response = await fetch(APPS_SCRIPT_URL, {

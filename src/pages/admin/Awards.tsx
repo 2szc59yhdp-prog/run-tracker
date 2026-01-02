@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Activity, Users, Star, ThumbsUp } from 'lucide-react';
-import { fetchAllRuns, fetchAllUsers } from '../../services/api';
-import type { RegisteredUser, Run } from '../../types';
+import { Trophy, Medal, Award, Activity, Users, Star, ThumbsUp, Edit2, X, Save } from 'lucide-react';
+import { fetchAllRuns, fetchAllUsers, fetchManualAwards, saveManualAward } from '../../services/api';
+import type { RegisteredUser, Run, ManualAward, SaveManualAwardPayload } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 interface UserStats {
   user: RegisteredUser;
@@ -22,19 +23,33 @@ interface StationStats {
 }
 
 const Awards: React.FC = () => {
+  const { isAdmin, adminToken } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userStats, setUserStats] = useState<UserStats[]>([]);
   const [stationStats, setStationStats] = useState<StationStats[]>([]);
+  const [users, setUsers] = useState<RegisteredUser[]>([]);
+  const [manualAwards, setManualAwards] = useState<Record<string, ManualAward>>({});
   const [challengeStartDate, setChallengeStartDate] = useState<Date | null>(null);
   const [challengeEndDate, setChallengeEndDate] = useState<Date | null>(null);
+
+  // Edit State
+  const [editingAwardKey, setEditingAwardKey] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<SaveManualAwardPayload>({
+    awardKey: '',
+    winnerIdentifier: '',
+    winnerName: '',
+    notes: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [runsRes, usersRes] = await Promise.all([
+        const [runsRes, usersRes, manualAwardsRes] = await Promise.all([
           fetchAllRuns(),
-          fetchAllUsers()
+          fetchAllUsers(),
+          fetchManualAwards()
         ]);
 
         if (!runsRes.success || !runsRes.data) {
@@ -46,6 +61,11 @@ const Awards: React.FC = () => {
 
         const runs = runsRes.data;
         const allUsers = usersRes.data;
+        setUsers(allUsers);
+
+        if (manualAwardsRes.success && manualAwardsRes.data) {
+          setManualAwards(manualAwardsRes.data);
+        }
 
         // Process Data
         const statsMap = new Map<string, UserStats>();
@@ -163,6 +183,72 @@ const Awards: React.FC = () => {
     loadData();
   }, []);
 
+  const handleEditManualAward = (key: string, awardTitle: string) => {
+    const existing = manualAwards[key];
+    setEditForm({
+      awardKey: key,
+      winnerIdentifier: existing?.winnerIdentifier || '',
+      winnerName: existing?.winnerName || '',
+      notes: existing?.notes || ''
+    });
+    setEditingAwardKey(key);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!adminToken || !editingAwardKey) return;
+    setIsSaving(true);
+    try {
+      const payload: SaveManualAwardPayload = {
+        awardKey: editingAwardKey,
+        winnerIdentifier: editForm.winnerIdentifier,
+        winnerName: editForm.winnerName,
+        notes: editForm.notes
+      };
+
+      const res = await saveManualAward(payload, adminToken);
+      if (res.success) {
+        // Update local state
+        setManualAwards(prev => ({
+          ...prev,
+          [editingAwardKey]: {
+            ...prev[editingAwardKey],
+            awardKey: editingAwardKey,
+            winnerIdentifier: editForm.winnerIdentifier,
+            winnerName: editForm.winnerName,
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'Admin', // In a real app we'd get this from context
+            notes: editForm.notes
+          }
+        }));
+        setEditingAwardKey(null);
+      } else {
+        alert('Failed to save award: ' + res.error);
+      }
+    } catch (err) {
+      alert('An error occurred while saving');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUserSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const serviceNumber = e.target.value;
+    const user = users.find(u => u.serviceNumber === serviceNumber);
+    if (user) {
+      setEditForm(prev => ({
+        ...prev,
+        winnerIdentifier: user.serviceNumber,
+        winnerName: user.name
+      }));
+    } else if (serviceNumber === '') {
+        setEditForm(prev => ({
+            ...prev,
+            winnerIdentifier: '',
+            winnerName: ''
+        }));
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-primary-300">Loading awards data...</div>;
   if (error) return <div className="p-8 text-center text-danger-500">{error}</div>;
 
@@ -214,7 +300,7 @@ const Awards: React.FC = () => {
 
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6 relative">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <Trophy className="w-8 h-8 text-warning-400" />
@@ -232,6 +318,7 @@ const Awards: React.FC = () => {
           title="Highest Total Distance" 
           icon={<Activity className="w-6 h-6 text-accent-400" />}
           description="Most KM logged by the end of the challenge"
+          criteria="The runner with the highest total distance approved by the end of the challenge."
         >
           {highestDistance ? (
             <div className="text-center">
@@ -247,6 +334,7 @@ const Awards: React.FC = () => {
           title="Comeback Award" 
           icon={<Activity className="w-6 h-6 text-purple-400" />}
           description="Started late (2nd half) but finished Strong"
+          criteria="Started running in the second half of the challenge and achieved the highest distance among late starters."
         >
           {comebackWinner ? (
             <div className="text-center">
@@ -271,6 +359,7 @@ const Awards: React.FC = () => {
           title="Fair Play Award" 
           icon={<Star className="w-6 h-6 text-success-400" />}
           description="Zero Rejected Runs (Min 5 runs submitted)"
+          criteria="Runners with at least 5 runs submitted and 0 rejected runs. Tie-breaker: Most runs submitted."
         >
           {fairPlayCandidates.length > 0 ? (
              <div className="text-center">
@@ -292,6 +381,7 @@ const Awards: React.FC = () => {
           title="Silent Grinder Award" 
           icon={<Activity className="w-6 h-6 text-primary-400" />}
           description="Most Consistent (Highest Active Days)"
+          criteria="The runner with the highest number of active days (days with at least one approved run)."
         >
           {silentGrinder ? (
             <div className="text-center">
@@ -308,6 +398,7 @@ const Awards: React.FC = () => {
             title="100K Finishers" 
             icon={<Medal className="w-6 h-6 text-warning-400" />}
             description="Ordered by time of completion"
+            criteria="Runners who have completed 100km total distance. Ordered by the date/time they crossed the 100km mark."
             >
             <div className="text-center">
                 <div className="text-3xl font-bold text-warning-400 mb-2">{finishers100k.length}</div>
@@ -345,6 +436,7 @@ const Awards: React.FC = () => {
           title="Best Performing Station" 
           icon={<Trophy className="w-6 h-6 text-warning-500" />}
           description="Highest Total Distance"
+          criteria="The station with the highest aggregated total distance of all its participants."
         >
           {bestStation ? (
             <div className="text-center">
@@ -360,6 +452,7 @@ const Awards: React.FC = () => {
           title="Most Consistent Station" 
           icon={<Users className="w-6 h-6 text-indigo-400" />}
           description="Highest average active days per active participant"
+          criteria="The station with the highest average active days per runner. Only stations with at least 5 active runners are eligible."
         >
           {consistentStation ? (
             <div className="text-center">
@@ -392,10 +485,22 @@ const Awards: React.FC = () => {
           icon={<ThumbsUp className="w-6 h-6 text-pink-400" />}
           description="For Motivating Others"
           manual
+          criteria="Awarded to the runner who has shown exceptional spirit in motivating others. Selected manually."
+          onEdit={isAdmin ? () => handleEditManualAward('inspiring_award', 'Inspiring Award') : undefined}
         >
-          <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
-            <span className="text-primary-500 italic">To be decided manually</span>
-          </div>
+          {manualAwards['inspiring_award'] ? (
+             <div className="text-center">
+             <div className="text-xl font-bold text-white">{manualAwards['inspiring_award'].winnerName}</div>
+             <div className="text-sm text-primary-400 mb-2">#{manualAwards['inspiring_award'].winnerIdentifier}</div>
+             {manualAwards['inspiring_award'].notes && (
+                 <div className="text-xs text-primary-400 italic mt-2">"{manualAwards['inspiring_award'].notes}"</div>
+             )}
+           </div>
+          ) : (
+            <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
+                <span className="text-primary-500 italic">To be decided manually</span>
+            </div>
+          )}
         </AwardCard>
 
          {/* Best Team Spirit (Manual) */}
@@ -404,13 +509,103 @@ const Awards: React.FC = () => {
           icon={<Award className="w-6 h-6 text-orange-400" />}
           description="Motivation, Encouragement, Participant Vibe"
           manual
+          criteria="Awarded to the runner or group that best exemplifies team spirit. Selected manually."
+          onEdit={isAdmin ? () => handleEditManualAward('team_spirit', 'Best Team Spirit') : undefined}
         >
-          <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
-            <span className="text-primary-500 italic">To be decided manually</span>
-          </div>
+          {manualAwards['team_spirit'] ? (
+             <div className="text-center">
+             <div className="text-xl font-bold text-white">{manualAwards['team_spirit'].winnerName}</div>
+             <div className="text-sm text-primary-400 mb-2">#{manualAwards['team_spirit'].winnerIdentifier}</div>
+             {manualAwards['team_spirit'].notes && (
+                 <div className="text-xs text-primary-400 italic mt-2">"{manualAwards['team_spirit'].notes}"</div>
+             )}
+           </div>
+          ) : (
+            <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
+                <span className="text-primary-500 italic">To be decided manually</span>
+            </div>
+          )}
         </AwardCard>
         
       </div>
+
+      {/* Edit Modal */}
+      {editingAwardKey && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-primary-900 border border-primary-700 rounded-xl shadow-2xl max-w-md w-full p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white">Edit Award Winner</h3>
+                    <button 
+                        onClick={() => setEditingAwardKey(null)}
+                        className="text-primary-400 hover:text-white"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-primary-300 mb-1">Select Winner</label>
+                        <select
+                            value={editForm.winnerIdentifier}
+                            onChange={handleUserSelect}
+                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none"
+                        >
+                            <option value="">-- Select a User --</option>
+                            {users.sort((a,b) => a.name.localeCompare(b.name)).map(user => (
+                                <option key={user.serviceNumber} value={user.serviceNumber}>
+                                    {user.name} ({user.serviceNumber})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-primary-300 mb-1">Winner Name (Override)</label>
+                        <input
+                            type="text"
+                            value={editForm.winnerName}
+                            onChange={(e) => setEditForm({...editForm, winnerName: e.target.value})}
+                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none"
+                            placeholder="Name"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-primary-300 mb-1">Notes / Reason</label>
+                        <textarea
+                            value={editForm.notes}
+                            onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none h-24 resize-none"
+                            placeholder="Why did they win?"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        <button
+                            onClick={() => setEditingAwardKey(null)}
+                            className="flex-1 px-4 py-2 bg-primary-800 hover:bg-primary-700 text-primary-200 rounded-lg transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveEdit}
+                            disabled={isSaving}
+                            className="flex-1 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            {isSaving ? 'Saving...' : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Save Winner
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -421,10 +616,22 @@ interface AwardCardProps {
   description: string;
   children: React.ReactNode;
   manual?: boolean;
+  criteria?: string;
+  onEdit?: () => void;
 }
 
-const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, children, manual }) => (
-  <div className={`bg-primary-800/50 backdrop-blur-sm rounded-xl shadow-lg border p-6 flex flex-col h-full ${manual ? 'border-dashed border-primary-600/50' : 'border-primary-700/50 hover:border-primary-600 transition-colors'}`}>
+const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, children, manual, criteria, onEdit }) => (
+  <div className={`bg-primary-800/50 backdrop-blur-sm rounded-xl shadow-lg border p-6 flex flex-col h-full relative group ${manual ? 'border-dashed border-primary-600/50' : 'border-primary-700/50 hover:border-primary-600 transition-colors'}`}>
+    {onEdit && (
+        <button 
+            onClick={onEdit}
+            className="absolute top-4 right-4 p-2 bg-primary-700/80 hover:bg-accent-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+            title="Edit Winner"
+        >
+            <Edit2 className="w-4 h-4" />
+        </button>
+    )}
+    
     <div className="flex items-start justify-between mb-4">
       <div>
         <h3 className="font-bold text-lg text-white">{title}</h3>
@@ -432,9 +639,17 @@ const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, childre
       </div>
       <div className="p-2 bg-primary-900/50 rounded-lg border border-primary-700/50">{icon}</div>
     </div>
-    <div className="flex-grow flex flex-col justify-center">
+    
+    <div className="flex-grow flex flex-col justify-center mb-4">
       {children}
     </div>
+
+    {criteria && (
+        <div className="mt-auto pt-4 border-t border-primary-700/30">
+            <p className="text-[10px] uppercase tracking-wider text-primary-500 font-semibold mb-1">Criteria</p>
+            <p className="text-xs text-primary-400 leading-relaxed">{criteria}</p>
+        </div>
+    )}
   </div>
 );
 

@@ -122,3 +122,19 @@ export interface AdminUser {
   serviceNumber: string;
   name: string;
 }
+
+export interface ManualAward {
+  awardKey: string;
+  winnerIdentifier: string;
+  winnerName: string;
+  updatedAt: string;
+  updatedBy: string;
+  notes?: string;
+}
+
+export interface SaveManualAwardPayload {
+  awardKey: string;
+  winnerIdentifier: string;
+  winnerName: string;
+  notes?: string;
+}

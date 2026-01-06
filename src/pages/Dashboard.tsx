@@ -234,6 +234,14 @@ export default function Dashboard() {
     return registeredUsers.filter(user => user.station !== 'General Admin').length;
   }, [registeredUsers]);
 
+  const stationBySN = useMemo(() => {
+    const m = new Map<string, string>();
+    registeredUsers.forEach(u => {
+      if (u.serviceNumber) m.set(u.serviceNumber, u.station);
+    });
+    return m;
+  }, [registeredUsers]);
+
   // Constants for finisher criteria
   const MIN_DISTANCE_KM = 100; // Must reach 100km
   const MIN_ACTIVE_DAYS = 40;  // Must have at least 40 active days
@@ -1053,11 +1061,13 @@ export default function Dashboard() {
               </p>
             ) : (() => {
               const filteredRunners = leaderboardFilter
-                ? leaderboardRunners.filter(runner => 
-                    runner.name.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
-                    runner.serviceNumber.toLowerCase().includes(leaderboardFilter.toLowerCase()) ||
-                    runner.station.toLowerCase().includes(leaderboardFilter.toLowerCase())
-                  )
+                ? leaderboardRunners.filter(runner => {
+                    const regStation = (stationBySN.get(runner.serviceNumber) || runner.station || '').toLowerCase();
+                    const q = leaderboardFilter.toLowerCase();
+                    return runner.name.toLowerCase().includes(q) ||
+                      runner.serviceNumber.toLowerCase().includes(q) ||
+                      regStation.includes(q);
+                  })
                 : leaderboardRunners;
               
               if (filteredRunners.length === 0) {
@@ -1120,7 +1130,7 @@ export default function Dashboard() {
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-primary-400">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate max-w-[120px] sm:max-w-[150px]">{runner.station}</span>
+                          <span className="truncate max-w-[120px] sm:max-w-[150px]">{stationBySN.get(runner.serviceNumber) || runner.station}</span>
                         </span>
                         <span className="text-accent-400 flex items-center gap-0.5 flex-shrink-0">
                           <Footprints className="w-3 h-3" />
@@ -1491,7 +1501,7 @@ export default function Dashboard() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-primary-300 text-sm">{run.station}</td>
+                        <td className="py-3 px-2 text-primary-300 text-sm">{stationBySN.get(run.serviceNumber) || run.station}</td>
                         <td className="py-3 px-2 text-right font-display font-semibold text-white">
                           {(run.distanceDisplay && run.distanceDisplay.trim() !== '' ? run.distanceDisplay : run.distanceKm.toFixed(2))} km
                         </td>
@@ -1557,7 +1567,7 @@ export default function Dashboard() {
                         </span>
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          {run.station}
+                          {stationBySN.get(run.serviceNumber) || run.station}
                         </span>
                       </div>
                       <div className="pt-2 border-t border-primary-700/50">

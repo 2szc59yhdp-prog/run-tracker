@@ -98,6 +98,8 @@ export default function AdminReport() {
   //  LEADERBOARD CALCULATION
   // -----------------------------
   const leaderboard = useMemo(() => {
+    const userStationMap = new Map<string, string>();
+    users.forEach(u => userStationMap.set(u.serviceNumber, u.station));
     const map = new Map<
       string,
       {
@@ -117,7 +119,7 @@ export default function AdminReport() {
         map.get(key) || {
           serviceNumber: r.serviceNumber,
           name: r.name,
-          station: r.station,
+          station: userStationMap.get(r.serviceNumber) || r.station,
           totalDistance: 0,
           approvedRuns: 0,
           rejectedRuns: 0,
@@ -134,7 +136,7 @@ export default function AdminReport() {
         map.get(key) || {
           serviceNumber: r.serviceNumber,
           name: r.name,
-          station: r.station,
+          station: userStationMap.get(r.serviceNumber) || r.station,
           totalDistance: 0,
           approvedRuns: 0,
           rejectedRuns: 0,

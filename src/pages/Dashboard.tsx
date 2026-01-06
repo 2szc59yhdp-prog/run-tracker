@@ -18,11 +18,11 @@ const ALL_STATIONS = [
   'Thinadhoo City Police',
   'Gdh.Madaveli Police Station',
   'Gdh.Nadella Police Station',
-  'Gdh.Rathafandhoo Police Station',
   'Gdh.Fiyoari Police Station',
   'Gdh.Faresmaathoda Police Station',
   'Gdh.Vaadhoo Police Station',
   'Gdh.Gadhdhoo Police Station',
+  'SPSR',
 ];
 
 // Status badge component (public view - no approver info shown)
@@ -411,7 +411,7 @@ export default function Dashboard() {
     });
 
     // Stations to exclude from the performance board
-    const excludedStations = ['General Admin', 'Gdh.Atoll Police', 'SPSR', 'SPSR RR&HV'];
+    const excludedStations = ['General Admin', 'Gdh.Atoll Police', 'SPSR RR&HV'];
     
     // Convert to array and sort by average progress (then by total distance as tiebreaker)
     // Show all stations in ALL_STATIONS even if they have 0 participants

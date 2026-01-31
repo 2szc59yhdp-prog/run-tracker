@@ -10,8 +10,8 @@ import { fetchAllUsers, addTshirtAdmission, getUserByServiceNumber, fetchTshirtA
 import type { RunStatus, RegisteredUser } from '../types';
 
 // Challenge dates
-const CHALLENGE_START = new Date('2025-12-01T00:00:00');
-const CHALLENGE_END = new Date('2026-01-31T23:59:59');
+const CHALLENGE_START = new Date('2025-12-01T00:00:00+05:00');
+const CHALLENGE_END = new Date('2026-01-31T23:59:59+05:00');
 
 // All stations for Station Performance Board (police stations only)
 const ALL_STATIONS = [

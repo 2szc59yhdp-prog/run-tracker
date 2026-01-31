@@ -68,8 +68,8 @@ export default function AddRun() {
   useEffect(() => {
     const checkChallengeStatus = () => {
       const now = new Date();
-      // Challenge ends on Jan 31, 2026 at 00:00 Maldives Time (UTC+5)
-      const endDate = new Date('2026-01-31T00:00:00+05:00');
+      // Challenge ends on Jan 31, 2026 at 23:59:59 Maldives Time (UTC+5)
+      const endDate = new Date('2026-01-31T23:59:59+05:00');
       setIsChallengeEnded(now >= endDate);
     };
     

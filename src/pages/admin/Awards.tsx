@@ -271,40 +271,42 @@ const Awards: React.FC = () => {
     });
 
   // 2. Highest Total Distance
-  const highestDistance = [...userStats].sort((a, b) => b.totalDistance - a.totalDistance)[0];
+  const highestDistanceTop3 = [...userStats].sort((a, b) => b.totalDistance - a.totalDistance).slice(0, 3);
 
   // 3. Comeback Award (Started in 2nd half, highest distance among them)
-  let comebackWinner = null;
+  let comebackTop3: UserStats[] = [];
   if (challengeStartDate && challengeEndDate) {
     const duration = challengeEndDate.getTime() - challengeStartDate.getTime();
     const midPoint = new Date(challengeStartDate.getTime() + (duration / 2));
     
     const lateStarters = userStats.filter(s => s.firstRunDate && s.firstRunDate > midPoint);
-    comebackWinner = lateStarters.sort((a, b) => b.totalDistance - a.totalDistance)[0];
+    comebackTop3 = lateStarters.sort((a, b) => b.totalDistance - a.totalDistance).slice(0, 3);
   }
 
   // 4. Fair Play (Zero rejected runs, min 5 runs)
   const fairPlayCandidates = userStats
     .filter(s => s.runCount >= 5 && s.rejectedCount === 0)
-    .sort((a, b) => b.runCount - a.runCount) // Sort by most runs without rejection
-    .slice(0, 10); // Top 10
+    .sort((a, b) => b.runCount - a.runCount); // Sort by most runs without rejection
+  
+  const fairPlayTop3 = fairPlayCandidates.slice(0, 3);
 
   // 5. Silent Grinder (Most consistent / Active Days)
-  const silentGrinder = [...userStats].sort((a, b) => b.activeDays.size - a.activeDays.size)[0];
+  const silentGrinderTop3 = [...userStats].sort((a, b) => b.activeDays.size - a.activeDays.size).slice(0, 3);
 
   // Station Awards
   // 1. Best Performing Station (Total Distance)
-  const bestStation = [...stationStats].sort((a, b) => b.totalDistance - a.totalDistance)[0];
+  const bestStationTop3 = [...stationStats].sort((a, b) => b.totalDistance - a.totalDistance).slice(0, 3);
 
   // 2. Most Consistent Station (Avg active days per user)
   // Only compare with Stations with 5 or more Active runners
-  const consistentStation = [...stationStats]
+  const consistentStationTop3 = [...stationStats]
     .filter(s => s.activeUserCount >= 5)
     .map(s => ({
       ...s,
       avgActiveDays: s.totalActiveDays / s.activeUserCount // Calculate based on active users
     }))
-    .sort((a, b) => b.avgActiveDays - a.avgActiveDays)[0];
+    .sort((a, b) => b.avgActiveDays - a.avgActiveDays)
+    .slice(0, 3);
 
 
   return (
@@ -314,7 +316,7 @@ const Awards: React.FC = () => {
           <Trophy className="w-8 h-8 text-warning-400" />
           Challenge Awards & Winners
         </h1>
-        <p className="text-primary-300">Automated calculations based on run data.</p>
+        <p className="text-primary-300">Automated calculations based on run data. Top 3 contenders shown.</p>
       </div>
 
       {/* 1. Individual Awards Section */}
@@ -328,13 +330,13 @@ const Awards: React.FC = () => {
           description="Most KM logged by the end of the challenge"
           criteria="The runner with the highest total distance approved by the end of the challenge."
         >
-          {highestDistance ? (
+          <PodiumList items={highestDistanceTop3} renderItem={(stat) => (
             <div className="text-center">
-              <div className="text-xl font-bold text-white">{highestDistance.user.name}</div>
-              <div className="text-sm text-primary-400 mb-2">#{highestDistance.user.serviceNumber} • {highestDistance.user.station}</div>
-              <div className="text-3xl font-bold text-accent-400">{highestDistance.totalDistance.toFixed(2)} km</div>
+                <div className="font-bold text-white">{stat.user.name}</div>
+                <div className="text-xs text-primary-400">#{stat.user.serviceNumber} • {stat.user.station}</div>
+                <div className="text-lg font-bold text-accent-400">{stat.totalDistance.toFixed(2)} km</div>
             </div>
-          ) : <p className="text-primary-500 text-center">No data</p>}
+          )} />
         </AwardCard>
 
         {/* Comeback Award */}
@@ -344,22 +346,22 @@ const Awards: React.FC = () => {
           description="Started late (2nd half) but finished Strong"
           criteria="Started running in the second half of the challenge and achieved the highest distance among late starters."
         >
-          {comebackWinner ? (
-            <div className="text-center">
-              <div className="text-xl font-bold text-white">{comebackWinner.user.name}</div>
-              <div className="text-sm text-primary-400 mb-2">#{comebackWinner.user.serviceNumber}</div>
-              <div className="grid grid-cols-2 gap-2 text-sm bg-purple-500/10 border border-purple-500/20 p-2 rounded">
+          <PodiumList items={comebackTop3} emptyMessage="No eligible candidates" renderItem={(stat) => (
+             <div className="text-center">
+                <div className="font-bold text-white">{stat.user.name}</div>
+                <div className="text-xs text-primary-400 mb-1">#{stat.user.serviceNumber}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs bg-purple-500/10 border border-purple-500/20 p-1 rounded">
                 <div>
-                  <div className="text-primary-400">Started</div>
-                  <div className="font-semibold text-purple-300">{comebackWinner.firstRunDate?.toLocaleDateString()}</div>
+                    <div className="text-primary-400 text-[10px]">Started</div>
+                    <div className="font-semibold text-purple-300">{stat.firstRunDate?.toLocaleDateString()}</div>
                 </div>
                 <div>
-                  <div className="text-primary-400">Distance</div>
-                  <div className="font-semibold text-purple-300">{comebackWinner.totalDistance.toFixed(1)} km</div>
+                    <div className="text-primary-400 text-[10px]">Distance</div>
+                    <div className="font-semibold text-purple-300">{stat.totalDistance.toFixed(1)} km</div>
                 </div>
-              </div>
+                </div>
             </div>
-          ) : <p className="text-primary-500 text-center">No eligible candidates</p>}
+          )} />
         </AwardCard>
 
         {/* Fair Play Award */}
@@ -369,19 +371,14 @@ const Awards: React.FC = () => {
           description="Zero Rejected Runs (Min 5 runs submitted)"
           criteria="Runners with at least 5 runs submitted and 0 rejected runs. Tie-breaker: Most runs submitted."
         >
-          {fairPlayCandidates.length > 0 ? (
+           <PodiumList items={fairPlayTop3} emptyMessage="No eligible candidates" renderItem={(stat) => (
              <div className="text-center">
-             <div className="text-xl font-bold text-white">{fairPlayCandidates[0].user.name}</div>
-             <div className="text-sm text-primary-400 mb-2">#{fairPlayCandidates[0].user.serviceNumber}</div>
-             <div className="text-2xl font-bold text-success-400">{fairPlayCandidates[0].runCount} Runs</div>
-             <div className="text-xs text-primary-500">100% Approval Rate</div>
-             {fairPlayCandidates.length > 1 && (
-               <div className="mt-2 text-xs text-primary-600">
-                 + {fairPlayCandidates.length - 1} other candidates
-               </div>
-             )}
-           </div>
-          ) : <p className="text-primary-500 text-center">No eligible candidates</p>}
+                <div className="font-bold text-white">{stat.user.name}</div>
+                <div className="text-xs text-primary-400 mb-1">#{stat.user.serviceNumber}</div>
+                <div className="text-lg font-bold text-success-400">{stat.runCount} Runs</div>
+                <div className="text-[10px] text-primary-500">100% Approval Rate</div>
+            </div>
+           )} />
         </AwardCard>
 
         {/* Silent Grinder Award */}
@@ -391,13 +388,13 @@ const Awards: React.FC = () => {
           description="Most Consistent (Highest Active Days)"
           criteria="The runner with the highest number of active days (days with at least one approved run)."
         >
-          {silentGrinder ? (
+          <PodiumList items={silentGrinderTop3} renderItem={(stat) => (
             <div className="text-center">
-              <div className="text-xl font-bold text-white">{silentGrinder.user.name}</div>
-              <div className="text-sm text-primary-400 mb-2">#{silentGrinder.user.serviceNumber}</div>
-              <div className="text-3xl font-bold text-primary-200">{silentGrinder.activeDays.size} <span className="text-lg font-normal text-primary-500">days active</span></div>
+              <div className="font-bold text-white">{stat.user.name}</div>
+              <div className="text-xs text-primary-400 mb-1">#{stat.user.serviceNumber}</div>
+              <div className="text-xl font-bold text-primary-200">{stat.activeDays.size} <span className="text-sm font-normal text-primary-500">days</span></div>
             </div>
-          ) : <p className="text-primary-500 text-center">No data</p>}
+          )} />
         </AwardCard>
         
         {/* 100K Finisher Medal - Spans full width */}
@@ -446,13 +443,13 @@ const Awards: React.FC = () => {
           description="Highest Total Distance"
           criteria="The station with the highest aggregated total distance of all its participants."
         >
-          {bestStation ? (
+          <PodiumList items={bestStationTop3} renderItem={(station) => (
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{bestStation.name}</div>
-              <div className="text-sm text-primary-400 mb-2">{bestStation.userCount} Participants</div>
-              <div className="text-3xl font-bold text-warning-500">{bestStation.totalDistance.toFixed(0)} km</div>
+              <div className="font-bold text-white">{station.name}</div>
+              <div className="text-xs text-primary-400 mb-1">{station.userCount} Participants</div>
+              <div className="text-lg font-bold text-warning-500">{station.totalDistance.toFixed(0)} km</div>
             </div>
-          ) : <p className="text-primary-500 text-center">No data</p>}
+          )} />
         </AwardCard>
 
         {/* Most Consistent Station */}
@@ -462,23 +459,22 @@ const Awards: React.FC = () => {
           description="Highest average active days per active participant"
           criteria="The station with the highest average active days per runner. Only stations with at least 5 active runners are eligible."
         >
-          {consistentStation ? (
+          <PodiumList items={consistentStationTop3} emptyMessage="No stations with 5+ active runners" renderItem={(station) => (
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{consistentStation.name}</div>
-              <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                <div className="bg-indigo-500/10 border border-indigo-500/20 p-2 rounded">
-                  <div className="text-primary-400 text-xs">Total Active Days</div>
-                  <div className="font-bold text-indigo-400">{consistentStation.totalActiveDays}</div>
+              <div className="font-bold text-white">{station.name}</div>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                <div className="bg-indigo-500/10 border border-indigo-500/20 p-1 rounded">
+                  <div className="text-primary-400 text-[10px]">Total Days</div>
+                  <div className="font-bold text-indigo-400">{station.totalActiveDays}</div>
                 </div>
-                <div className="bg-indigo-500/10 border border-indigo-500/20 p-2 rounded">
-                  <div className="text-primary-400 text-xs">Avg / Active User</div>
+                <div className="bg-indigo-500/10 border border-indigo-500/20 p-1 rounded">
+                  <div className="text-primary-400 text-[10px]">Avg / User</div>
                   {/* @ts-ignore */}
-                  <div className="font-bold text-indigo-400">{consistentStation.avgActiveDays.toFixed(1)} days</div>
-                  <div className="text-[10px] text-primary-500 mt-1">({consistentStation.activeUserCount} active runners)</div>
+                  <div className="font-bold text-indigo-400">{station.avgActiveDays.toFixed(1)}</div>
                 </div>
               </div>
             </div>
-          ) : <p className="text-primary-500 text-center">No stations with 5+ active runners</p>}
+          )} />
         </AwardCard>
 
       </div>
@@ -660,5 +656,38 @@ const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, childre
     )}
   </div>
 );
+
+const PodiumList = ({ 
+    items, 
+    renderItem, 
+    emptyMessage = "No data" 
+}: { 
+    items: any[], 
+    renderItem: (item: any, index: number) => React.ReactNode, 
+    emptyMessage?: string 
+}) => {
+    if (items.length === 0) return <p className="text-primary-500 text-center">{emptyMessage}</p>;
+    
+    return (
+        <div className="space-y-2">
+            {items.map((item, index) => (
+                <div key={index} className={`relative p-2 rounded-lg border ${
+                    index === 0 ? 'bg-warning-500/10 border-warning-500/30' : 
+                    index === 1 ? 'bg-primary-600/20 border-primary-500/20' : 
+                    'bg-primary-800/20 border-primary-700/20'
+                }`}>
+                    <div className={`absolute top-1 right-2 text-[10px] font-bold uppercase tracking-wider ${
+                        index === 0 ? 'text-warning-400' : 
+                        index === 1 ? 'text-primary-300' : 
+                        'text-primary-500'
+                    }`}>
+                        {index === 0 ? '1st' : index === 1 ? '2nd' : '3rd'}
+                    </div>
+                    {renderItem(item, index)}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default Awards;

@@ -204,7 +204,17 @@ const Awards: React.FC = () => {
   // 4. Fair Play (Zero rejected runs, min 5 runs)
   const fairPlayCandidates = userStats
     .filter(s => s.runCount >= 5 && s.rejectedCount === 0)
-    .sort((a, b) => b.runCount - a.runCount); // Sort by most runs without rejection
+    .sort((a, b) => {
+        const aHas40Days = a.activeDays.size >= 40;
+        const bHas40Days = b.activeDays.size >= 40;
+
+        // Prioritize participants with 40+ active days
+        if (aHas40Days && !bHas40Days) return -1;
+        if (!aHas40Days && bHas40Days) return 1;
+
+        // Then sort by most runs (existing logic)
+        return b.runCount - a.runCount;
+    });
 
   // 5. Silent Grinder (Most consistent / Active Days)
   const silentGrinderTop3 = [...userStats].sort((a, b) => b.activeDays.size - a.activeDays.size).slice(0, 3);
@@ -321,7 +331,12 @@ const Awards: React.FC = () => {
                             <div className="col-span-2 text-primary-500">{index + 1}</div>
                             <div className="col-span-7 truncate" title={stat.user.name}>
                                 {stat.user.name}
-                                <div className="text-[10px] text-primary-500">#{stat.user.serviceNumber}</div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-primary-500">#{stat.user.serviceNumber}</span>
+                                    {stat.activeDays.size >= 40 && (
+                                        <span className="text-[10px] bg-success-500/20 text-success-300 px-1 rounded border border-success-500/30">40+ Days</span>
+                                    )}
+                                </div>
                             </div>
                             <div className="col-span-3 font-mono text-success-400 text-right flex items-center justify-end">{stat.runCount}</div>
                         </div>

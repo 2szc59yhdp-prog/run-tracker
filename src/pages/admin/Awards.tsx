@@ -205,8 +205,6 @@ const Awards: React.FC = () => {
   const fairPlayCandidates = userStats
     .filter(s => s.runCount >= 5 && s.rejectedCount === 0)
     .sort((a, b) => b.runCount - a.runCount); // Sort by most runs without rejection
-  
-  const fairPlayTop3 = fairPlayCandidates.slice(0, 3);
 
   // 5. Silent Grinder (Most consistent / Active Days)
   const silentGrinderTop3 = [...userStats].sort((a, b) => b.activeDays.size - a.activeDays.size).slice(0, 3);
@@ -306,14 +304,31 @@ const Awards: React.FC = () => {
           description="Zero Rejected Runs (Min 5 runs submitted)"
           criteria="Runners with at least 5 runs submitted and 0 rejected runs. Tie-breaker: Most runs submitted."
         >
-           <PodiumList items={fairPlayTop3} emptyMessage="No eligible candidates" renderItem={(stat) => (
-             <div className="text-center">
-                <div className="font-bold text-white">{stat.user.name}</div>
-                <div className="text-xs text-primary-400 mb-1">#{stat.user.serviceNumber}</div>
-                <div className="text-lg font-bold text-success-400">{stat.runCount} Runs</div>
-                <div className="text-[10px] text-primary-500">100% Approval Rate</div>
+           <div className="text-center">
+                <div className="text-3xl font-bold text-success-400 mb-2">{fairPlayCandidates.length}</div>
+                <p className="text-primary-300 mb-3">Runners Qualified</p>
+                <div className="max-h-60 overflow-y-auto text-sm text-left bg-primary-800/50 p-2 rounded border border-primary-700/50 scrollbar-thin scrollbar-thumb-primary-600 scrollbar-track-transparent">
+                    <div className="grid grid-cols-12 gap-2 font-bold text-primary-400 border-b border-primary-700/50 pb-2 mb-2 px-2">
+                        <div className="col-span-2">#</div>
+                        <div className="col-span-7">Name</div>
+                        <div className="col-span-3 text-right">Runs</div>
+                    </div>
+                   {fairPlayCandidates.length === 0 ? (
+                       <p className="text-center text-primary-500 py-4">No eligible candidates</p>
+                   ) : (
+                       fairPlayCandidates.map((stat, index) => (
+                        <div key={stat.user.serviceNumber} className="grid grid-cols-12 gap-2 py-1 border-b border-primary-700/50 last:border-0 text-primary-200 px-2 hover:bg-primary-700/20">
+                            <div className="col-span-2 text-primary-500">{index + 1}</div>
+                            <div className="col-span-7 truncate" title={stat.user.name}>
+                                {stat.user.name}
+                                <div className="text-[10px] text-primary-500">#{stat.user.serviceNumber}</div>
+                            </div>
+                            <div className="col-span-3 font-mono text-success-400 text-right flex items-center justify-end">{stat.runCount}</div>
+                        </div>
+                       ))
+                   )}
+                </div>
             </div>
-           )} />
         </AwardCard>
 
         {/* Silent Grinder Award */}

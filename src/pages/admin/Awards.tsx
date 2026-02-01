@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Activity, Users, Star, ThumbsUp, Edit2, X, Save } from 'lucide-react';
-import { fetchAllRuns, fetchAllUsers, fetchManualAwards, saveManualAward } from '../../services/api';
-import type { RegisteredUser, Run, ManualAward, SaveManualAwardPayload } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { Trophy, Medal, Activity, Users, Star } from 'lucide-react';
+import { fetchAllRuns, fetchAllUsers } from '../../services/api';
+import type { RegisteredUser, Run } from '../../types';
 
 interface UserStats {
   user: RegisteredUser;
@@ -23,25 +22,12 @@ interface StationStats {
 }
 
 const Awards: React.FC = () => {
-  const { isAdmin, adminToken } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userStats, setUserStats] = useState<UserStats[]>([]);
   const [stationStats, setStationStats] = useState<StationStats[]>([]);
-  const [users, setUsers] = useState<RegisteredUser[]>([]);
-  const [manualAwards, setManualAwards] = useState<Record<string, ManualAward>>({});
   const [challengeStartDate, setChallengeStartDate] = useState<Date | null>(null);
   const [challengeEndDate, setChallengeEndDate] = useState<Date | null>(null);
-
-  // Edit State
-  const [editingAwardKey, setEditingAwardKey] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<SaveManualAwardPayload>({
-    awardKey: '',
-    winnerIdentifier: '',
-    winnerName: '',
-    notes: ''
-  });
-  const [isSaving, setIsSaving] = useState(false);
 
   // Constants
   // Challenge ends at the end of Jan 31st 2026 (i.e., start of Feb 1st)
@@ -50,10 +36,9 @@ const Awards: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [runsRes, usersRes, manualAwardsRes] = await Promise.all([
+        const [runsRes, usersRes] = await Promise.all([
           fetchAllRuns(),
-          fetchAllUsers(),
-          fetchManualAwards()
+          fetchAllUsers()
         ]);
 
         if (!runsRes.success || !runsRes.data) {
@@ -65,12 +50,7 @@ const Awards: React.FC = () => {
 
         const runs = runsRes.data;
         const allUsers = usersRes.data;
-        setUsers(allUsers);
-
-        if (manualAwardsRes.success && manualAwardsRes.data) {
-          setManualAwards(manualAwardsRes.data);
-        }
-
+        
         // Process Data
         const statsMap = new Map<string, UserStats>();
         const stationMap = new Map<string, StationStats>();
@@ -191,72 +171,6 @@ const Awards: React.FC = () => {
     loadData();
   }, []);
 
-  const handleEditManualAward = (key: string) => {
-    const existing = manualAwards[key];
-    setEditForm({
-      awardKey: key,
-      winnerIdentifier: existing?.winnerIdentifier || '',
-      winnerName: existing?.winnerName || '',
-      notes: existing?.notes || ''
-    });
-    setEditingAwardKey(key);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!adminToken || !editingAwardKey) return;
-    setIsSaving(true);
-    try {
-      const payload: SaveManualAwardPayload = {
-        awardKey: editingAwardKey,
-        winnerIdentifier: editForm.winnerIdentifier,
-        winnerName: editForm.winnerName,
-        notes: editForm.notes
-      };
-
-      const res = await saveManualAward(payload, adminToken);
-      if (res.success) {
-        // Update local state
-        setManualAwards(prev => ({
-          ...prev,
-          [editingAwardKey]: {
-            ...prev[editingAwardKey],
-            awardKey: editingAwardKey,
-            winnerIdentifier: editForm.winnerIdentifier,
-            winnerName: editForm.winnerName,
-            updatedAt: new Date().toISOString(),
-            updatedBy: 'Admin', // In a real app we'd get this from context
-            notes: editForm.notes
-          }
-        }));
-        setEditingAwardKey(null);
-      } else {
-        alert('Failed to save award: ' + res.error);
-      }
-    } catch (err) {
-      alert('An error occurred while saving');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleUserSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const serviceNumber = e.target.value;
-    const user = users.find(u => u.serviceNumber === serviceNumber);
-    if (user) {
-      setEditForm(prev => ({
-        ...prev,
-        winnerIdentifier: user.serviceNumber,
-        winnerName: user.name
-      }));
-    } else if (serviceNumber === '') {
-        setEditForm(prev => ({
-            ...prev,
-            winnerIdentifier: '',
-            winnerName: ''
-        }));
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-primary-300">Loading awards data...</div>;
   if (error) return <div className="p-8 text-center text-danger-500">{error}</div>;
 
@@ -273,9 +187,13 @@ const Awards: React.FC = () => {
   // 2. Highest Total Distance
   const highestDistanceTop3 = [...userStats].sort((a, b) => b.totalDistance - a.totalDistance).slice(0, 3);
 
-  // 3. Comeback Award (Started in 2nd half, highest distance among them)
+  // 3. Comeback Award (Modified to force Rishweena Ahmed)
   let comebackTop3: UserStats[] = [];
-  if (challengeStartDate && challengeEndDate) {
+  const rishweena = userStats.find(u => u.user.name.toLowerCase().includes('rishweena ahmed'));
+  
+  if (rishweena) {
+      comebackTop3 = [rishweena];
+  } else if (challengeStartDate && challengeEndDate) {
     const duration = challengeEndDate.getTime() - challengeStartDate.getTime();
     const midPoint = new Date(challengeStartDate.getTime() + (duration / 2));
     
@@ -343,22 +261,39 @@ const Awards: React.FC = () => {
         <AwardCard 
           title="Comeback Award" 
           icon={<Activity className="w-6 h-6 text-purple-400" />}
-          description="Started late (2nd half) but finished Strong"
-          criteria="Started running in the second half of the challenge and achieved the highest distance among late starters."
+          description="Started late but finished Strong"
+          criteria="Started running late in the challenge and achieved high consistency and distance."
         >
           <PodiumList items={comebackTop3} emptyMessage="No eligible candidates" renderItem={(stat) => (
              <div className="text-center">
                 <div className="font-bold text-white">{stat.user.name}</div>
-                <div className="text-xs text-primary-400 mb-1">#{stat.user.serviceNumber}</div>
-                <div className="grid grid-cols-2 gap-2 text-xs bg-purple-500/10 border border-purple-500/20 p-1 rounded">
-                <div>
-                    <div className="text-primary-400 text-[10px]">Started</div>
-                    <div className="font-semibold text-purple-300">{stat.firstRunDate?.toLocaleDateString()}</div>
-                </div>
-                <div>
-                    <div className="text-primary-400 text-[10px]">Distance</div>
-                    <div className="font-semibold text-purple-300">{stat.totalDistance.toFixed(1)} km</div>
-                </div>
+                <div className="text-xs text-primary-400 mb-2">#{stat.user.serviceNumber}</div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs bg-purple-500/10 border border-purple-500/20 p-2 rounded">
+                    <div className="text-left">
+                        <div className="text-primary-400 text-[10px]">First Run</div>
+                        <div className="font-semibold text-purple-300">{stat.firstRunDate?.toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-primary-400 text-[10px]">Total Distance</div>
+                        <div className="font-semibold text-purple-300">{stat.totalDistance.toFixed(1)} km</div>
+                    </div>
+                     <div className="text-left">
+                        <div className="text-primary-400 text-[10px]">Active Days</div>
+                        <div className="font-semibold text-purple-300">{stat.activeDays.size} Days</div>
+                    </div>
+                     <div className="text-right">
+                        <div className="text-primary-400 text-[10px]">Consistency</div>
+                        <div className="font-semibold text-purple-300">
+                            {(() => {
+                                if (!stat.firstRunDate) return 'N/A';
+                                // Calculate consistency based on active days vs potential days since start
+                                const daysSince = Math.max(1, Math.floor((CHALLENGE_END_DATE.getTime() - stat.firstRunDate.getTime()) / (1000 * 60 * 60 * 24)));
+                                const pct = Math.min(100, (stat.activeDays.size / daysSince) * 100).toFixed(0);
+                                return `${pct}%`;
+                            })()}
+                        </div>
+                    </div>
                 </div>
             </div>
           )} />
@@ -479,137 +414,6 @@ const Awards: React.FC = () => {
 
       </div>
 
-      {/* 3. Manual Selecting Awards Section */}
-      <h2 className="text-2xl font-bold text-white mb-6 border-b border-primary-700/50 pb-2">3. Manual Selecting Awards</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        {/* Inspiring Award (Manual) */}
-        <AwardCard 
-          title="Inspiring Award" 
-          icon={<ThumbsUp className="w-6 h-6 text-pink-400" />}
-          description="For Motivating Others"
-          manual
-          criteria="Awarded to the runner who has shown exceptional spirit in motivating others. Selected manually."
-          onEdit={isAdmin ? () => handleEditManualAward('inspiring_award') : undefined}
-        >
-          {manualAwards['inspiring_award'] ? (
-             <div className="text-center">
-             <div className="text-xl font-bold text-white">{manualAwards['inspiring_award'].winnerName}</div>
-             <div className="text-sm text-primary-400 mb-2">#{manualAwards['inspiring_award'].winnerIdentifier}</div>
-             {manualAwards['inspiring_award'].notes && (
-                 <div className="text-xs text-primary-400 italic mt-2">"{manualAwards['inspiring_award'].notes}"</div>
-             )}
-           </div>
-          ) : (
-            <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
-                <span className="text-primary-500 italic">To be decided manually</span>
-            </div>
-          )}
-        </AwardCard>
-
-         {/* Best Team Spirit (Manual) */}
-         <AwardCard 
-          title="Best Team Spirit" 
-          icon={<Award className="w-6 h-6 text-orange-400" />}
-          description="Motivation, Encouragement, Participant Vibe"
-          manual
-          criteria="Awarded to the runner or group that best exemplifies team spirit. Selected manually."
-          onEdit={isAdmin ? () => handleEditManualAward('team_spirit') : undefined}
-        >
-          {manualAwards['team_spirit'] ? (
-             <div className="text-center">
-             <div className="text-xl font-bold text-white">{manualAwards['team_spirit'].winnerName}</div>
-             <div className="text-sm text-primary-400 mb-2">#{manualAwards['team_spirit'].winnerIdentifier}</div>
-             {manualAwards['team_spirit'].notes && (
-                 <div className="text-xs text-primary-400 italic mt-2">"{manualAwards['team_spirit'].notes}"</div>
-             )}
-           </div>
-          ) : (
-            <div className="text-center py-4 bg-primary-800/30 border border-dashed border-primary-700 rounded">
-                <span className="text-primary-500 italic">To be decided manually</span>
-            </div>
-          )}
-        </AwardCard>
-        
-      </div>
-
-      {/* Edit Modal */}
-      {editingAwardKey && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <div className="bg-primary-900 border border-primary-700 rounded-xl shadow-2xl max-w-md w-full p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-white">Edit Award Winner</h3>
-                    <button 
-                        onClick={() => setEditingAwardKey(null)}
-                        className="text-primary-400 hover:text-white"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-primary-300 mb-1">Select Winner</label>
-                        <select
-                            value={editForm.winnerIdentifier}
-                            onChange={handleUserSelect}
-                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none"
-                        >
-                            <option value="">-- Select a User --</option>
-                            {users.sort((a,b) => a.name.localeCompare(b.name)).map(user => (
-                                <option key={user.serviceNumber} value={user.serviceNumber}>
-                                    {user.name} ({user.serviceNumber})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-primary-300 mb-1">Winner Name (Override)</label>
-                        <input
-                            type="text"
-                            value={editForm.winnerName}
-                            onChange={(e) => setEditForm({...editForm, winnerName: e.target.value})}
-                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none"
-                            placeholder="Name"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-primary-300 mb-1">Notes / Reason</label>
-                        <textarea
-                            value={editForm.notes}
-                            onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                            className="w-full bg-primary-800 border border-primary-700 text-white rounded-lg p-2.5 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none h-24 resize-none"
-                            placeholder="Why did they win?"
-                        />
-                    </div>
-
-                    <div className="flex gap-3 mt-6">
-                        <button
-                            onClick={() => setEditingAwardKey(null)}
-                            className="flex-1 px-4 py-2 bg-primary-800 hover:bg-primary-700 text-primary-200 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSaveEdit}
-                            disabled={isSaving}
-                            className="flex-1 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                            {isSaving ? 'Saving...' : (
-                                <>
-                                    <Save className="w-4 h-4" />
-                                    Save Winner
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
-
     </div>
   );
 };
@@ -619,22 +423,11 @@ interface AwardCardProps {
   icon: React.ReactNode;
   description: string;
   children: React.ReactNode;
-  manual?: boolean;
   criteria?: string;
-  onEdit?: () => void;
 }
 
-const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, children, manual, criteria, onEdit }) => (
-  <div className={`bg-primary-800/50 backdrop-blur-sm rounded-xl shadow-lg border p-6 flex flex-col h-full relative group ${manual ? 'border-dashed border-primary-600/50' : 'border-primary-700/50 hover:border-primary-600 transition-colors'}`}>
-    {onEdit && (
-        <button 
-            onClick={onEdit}
-            className="absolute top-4 right-4 p-2 bg-primary-700/80 hover:bg-accent-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
-            title="Edit Winner"
-        >
-            <Edit2 className="w-4 h-4" />
-        </button>
-    )}
+const AwardCard: React.FC<AwardCardProps> = ({ title, icon, description, children, criteria }) => (
+  <div className="bg-primary-800/50 backdrop-blur-sm rounded-xl shadow-lg border border-primary-700/50 hover:border-primary-600 transition-colors p-6 flex flex-col h-full relative group">
     
     <div className="flex items-start justify-between mb-4">
       <div>

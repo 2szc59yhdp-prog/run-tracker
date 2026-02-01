@@ -6,7 +6,7 @@
  */
 
 import { APPS_SCRIPT_URL } from '../config';
-import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser, TshirtAdmission, AddTshirtAdmissionPayload, ManualAward, SaveManualAwardPayload } from '../types';
+import type { Run, AddRunPayload, UpdateRunPayload, ApiResponse, RegisteredUser, AddUserPayload, UpdateUserPayload, AdminUser, TshirtAdmission, AddTshirtAdmissionPayload } from '../types';
 
 export interface Sponsor {
   id: string;
@@ -698,31 +698,6 @@ export async function fetchFundUsages(): Promise<ApiResponse<FundUsageEntry[]>> 
     return data;
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch fund usages' };
-  }
-}
-
-export async function fetchManualAwards(): Promise<ApiResponse<Record<string, ManualAward>>> {
-  try {
-    const response = await fetch(`${APPS_SCRIPT_URL}?action=getManualAwards`, { method: 'GET' });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch manual awards' };
-  }
-}
-
-export async function saveManualAward(payload: SaveManualAwardPayload, adminToken: string): Promise<ApiResponse<void>> {
-  try {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveManualAward', adminToken, ...payload }),
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to save manual award' };
   }
 }
 
